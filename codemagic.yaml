@@ -16,14 +16,12 @@ workflows:
           npm install
           npx cap add ios
           npx cap sync ios
-          cd ios/App
-          pod install
 
       - name: Compile iOS app
         script: |
           cd scrobble-mobile
           xcodebuild \
-            -workspace ios/App/App.xcworkspace \
+            -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Debug \
             -sdk iphonesimulator \
