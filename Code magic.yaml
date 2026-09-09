@@ -1,0 +1,38 @@
+workflows:
+  scrobble-ios-check:
+    name: Scrobble iOS Build Check
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 22
+      xcode: latest
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+
+      - name: Generate iOS project
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+
+      - name: Sync Scrobble into iOS
+        script: npx cap sync ios
+
+      - name: Install CocoaPods
+        script: |
+          cd ios/App
+          pod install
+
+      - name: Compile iOS app
+        script: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
