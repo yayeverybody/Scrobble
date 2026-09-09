@@ -20,8 +20,73 @@ workflows:
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
           cd scrobble-mobile
           npm install
+
+          # Native iPhone safe-area fix. Keep the black game header below the
+          # status bar / Dynamic Island while preserving the existing layout.
+          python3 - <<'PY'
+          from pathlib import Path
+
+          index = Path('www/index.html')
+          text = index.read_text()
+          text = text.replace(
+              'content="width=device-width,initial-scale=1"',
+              'content="width=device-width,initial-scale=1,viewport-fit=cover"'
+          )
+          safe_style = '''
+          <style id="scrobble-ios-safe-area">
+          @supports (padding: env(safe-area-inset-top)) {
+            body.scrobbleGameActive {
+              background:#111 !important;
+            }
+            body.scrobbleGameActive #scrobble-v4 {
+              margin-top:env(safe-area-inset-top) !important;
+            }
+          }
+          </style>
+          '''
+          if 'id="scrobble-ios-safe-area"' not in text:
+              text = text.replace('</head>', safe_style + '</head>')
+          index.write_text(text)
+
+          fit = Path('www/viewport-fit-v2670.js')
+          js = fit.read_text()
+          old = 'const available=Math.max(1,viewportHeight());'
+          new = "const safeTop=parseFloat(getComputedStyle(root).marginTop)||0;\n      const available=Math.max(1,viewportHeight()-safeTop);"
+          if old in js:
+              js = js.replace(old, new)
+          fit.write_text(js)
+          PY
+
           npx cap add ios
           npx cap sync ios
+
+          # Use the existing approved dark-blue Scrobble mascot artwork as the
+          # native iOS icon. Xcode's current app-icon format uses one 1024 image.
+          ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          mkdir -p "$ICONSET"
+          find "$ICONSET" -type f -name '*.png' -delete
+          sips -z 1024 1024 www/icons/scrobble-mascot-512.png \
+            --out "$ICONSET/AppIcon-1024.png" >/dev/null
+          cat > "$ICONSET/Contents.json" <<'JSON'
+          {
+            "images" : [
+              {
+                "filename" : "AppIcon-1024.png",
+                "idiom" : "universal",
+                "platform" : "ios",
+                "size" : "1024x1024"
+              }
+            ],
+            "info" : {
+              "author" : "xcode",
+              "version" : 1
+            }
+          }
+          JSON
+
+          # Every TestFlight upload needs a unique build number.
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 
       - name: Set up iOS code signing
         script: |
