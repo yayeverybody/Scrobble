@@ -1,4 +1,5 @@
 [build]
+  command = "unzip -p Scrobble_Mobile_0_1_Capacitor.zip www/icons/scrobble-mascot-v291-512.png > site/mascot.png"
   publish = "site"
 
 [[redirects]]
