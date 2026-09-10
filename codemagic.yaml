@@ -60,12 +60,12 @@ workflows:
           npx cap add ios
           npx cap sync ios
 
-          # Use the existing approved dark-blue Scrobble mascot artwork as the
-          # native iOS icon. Xcode's current app-icon format uses one 1024 image.
+          # Use the exact approved dark-blue puppet icon already included in
+          # the Scrobble package.
           ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           mkdir -p "$ICONSET"
           find "$ICONSET" -type f -name '*.png' -delete
-          sips -z 1024 1024 www/icons/scrobble-mascot-512.png \
+          sips -z 1024 1024 www/icons/scrobble-mascot-v291-512.png \
             --out "$ICONSET/AppIcon-1024.png" >/dev/null
           cat > "$ICONSET/Contents.json" <<'JSON'
           {
