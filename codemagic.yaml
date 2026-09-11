@@ -55,6 +55,18 @@ workflows:
           if old in js:
               js = js.replace(old, new)
           fit.write_text(js)
+
+          # iOS touch fix: make returning a pending board tile to the rack
+          # forgiving. The visual rack is small enough that a finger can be
+          # over it while the touch point lands just outside its DOM bounds.
+          engine = Path('www/game-engine-v3140.js')
+          game = engine.read_text()
+          old_hit = "const q=rackEl.getBoundingClientRect(),hit={left:q.left-8,right:q.right+8,top:q.top-18,bottom:q.bottom+18};"
+          new_hit = "const q=rackEl.getBoundingClientRect(),hit={left:q.left-18,right:q.right+18,top:q.top-55,bottom:q.bottom+55};"
+          if old_hit not in game:
+              raise SystemExit('Rack hit-zone patch target not found')
+          game = game.replace(old_hit, new_hit, 1)
+          engine.write_text(game)
           PY
 
           npx cap add ios
