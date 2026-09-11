@@ -72,6 +72,17 @@ workflows:
           npx cap add ios
           npx cap sync ios
 
+          # Version 1.0 is iPhone-only. This prevents App Store Connect from
+          # requiring iPad screenshots for an interface we have not shipped/tested.
+          /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:0 integer 1" ios/App/App/Info.plist
+          sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 1;/g' ios/App/App.xcodeproj/project.pbxproj
+
+          # We use only standard platform/web HTTPS encryption.
+          /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist
+
           # Use the exact approved dark-blue puppet icon already included in
           # the Scrobble package.
           ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
