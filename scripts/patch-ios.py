@@ -48,6 +48,16 @@ if old_hit in game:
     game = game.replace(old_hit, new_hit, 1)
 elif new_hit not in game:
     raise SystemExit('Rack hit-zone patch target not found')
+
+# The larger rack return zone fixed dragging pending tiles back to the rack, but it
+# overlaps the board's bottom row on iPhone. Give the board first refusal near its
+# edge; the rack still wins everywhere below the board snap tolerance.
+old_target = "const q=rackEl.getBoundingClientRect(),hit={left:q.left-18,right:q.right+18,top:q.top-55,bottom:q.bottom+55};if(pointInRect(x,y,hit)){rackEl.classList.add('dropTarget');return{type:'rack'}}const target=boardTargetAt(x,y);if(target){const cell=boardEl.querySelector(`.cell[data-r=\"${target.r}\"][data-c=\"${target.c}\"]`);cell?.classList.add('dropTarget');return target}return null"
+new_target = "const target=boardTargetAt(x,y);if(target){const cell=boardEl.querySelector(`.cell[data-r=\"${target.r}\"][data-c=\"${target.c}\"]`);cell?.classList.add('dropTarget');return target}const q=rackEl.getBoundingClientRect(),hit={left:q.left-18,right:q.right+18,top:q.top-55,bottom:q.bottom+55};if(pointInRect(x,y,hit)){rackEl.classList.add('dropTarget');return{type:'rack'}}return null"
+if old_target in game:
+    game = game.replace(old_target, new_target, 1)
+elif new_target not in game:
+    raise SystemExit('Bottom-row priority patch target not found')
 engine.write_text(game)
 
 app = Path('www/app-v3140.js')
