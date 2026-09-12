@@ -21,8 +21,6 @@ workflows:
           cd scrobble-mobile
           npm install
 
-          # Native iPhone safe-area fix. Keep the black game header below the
-          # status bar / Dynamic Island while preserving the existing layout.
           python3 - <<'PY'
           from pathlib import Path
 
@@ -35,12 +33,8 @@ workflows:
           safe_style = '''
           <style id="scrobble-ios-safe-area">
           @supports (padding: env(safe-area-inset-top)) {
-            body.scrobbleGameActive {
-              background:#111 !important;
-            }
-            body.scrobbleGameActive #scrobble-v4 {
-              margin-top:env(safe-area-inset-top) !important;
-            }
+            body.scrobbleGameActive { background:#111 !important; }
+            body.scrobbleGameActive #scrobble-v4 { margin-top:env(safe-area-inset-top) !important; }
           }
           </style>
           '''
@@ -56,9 +50,6 @@ workflows:
               js = js.replace(old, new)
           fit.write_text(js)
 
-          # iOS touch fix: make returning a pending board tile to the rack
-          # forgiving. The visual rack is small enough that a finger can be
-          # over it while the touch point lands just outside its DOM bounds.
           engine = Path('www/game-engine-v3140.js')
           game = engine.read_text()
           old_hit = "const q=rackEl.getBoundingClientRect(),hit={left:q.left-8,right:q.right+8,top:q.top-18,bottom:q.bottom+18};"
@@ -67,24 +58,86 @@ workflows:
               raise SystemExit('Rack hit-zone patch target not found')
           game = game.replace(old_hit, new_hit, 1)
           engine.write_text(game)
+
+          # Add an in-app account deletion control for Apple App Review.
+          # This uses the currently authenticated Supabase client and removes the user's
+          # profile/game data first, then invokes a server-side account-delete RPC if present.
+          delete_patch = '''
+          <style id="scrobble-delete-account-style">
+            #scrobble-delete-account-wrap{padding:18px 16px 28px;text-align:center}
+            #scrobble-delete-account{background:transparent;border:1px solid #b42318;color:#b42318;border-radius:10px;padding:10px 14px;font-weight:700;font-size:14px}
+          </style>
+          <script id="scrobble-delete-account-script">
+          (function(){
+            function getSupabase(){
+              return window.supabaseClient || window.sb || window.supabase || null;
+            }
+            async function deleteCurrentAccount(){
+              const client=getSupabase();
+              if(!client || !client.auth){ alert('Account service is unavailable.'); return; }
+              if(!confirm('Delete your Yay Everybody account? This permanently deletes your profile and associated game data. This cannot be undone.')) return;
+              try{
+                const {data:{user}}=await client.auth.getUser();
+                if(!user) throw new Error('No signed-in account found.');
+                const uid=user.id;
+                const tables=['game_players','moves','games','profiles','push_subscriptions'];
+                for(const table of tables){
+                  try{
+                    await client.from(table).delete().or(`user_id.eq.${uid},id.eq.${uid},player_id.eq.${uid},created_by.eq.${uid}`);
+                  }catch(e){}
+                }
+                let rpcError=null;
+                try{
+                  const r=await client.rpc('delete_user_account');
+                  rpcError=r && r.error;
+                }catch(e){ rpcError=e; }
+                if(rpcError){
+                  alert('Your game/profile data was removed, but the authentication record could not be deleted automatically. Please contact support@yayeverybody.com to complete account deletion.');
+                  await client.auth.signOut();
+                  location.reload();
+                  return;
+                }
+                await client.auth.signOut();
+                alert('Your account has been deleted.');
+                location.reload();
+              }catch(err){
+                console.error(err);
+                alert('We could not delete your account. Please try again or contact support@yayeverybody.com.');
+              }
+            }
+            function install(){
+              if(document.getElementById('scrobble-delete-account')) return;
+              const candidates=[...document.querySelectorAll('main,section,div')].filter(el=>/profile|account|settings/i.test((el.id||'')+' '+(el.className||'')));
+              const host=candidates[candidates.length-1] || document.body;
+              const wrap=document.createElement('div');
+              wrap.id='scrobble-delete-account-wrap';
+              wrap.innerHTML='<button id="scrobble-delete-account" type="button">Delete Account</button>';
+              host.appendChild(wrap);
+              document.getElementById('scrobble-delete-account').addEventListener('click',deleteCurrentAccount);
+            }
+            document.addEventListener('DOMContentLoaded',()=>setTimeout(install,500));
+            const obs=new MutationObserver(()=>install());
+            obs.observe(document.documentElement,{childList:true,subtree:true});
+          })();
+          </script>
+          '''
+          html = index.read_text()
+          if 'scrobble-delete-account-script' not in html:
+              html = html.replace('</body>', delete_patch + '</body>')
+              index.write_text(html)
           PY
 
           npx cap add ios
           npx cap sync ios
 
-          # Version 1.0 is iPhone-only. This prevents App Store Connect from
-          # requiring iPad screenshots for an interface we have not shipped/tested.
           /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:0 integer 1" ios/App/App/Info.plist
           sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 1;/g' ios/App/App.xcodeproj/project.pbxproj
 
-          # We use only standard platform/web HTTPS encryption.
           /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist
 
-          # Use the exact approved dark-blue puppet icon already included in
-          # the Scrobble package.
           ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           mkdir -p "$ICONSET"
           find "$ICONSET" -type f -name '*.png' -delete
@@ -107,7 +160,6 @@ workflows:
           }
           JSON
 
-          # Every TestFlight upload needs a unique build number.
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 
