@@ -40,6 +40,21 @@ workflows:
           '''
           if 'id="scrobble-ios-safe-area"' not in text:
               text = text.replace('</head>', safe_style + '</head>')
+
+          # Put Delete Account in the actual Account modal, directly below Log Out.
+          old_logout = '<button id="logoutAccount" class="logoutAccount hidden" type="button">LOG OUT</button>'
+          new_logout = old_logout + '<button id="deleteAccount" class="deleteAccount hidden" type="button">DELETE ACCOUNT</button>'
+          if old_logout not in text:
+              raise SystemExit('Account modal logout button not found')
+          text = text.replace(old_logout, new_logout, 1)
+          delete_style = '''
+          <style id="scrobble-delete-account-style">
+          #accountBox .deleteAccount{width:100%;min-height:48px;margin-top:12px;border:1px solid #b42318;border-radius:12px;background:#fff;color:#b42318;font:900 14px Arial,Helvetica,sans-serif}
+          #accountBox .deleteAccount.hidden{display:none!important}
+          </style>
+          '''
+          if 'id="scrobble-delete-account-style"' not in text:
+              text = text.replace('</head>', delete_style + '</head>')
           index.write_text(text)
 
           fit = Path('www/viewport-fit-v2670.js')
@@ -59,72 +74,55 @@ workflows:
           game = game.replace(old_hit, new_hit, 1)
           engine.write_text(game)
 
-          # Add an in-app account deletion control for Apple App Review.
-          # This uses the currently authenticated Supabase client and removes the user's
-          # profile/game data first, then invokes a server-side account-delete RPC if present.
-          delete_patch = '''
-          <style id="scrobble-delete-account-style">
-            #scrobble-delete-account-wrap{padding:18px 16px 28px;text-align:center}
-            #scrobble-delete-account{background:transparent;border:1px solid #b42318;color:#b42318;border-radius:10px;padding:10px 14px;font-weight:700;font-size:14px}
-          </style>
-          <script id="scrobble-delete-account-script">
-          (function(){
-            function getSupabase(){
-              return window.supabaseClient || window.sb || window.supabase || null;
-            }
-            async function deleteCurrentAccount(){
-              const client=getSupabase();
-              if(!client || !client.auth){ alert('Account service is unavailable.'); return; }
-              if(!confirm('Delete your Yay Everybody account? This permanently deletes your profile and associated game data. This cannot be undone.')) return;
-              try{
-                const {data:{user}}=await client.auth.getUser();
-                if(!user) throw new Error('No signed-in account found.');
-                const uid=user.id;
-                const tables=['game_players','moves','games','profiles','push_subscriptions'];
-                for(const table of tables){
-                  try{
-                    await client.from(table).delete().or(`user_id.eq.${uid},id.eq.${uid},player_id.eq.${uid},created_by.eq.${uid}`);
-                  }catch(e){}
-                }
-                let rpcError=null;
-                try{
-                  const r=await client.rpc('delete_user_account');
-                  rpcError=r && r.error;
-                }catch(e){ rpcError=e; }
-                if(rpcError){
-                  alert('Your game/profile data was removed, but the authentication record could not be deleted automatically. Please contact support@yayeverybody.com to complete account deletion.');
-                  await client.auth.signOut();
-                  location.reload();
-                  return;
-                }
-                await client.auth.signOut();
-                alert('Your account has been deleted.');
-                location.reload();
-              }catch(err){
-                console.error(err);
-                alert('We could not delete your account. Please try again or contact support@yayeverybody.com.');
-              }
-            }
-            function install(){
-              if(document.getElementById('scrobble-delete-account')) return;
-              const candidates=[...document.querySelectorAll('main,section,div')].filter(el=>/profile|account|settings/i.test((el.id||'')+' '+(el.className||'')));
-              const host=candidates[candidates.length-1] || document.body;
-              const wrap=document.createElement('div');
-              wrap.id='scrobble-delete-account-wrap';
-              wrap.innerHTML='<button id="scrobble-delete-account" type="button">Delete Account</button>';
-              host.appendChild(wrap);
-              document.getElementById('scrobble-delete-account').addEventListener('click',deleteCurrentAccount);
-            }
-            document.addEventListener('DOMContentLoaded',()=>setTimeout(install,500));
-            const obs=new MutationObserver(()=>install());
-            obs.observe(document.documentElement,{childList:true,subtree:true});
-          })();
-          </script>
-          '''
-          html = index.read_text()
-          if 'scrobble-delete-account-script' not in html:
-              html = html.replace('</body>', delete_patch + '</body>')
-              index.write_text(html)
+          app = Path('www/app-v3140.js')
+          code = app.read_text()
+          old_decl = "saveAccountPassword=document.getElementById('saveAccountPassword'),logoutAccount=document.getElementById('logoutAccount'),"
+          new_decl = "saveAccountPassword=document.getElementById('saveAccountPassword'),logoutAccount=document.getElementById('logoutAccount'),deleteAccount=document.getElementById('deleteAccount'),"
+          if old_decl not in code:
+              raise SystemExit('Account element declaration target not found')
+          code = code.replace(old_decl, new_decl, 1)
+
+          old_show = "notificationSetupAccount.classList.remove('hidden');\n      logoutAccount.classList.remove('hidden');"
+          new_show = "notificationSetupAccount.classList.remove('hidden');\n      logoutAccount.classList.remove('hidden');\n      deleteAccount.classList.remove('hidden');"
+          if old_show not in code:
+              raise SystemExit('Signed-in account render target not found')
+          code = code.replace(old_show, new_show, 1)
+
+          old_hide = "notificationSetupAccount.classList.add('hidden');\n      logoutAccount.classList.add('hidden');"
+          new_hide = "notificationSetupAccount.classList.add('hidden');\n      logoutAccount.classList.add('hidden');\n      deleteAccount.classList.add('hidden');"
+          if old_hide not in code:
+              raise SystemExit('Signed-out account render target not found')
+          code = code.replace(old_hide, new_hide, 1)
+
+          logout_block = """  logoutAccount.onclick=async()=>{\n    logoutAccount.disabled=true;\n    logoutAccount.textContent='LOGGING OUT…';\n    try{\n      const {error}=await client.auth.signOut();\n      if(error)throw error;\n      location.reload();\n    }catch(e){\n      alert('Could not log out: '+e.message);\n      logoutAccount.disabled=false;\n      logoutAccount.textContent='LOG OUT';\n    }\n  };\n"""
+          delete_block = logout_block + """
+
+  deleteAccount.onclick=async()=>{
+    if(!user)return;
+    const first=confirm('Delete your Yay Everybody account? This permanently deletes your profile and associated game data. This cannot be undone.');
+    if(!first)return;
+    const second=confirm('Are you sure? Your account and game history will be permanently deleted.');
+    if(!second)return;
+    deleteAccount.disabled=true;
+    deleteAccount.textContent='DELETING ACCOUNT…';
+    try{
+      const {error}=await client.rpc('delete_user_account');
+      if(error)throw error;
+      try{await client.auth.signOut()}catch(e){}
+      alert('Your account has been permanently deleted.');
+      location.reload();
+    }catch(e){
+      console.error('Account deletion failed',e);
+      alert('We could not delete your account. Nothing else was changed. Please try again.');
+      deleteAccount.disabled=false;
+      deleteAccount.textContent='DELETE ACCOUNT';
+    }
+  };
+"""
+          if logout_block not in code:
+              raise SystemExit('Logout handler target not found')
+          code = code.replace(logout_block, delete_block, 1)
+          app.write_text(code)
           PY
 
           npx cap add ios
