@@ -1,6 +1,6 @@
 workflows:
   scrobble-ios-release:
-    name: Scrobble iOS Release
+    name: Yay Everybody iOS Release
     max_build_duration: 60
     instance_type: mac_mini_m2
 
@@ -15,7 +15,7 @@ workflows:
         bundle_identifier: com.yayeverybody.scrobble
 
     scripts:
-      - name: Prepare Scrobble project
+      - name: Prepare Yay Everybody project
         script: |
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
           cd scrobble-mobile
@@ -28,6 +28,21 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:0 integer 1" ios/App/App/Info.plist
           sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 1;/g' ios/App/App.xcodeproj/project.pbxproj
+
+          # App Store metadata: installed app name must match marketplace name.
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Yay Everybody" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Yay Everybody" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName Yay Everybody" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleName string Yay Everybody" ios/App/App/Info.plist
+
+          # Camera/photo permissions. Missing usage descriptions cause iOS to terminate
+          # the app when Take Photo or the photo library is requested.
+          /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription Yay Everybody uses the camera when you choose to take a profile photo." ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Yay Everybody uses the camera when you choose to take a profile photo." ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription Yay Everybody uses your photo library when you choose a profile photo." ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string Yay Everybody uses your photo library when you choose a profile photo." ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription Yay Everybody can save a photo only when you choose to do so." ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string Yay Everybody can save a photo only when you choose to do so." ios/App/App/Info.plist
 
           /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist
