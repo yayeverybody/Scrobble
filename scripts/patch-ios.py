@@ -4,6 +4,11 @@ index = Path('www/index.html')
 text = index.read_text()
 text = text.replace('content="width=device-width,initial-scale=1"','content="width=device-width,initial-scale=1,viewport-fit=cover"')
 
+# App Store metadata compliance: "free" is treated as a pricing reference.
+# Keep the splash message but replace the pricing language.
+for old_splash in ('ALWAYS FREE', 'Always Free', 'Always free'):
+    text = text.replace(old_splash, 'PLAY ALL DAY')
+
 safe_style = '''
 <style id="scrobble-ios-safe-area">
 @supports (padding: env(safe-area-inset-top)) {
