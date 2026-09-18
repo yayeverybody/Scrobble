@@ -58,7 +58,27 @@ if old_target in game:
     game = game.replace(old_target, new_target, 1)
 elif new_target not in game:
     raise SystemExit('Bottom-row priority patch target not found')
+
+# App Review/iPad compatibility: make the PLAY control visibly responsive even
+# when a reviewer taps it before placing tiles, and make the drag-first action
+# explicit in the first-game instructions.
+play_handler = "playButton.onclick=()=>{if(spectatorMode){status.textContent=\"You can view this board, but it’s your opponent’s turn.\";return}if(swapMode)confirmSwap();else playMove()}"
+play_handler_fixed = "playButton.onclick=()=>{if(spectatorMode){status.textContent=\"You can view this board, but it’s your opponent’s turn.\";return}if(swapMode){confirmSwap();return}if(!pending.length){status.textContent='Drag a tile from your rack onto the board, then tap PLAY.';alert('To play: drag one or more tiles from your rack onto the board, then tap PLAY.');return}playMove()}"
+if play_handler in game:
+    game = game.replace(play_handler, play_handler_fixed, 1)
+elif play_handler_fixed not in game:
+    raise SystemExit('PLAY responsiveness patch target not found')
 engine.write_text(game)
+
+# Clarify the first interaction for reviewers and first-time players.
+text = index.read_text()
+rules_marker = '<div class="rulesWelcomeItems">'
+rules_tip = '<div class="rulesWelcomeItem"><div class="rulesIcon rulesIconBlue">↥</div><div><strong>Drag, then play.</strong><span>Drag tiles from your rack onto the board to make a word, then tap PLAY.</span></div></div>'
+if rules_tip not in text:
+    if rules_marker not in text:
+        raise SystemExit('Rules welcome insertion target not found')
+    text = text.replace(rules_marker, rules_marker + rules_tip, 1)
+index.write_text(text)
 
 app = Path('www/app-v3140.js')
 app_text = app.read_text()
