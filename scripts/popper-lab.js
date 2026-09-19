@@ -1,7 +1,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/+esm';
 const host=document.getElementById('ye-popper-canvas'),push=document.getElementById('ye-popper-push'),status=document.getElementById('ye-popper-status');
 const scene=new T.Scene();scene.background=new T.Color(0xffffff);
-const camera=new T.PerspectiveCamera(34,1,.1,100);camera.position.set(7.6,8.5,10.5);camera.lookAt(0,-.05,0);
+const camera=new T.PerspectiveCamera(34,1,.1,100);camera.position.set(10.4,11.6,14.4);camera.lookAt(0,-.05,0);
 const r=new T.WebGLRenderer({antialias:true});r.setPixelRatio(Math.min(2,devicePixelRatio||1));r.shadowMap.enabled=true;host.appendChild(r.domElement);
 scene.add(new T.HemisphereLight(0xffffff,0x888888,2.8));const dl=new T.DirectionalLight(0xffffff,3.8);dl.position.set(-5,10,6);dl.castShadow=true;scene.add(dl);
 const ground=new T.Mesh(new T.PlaneGeometry(30,30),new T.ShadowMaterial({opacity:.12}));ground.rotation.x=-Math.PI/2;ground.position.y=-1.19;ground.receiveShadow=true;scene.add(ground);
