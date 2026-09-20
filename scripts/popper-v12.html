@@ -9,7 +9,7 @@
 #boardWrap{display:flex;justify-content:center;min-height:0}
 #board{width:min(45vh,100%);aspect-ratio:1;border:3px solid #e0d3bb;border-radius:20px;background:#f7f1df;position:relative;overflow:hidden;box-shadow:inset 0 2px 8px #0001}
 .quad{position:absolute;width:50%;height:50%;opacity:.92}.q1{left:0;top:0;background:#27a8c6}.q2{right:0;top:0;background:#d85b61}.q3{right:0;bottom:0;background:#c8d82e}.q4{left:0;bottom:0;background:#f2c94c}
-.center{position:absolute;inset:31%;border-radius:50%;background:#fffaf0;border:3px solid #eadbb9;display:grid;place-items:center;font-weight:1000;font-size:11px;color:#b94450;text-align:center;z-index:3}
+.center{position:absolute;inset:29%;border-radius:50%;background:#fffaf0;border:3px solid #eadbb9;overflow:hidden;z-index:3;touch-action:none}.center canvas{display:block;width:100%!important;height:100%!important}
 .track{position:absolute;inset:7%;border:18px dotted rgba(255,250,240,.95);border-radius:28%;z-index:2}
 .home{position:absolute;display:grid;grid-template-columns:repeat(2,13px);gap:6px;z-index:4}.home i{width:13px;height:13px;border-radius:50%;background:#fffaf0;border:2px solid #ffffffaa}.h1{left:12%;top:12%}.h2{right:12%;top:12%}.h3{right:12%;bottom:12%}.h4{left:12%;bottom:12%}
 #popperArea{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
@@ -19,7 +19,7 @@
 </style></head><body><main id="game"><section id="shell">
 <div id="title" aria-label="Trobble"><span class="logoLetter lt">T</span><span class="logoLetter lr">R</span><span class="logoPop" aria-hidden="true"></span><span class="logoLetter lb1">B</span><span class="logoLetter lb2">B</span><span class="logoLetter ll">L</span><span class="logoLetter le">E</span></div>
 <div id="players"><div class="player"><span class="dot coral"></span><span>JOSH&nbsp; ●○○○</span></div><div id="turn">YOUR TURN<div class="roll" id="rollread">🎲 — + — = —</div></div><div class="player right"><span>SARA&nbsp; ●●○○</span><span class="dot blue"></span></div></div>
-<div id="boardWrap"><div id="board" aria-label="Four-player race board"><div class="quad q1"></div><div class="quad q2"></div><div class="quad q3"></div><div class="quad q4"></div><div class="track"></div><div class="center">YAY!<br>EVERYBODY</div><div class="home h1"><i></i><i></i><i></i><i></i></div><div class="home h2"><i></i><i></i><i></i><i></i></div><div class="home h3"><i></i><i></i><i></i><i></i></div><div class="home h4"><i></i><i></i><i></i><i></i></div></div></div>
+<div id="boardWrap"><div id="board" aria-label="Four-player race board"><div class="quad q1"></div><div class="quad q2"></div><div class="quad q3"></div><div class="quad q4"></div><div class="track"></div><div class="center" id="miniStage" aria-label="Mini popper mirrors the main popper"></div><div class="home h1"><i></i><i></i><i></i><i></i></div><div class="home h2"><i></i><i></i><i></i><i></i></div><div class="home h3"><i></i><i></i><i></i><i></i></div><div class="home h4"><i></i><i></i><i></i><i></i></div></div></div>
 <div id="popperArea"><div id="stage"></div><div id="hint">TAP THE DOME TO POP</div></div>
 <button id="push" aria-label="Pop dice"></button><div id="status">Ready</div>
 </section></main><script type="module" src="popper-v12.js"></script></body></html>
