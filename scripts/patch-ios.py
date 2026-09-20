@@ -136,10 +136,10 @@ if 'id="ye-popper-lab"' not in text:
 <style>
 #ye-popper-lab-launch{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:2147483000;border:0;border-radius:999px;background:#263b73;color:#fff;padding:12px 16px;font:800 13px Arial}
 #ye-popper-lab{display:none;position:fixed;inset:0;z-index:2147483001;background:#fff;padding-top:env(safe-area-inset-top);overflow:hidden}
-#ye-popper-lab.open{display:block}#ye-popper-canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#ye-popper-lab.open{display:flex;flex-direction:column;align-items:center}#ye-popper-canvas{position:relative;width:100vw;height:100vw;max-height:62vh;flex:0 0 auto;margin-top:72px;touch-action:none;overflow:hidden}
 #ye-popper-lab .top{position:absolute;z-index:5;left:14px;right:14px;top:calc(8px + env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center}
 #ye-popper-lab .tag,#ye-popper-lab .close{background:#ffffffe8;border:1px solid #bbb;border-radius:10px;padding:9px 12px;font:900 13px Arial}
-#ye-popper-controls{position:absolute;z-index:5;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:7px}
+#ye-popper-controls{position:relative;z-index:5;width:100%;display:flex;flex-direction:column;align-items:center;gap:7px;margin-top:12px;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
 #ye-popper-push{min-width:205px;min-height:54px;border:0;border-radius:16px;background:#263b73;color:#fff;font:900 17px Arial}
 #ye-popper-status{font:12px Arial;color:#555;background:#ffffffe0;border-radius:8px;padding:6px 9px}
 </style>
