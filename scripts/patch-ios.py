@@ -132,36 +132,65 @@ Path('www/index.html').write_text(popper_html)
 Path('www/popper-v12.js').write_text(popper_js)
 
 
-# V13 native iOS haptic bridge. Patch the generated Capacitor view controller so
-# WKWebView receives direct UIKit impact events without depending on JS plugin registration.
+# V13 native iOS sound + haptic bridge. Both effects are generated natively so
+# TestFlight does not depend on WKWebView WebAudio or JS plugin registration.
 vc = Path('ios/App/App/ViewController.swift')
 vc.write_text(r'''import UIKit
 import Capacitor
 import WebKit
+import AVFoundation
 
 class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
+    private let audioEngine = AVAudioEngine()
+    private let player = AVAudioPlayerNode()
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        bridge?.webView?.configuration.userContentController.add(self, name: "popperHaptic")
+        bridge?.webView?.configuration.userContentController.add(self, name: "popperFX")
+        audioEngine.attach(player)
+        let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
+        audioEngine.connect(player, to: audioEngine.mainMixerNode, format: format)
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        try? AVAudioSession.sharedInstance().setActive(true)
+        try? audioEngine.start()
     }
 
     deinit {
-        bridge?.webView?.configuration.userContentController.removeScriptMessageHandler(forName: "popperHaptic")
+        bridge?.webView?.configuration.userContentController.removeScriptMessageHandler(forName: "popperFX")
+    }
+
+    private func playMechanical(_ release: Bool) {
+        let sr: Double = 44100
+        let duration = release ? 0.095 : 0.14
+        let frames = AVAudioFrameCount(sr * duration)
+        let format = AVAudioFormat(standardFormatWithSampleRate: sr, channels: 1)!
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
+              let data = buffer.floatChannelData?[0] else { return }
+        buffer.frameLength = frames
+        for i in 0..<Int(frames) {
+            let t = Double(i) / sr
+            let env = Float(max(0, 1.0 - t / duration))
+            if release {
+                let body = sin(2 * Double.pi * (330.0 - 170.0 * t / duration) * t)
+                let crack = (Double.random(in: -1...1)) * exp(-t * 48.0)
+                data[i] = Float(body * 0.42 + crack * 0.58) * env * 0.72
+            } else {
+                let f = 96.0 - 36.0 * t / duration
+                data[i] = Float(sin(2 * Double.pi * f * t)) * env * 0.48
+            }
+        }
+        player.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
+        if !player.isPlaying { player.play() }
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == "popperHaptic", let style = message.body as? String else { return }
+        guard message.name == "popperFX", let stage = message.body as? String else { return }
         DispatchQueue.main.async {
-            let generator: UIImpactFeedbackGenerator
-            if style == "HEAVY" {
-                generator = UIImpactFeedbackGenerator(style: .heavy)
-                generator.prepare()
-                generator.impactOccurred(intensity: 1.0)
-            } else {
-                generator = UIImpactFeedbackGenerator(style: .light)
-                generator.prepare()
-                generator.impactOccurred(intensity: 0.7)
-            }
+            let release = stage == "release"
+            let h = UIImpactFeedbackGenerator(style: release ? .heavy : .light)
+            h.prepare()
+            h.impactOccurred(intensity: release ? 1.0 : 0.65)
+            self.playMechanical(release)
         }
     }
 }
