@@ -1,7 +1,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/+esm';
 const host=document.getElementById('ye-popper-canvas'),push=document.getElementById('ye-popper-push'),status=document.getElementById('ye-popper-status');
 const scene=new T.Scene();scene.background=new T.Color(0xffffff);
-const camera=new T.OrthographicCamera(-5.35,5.35,5.35,-5.35,.1,100);camera.position.set(7.6,8.5,10.5);camera.lookAt(0,-.25,0);
+const camera=new T.PerspectiveCamera(34,1,.1,100);camera.position.set(7.6,8.5,10.5);camera.lookAt(0,-.05,0);
 const r=new T.WebGLRenderer({antialias:true});r.setPixelRatio(Math.min(2,devicePixelRatio||1));r.shadowMap.enabled=true;host.appendChild(r.domElement);
 scene.add(new T.HemisphereLight(0xffffff,0x888888,2.8));const dl=new T.DirectionalLight(0xffffff,3.8);dl.position.set(-5,10,6);dl.castShadow=true;scene.add(dl);
 const ground=new T.Mesh(new T.PlaneGeometry(30,30),new T.ShadowMaterial({opacity:.12}));ground.rotation.x=-Math.PI/2;ground.position.y=-1.19;ground.receiveShadow=true;scene.add(ground);
@@ -29,5 +29,5 @@ function step(dt){for(const d of dice){if(d.rest)continue;d.t+=dt;d.v.y-=9.8*dt;
  if(d.m.position.y<F){d.m.position.y=F;if(d.v.y<0)d.v.y=-d.v.y*.5;d.v.x*=.915;d.v.z*=.915;d.w.multiplyScalar(.84)}
  if(d.t>.38&&d.m.position.y<=F+.035&&Math.abs(d.v.y)<.32&&Math.hypot(d.v.x,d.v.z)<.34&&d.w.length()<1.9){d.rest=true;d.v.set(0,0,0);d.w.set(0,0,0)}}
  if(rolling&&dice.every(d=>d.rest)){rolling=false;push.disabled=false;status.textContent='Roll complete · native haptics active'}}
-function resize(){const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);r.setSize(w,h,false);const halfW=5.35,halfH=halfW*(h/w);camera.left=-halfW;camera.right=halfW;camera.top=halfH;camera.bottom=-halfH;camera.position.set(7.6,8.5,10.5);camera.lookAt(0,-.25,0);camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();
+function resize(){const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);r.setSize(w,h,false);camera.aspect=w/h;camera.position.set(13.4,15.0,18.5);camera.lookAt(0,-.15,0);camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();
 push.onclick=pop;r.domElement.onclick=pop;(function frame(n){const dt=Math.min(.024,(n-last)/1000)*1.2;last=n;if(rolling)step(dt);r.render(scene,camera);requestAnimationFrame(frame)})(performance.now());
