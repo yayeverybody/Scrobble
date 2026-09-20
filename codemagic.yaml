@@ -20,6 +20,8 @@ workflows:
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
           cd scrobble-mobile
           npm install
+          CAP_MAJOR=$(node -p "String(require('./package.json').dependencies?.['@capacitor/core'] || require('./package.json').devDependencies?.['@capacitor/core'] || '7').match(/[0-9]+/)[0]")
+          npm install --no-save "@capacitor/haptics@$CAP_MAJOR"
           python3 ../scripts/patch-ios.py
           npx cap add ios
           npx cap sync ios
