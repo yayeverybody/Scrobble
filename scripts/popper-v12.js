@@ -1,6 +1,6 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/+esm';
 
-const host=document.getElementById('stage'), push=document.getElementById('push'), status=document.getElementById('status');
+const host=document.getElementById('stage'), push=document.getElementById('push'), status=document.getElementById('status'), rollread=document.getElementById('rollread');
 const scene=new T.Scene(); scene.background=new T.Color(0xffffff);
 const camera=new T.PerspectiveCamera(34,1,.1,100);
 camera.position.set(7.6,8.5,10.5); camera.lookAt(0,-.05,0);
@@ -45,7 +45,7 @@ function step(dt){for(const d of dice){if(d.rest===true)continue;if(d.rest==='se
   const current=best.clone().applyQuaternion(d.m.quaternion),fix=new T.Quaternion().setFromUnitVectors(current,new T.Vector3(0,1,0));
   d.targetQ=fix.multiply(d.m.quaternion.clone());d.settleT=0;d.rest='settling';
  }
- }if(rolling&&dice.every(d=>d.rest===true)){rolling=false;push.disabled=false;status.textContent='Roll complete'}}
-function resize(){const side=Math.max(1,Math.round(Math.min(innerWidth,620)));r.setSize(side,side,false);r.domElement.style.width=side+'px';r.domElement.style.height=side+'px';camera.aspect=1;camera.updateProjectionMatrix()}
+ }if(rolling&&dice.every(d=>d.rest===true)){rolling=false;push.disabled=false;status.textContent='Roll complete';const vals=dice.map(topFaceValue);if(rollread)rollread.textContent=`🎲 ${vals[0]} + ${vals[1]} = ${vals[0]+vals[1]}`}}
+function topFaceValue(d){let best=faces[0],score=-99;for(const f of faces){const n=new T.Vector3(f[0],f[1],f[2]).applyQuaternion(d.m.quaternion);if(n.y>score){score=n.y;best=f}}return best[3]}\nfunction resize(){const side=Math.max(1,Math.round(Math.min(host.clientWidth||innerWidth,host.clientHeight||innerWidth,620)));r.setSize(side,side,false);r.domElement.style.width='100%';r.domElement.style.height='100%';camera.aspect=1;camera.updateProjectionMatrix()}
 function loop(now){const dt=Math.min(.024,(now-last)/1000)*1.2;last=now;step(dt);r.render(scene,camera);requestAnimationFrame(loop)}
 addEventListener('resize',resize);resize();push.onclick=pop;host.onclick=pop;requestAnimationFrame(loop);
