@@ -25,10 +25,21 @@ workflows:
           # Capacitor generates ios/ here. Native patches MUST happen after this.
           npx cap add ios
           npx cap sync ios
+
+          # First patch writes the standalone V13 web assets.
           python3 ../scripts/patch-ios.py
 
-          # Sync again after patching web assets so the V13 JS is copied into the native app.
+          # Copy those patched web assets into the native app.
           npx cap sync ios
+
+          # cap sync can regenerate native project files, so apply the native
+          # ViewController sound/haptic bridge AFTER the final sync as well.
+          python3 ../scripts/patch-ios.py
+
+          # Fail the build rather than silently shipping without the native bridge.
+          grep -q 'popperFX' ios/App/App/ViewController.swift
+          grep -q 'AVAudioEngine' ios/App/App/ViewController.swift
+          grep -q 'popperFX' ios/App/App/public/popper-v12.js
 
           /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" ios/App/App/Info.plist
