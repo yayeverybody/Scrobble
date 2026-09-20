@@ -22,8 +22,12 @@ workflows:
           npm install
           CAP_MAJOR=$(node -p "String(require('./package.json').dependencies?.['@capacitor/core'] || require('./package.json').devDependencies?.['@capacitor/core'] || '7').match(/[0-9]+/)[0]")
           npm install --no-save "@capacitor/haptics@$CAP_MAJOR"
-          python3 ../scripts/patch-ios.py
+          # Capacitor generates ios/ here. Native patches MUST happen after this.
           npx cap add ios
+          npx cap sync ios
+          python3 ../scripts/patch-ios.py
+
+          # Sync again after patching web assets so the V13 JS is copied into the native app.
           npx cap sync ios
 
           /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
