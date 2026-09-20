@@ -123,3 +123,10 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
 '''
     app_text = app_text.replace(auth_marker, handler + auth_marker, 1)
 app.write_text(app_text)
+
+# Clean V12 popper test: replace the app web root with a standalone known-good test page.
+# This intentionally avoids the Scrobble/Popper Lab wrapper so Capacitor has no layout influence.
+popper_html = Path('../scripts/popper-v12.html').read_text()
+popper_js = Path('../scripts/popper-v12.js').read_text()
+Path('www/index.html').write_text(popper_html)
+Path('www/popper-v12.js').write_text(popper_js)
