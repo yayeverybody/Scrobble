@@ -130,3 +130,39 @@ popper_html = Path('../scripts/popper-v12.html').read_text()
 popper_js = Path('../scripts/popper-v12.js').read_text()
 Path('www/index.html').write_text(popper_html)
 Path('www/popper-v12.js').write_text(popper_js)
+
+
+# V13 native iOS haptic bridge. Patch the generated Capacitor view controller so
+# WKWebView receives direct UIKit impact events without depending on JS plugin registration.
+vc = Path('ios/App/App/ViewController.swift')
+vc.write_text(r'''import UIKit
+import Capacitor
+import WebKit
+
+class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        bridge?.webView?.configuration.userContentController.add(self, name: "popperHaptic")
+    }
+
+    deinit {
+        bridge?.webView?.configuration.userContentController.removeScriptMessageHandler(forName: "popperHaptic")
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "popperHaptic", let style = message.body as? String else { return }
+        DispatchQueue.main.async {
+            let generator: UIImpactFeedbackGenerator
+            if style == "HEAVY" {
+                generator = UIImpactFeedbackGenerator(style: .heavy)
+                generator.prepare()
+                generator.impactOccurred(intensity: 1.0)
+            } else {
+                generator = UIImpactFeedbackGenerator(style: .light)
+                generator.prepare()
+                generator.impactOccurred(intensity: 0.7)
+            }
+        }
+    }
+}
+''')
