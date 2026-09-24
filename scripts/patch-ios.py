@@ -139,6 +139,7 @@ vc.write_text(r'''import UIKit
 import Capacitor
 import WebKit
 import AVFoundation
+import AudioToolbox
 
 class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
     private let audioEngine = AVAudioEngine()
@@ -189,7 +190,8 @@ class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
             let release = stage == "release"
             let h = UIImpactFeedbackGenerator(style: release ? .heavy : .light)
             h.prepare()
-            h.impactOccurred(intensity: release ? 1.0 : 0.65)
+            h.impactOccurred(intensity: release ? 1.0 : 0.75)
+            AudioServicesPlaySystemSound(release ? 1520 : 1519)
             self.playMechanical(release)
         }
     }
