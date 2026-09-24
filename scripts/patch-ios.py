@@ -188,6 +188,7 @@ class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == "popperFX", let stage = message.body as? String else { return }
+        print("POPPER_FX_RECEIVED:\(stage)")
         DispatchQueue.main.async {
             let release = stage == "release"
             self.feedback.prepare()
