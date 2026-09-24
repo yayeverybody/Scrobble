@@ -142,12 +142,14 @@ import AVFoundation
 import AudioToolbox
 
 class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
+    private let feedback = UIImpactFeedbackGenerator(style: .heavy)
     private let audioEngine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         bridge?.webView?.configuration.userContentController.add(self, name: "popperFX")
+        feedback.prepare()
         audioEngine.attach(player)
         let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
         audioEngine.connect(player, to: audioEngine.mainMixerNode, format: format)
@@ -188,10 +190,9 @@ class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
         guard message.name == "popperFX", let stage = message.body as? String else { return }
         DispatchQueue.main.async {
             let release = stage == "release"
-            let h = UIImpactFeedbackGenerator(style: release ? .heavy : .light)
-            h.prepare()
-            h.impactOccurred(intensity: release ? 1.0 : 0.75)
-            AudioServicesPlaySystemSound(release ? 1520 : 1519)
+            self.feedback.prepare()
+            self.feedback.impactOccurred(intensity: release ? 1.0 : 0.65)
+            AudioServicesPlaySystemSoundWithCompletion(release ? 1520 : 1519, nil)
             self.playMechanical(release)
         }
     }
