@@ -40,6 +40,9 @@ workflows:
           grep -q 'popperFX' ios/App/App/ViewController.swift
           grep -q 'AVAudioEngine' ios/App/App/ViewController.swift
           grep -q 'popperFX' ios/App/App/public/popper-v12.js
+          grep -q 'POPPER_FX_RECEIVED' ios/App/App/ViewController.swift
+          grep -q 'id="stage"' ios/App/App/public/index.html
+          grep -q 'id="miniStage"' ios/App/App/public/index.html
 
           /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" ios/App/App/Info.plist
