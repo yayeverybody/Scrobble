@@ -155,7 +155,7 @@ class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
         audioEngine.attach(player)
         let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
         audioEngine.connect(player, to: audioEngine.mainMixerNode, format: format)
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
         try? AVAudioSession.sharedInstance().setActive(true)
         try? audioEngine.start()
     }
@@ -176,6 +176,7 @@ class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
     deinit {
         if popperBridgeInstalled {
             bridge?.webView?.configuration.userContentController.removeScriptMessageHandler(forName: "popperFX")
+            bridge?.webView?.configuration.userContentController.removeScriptMessageHandler(forName: "popperHaptic")
         }
     }
 
@@ -204,7 +205,15 @@ class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == "popperFX", let stage = message.body as? String else { return }
+        guard let stage = message.body as? String else { return }
+        if message.name == "popperHaptic" {
+            DispatchQueue.main.async {
+                self.feedback.prepare()
+                self.feedback.impactOccurred(intensity: stage == "HEAVY" ? 1.0 : 0.55)
+            }
+            return
+        }
+        guard message.name == "popperFX" else { return }
         print("POPPER_FX_RECEIVED:\(stage)")
         DispatchQueue.main.async {
             let release = stage == "release"
