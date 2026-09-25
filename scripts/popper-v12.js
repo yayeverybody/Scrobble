@@ -4,24 +4,24 @@ const host=document.getElementById('stage'), miniHost=document.getElementById('m
 // Classic Trouble-style topology: 28 unique outer spaces, four START spaces, four 4-space FINISH lanes.
 const trackEl=document.getElementById('track');
 const outer=[
-[8,8],[20,8],[32,8],[44,8],[56,8],[68,8],[80,8],
-[92,8],[92,22],[92,36],[92,50],[92,64],[92,78],[92,92],
-[80,92],[68,92],[56,92],[44,92],[32,92],[20,92],[8,92],
-[8,78],[8,64],[8,50],[8,36],[8,22],[8,15],[8,11]
+[8,8],[22,8],[36,8],[50,8],[64,8],[78,8],[92,8],
+[92,22],[92,36],[92,50],[92,64],[92,78],[92,92],
+[78,92],[64,92],[50,92],[36,92],[22,92],[8,92],
+[8,78],[8,64],[8,50],[8,36],[8,22]
 ];
-const starts=new Map([[0,0],[7,1],[14,2],[21,3]]);
+const starts=new Map([[0,0],[6,1],[12,2],[18,3]]);
 outer.forEach(([x,y],i)=>{const s=document.createElement('i');const col=starts.get(i);s.className='space'+(col!==undefined?' start c'+col:'');s.style.left=x+'%';s.style.top=y+'%';trackEl.appendChild(s)});
 const finishCoords=[
-[[20,28],[24,32],[28,36],[32,40]],
-[[80,28],[76,32],[72,36],[68,40]],
-[[80,72],[76,68],[72,64],[68,60]],
-[[20,72],[24,68],[28,64],[32,60]]
+[[22,22],[28,28],[34,34],[40,40]],
+[[78,22],[72,28],[66,34],[60,40]],
+[[78,78],[72,72],[66,66],[60,60]],
+[[22,78],[28,72],[34,66],[40,60]]
 ];
 finishCoords.forEach((lane,n)=>{const el=document.getElementById('finish'+n);lane.forEach(([x,y])=>{const s=document.createElement('i');s.style.left=x+'%';s.style.top=y+'%';el.appendChild(s)})});
 const scene=new T.Scene(); scene.background=new T.Color(0xf5ead3);
 const camera=new T.PerspectiveCamera(34,1,.1,100);
 camera.position.set(7.6,8.5,10.5); camera.lookAt(0,-.05,0);
-const miniCamera=new T.PerspectiveCamera(34,1,.1,100); miniCamera.position.set(0,15,0.001); miniCamera.lookAt(0,0,0);
+const miniCamera=new T.PerspectiveCamera(34,1,.1,100); miniCamera.position.set(0,17,0.001); miniCamera.lookAt(0,0,0);
 const r=new T.WebGLRenderer({antialias:true,alpha:false}); r.setPixelRatio(Math.min(2,devicePixelRatio||1)); r.shadowMap.enabled=false; host.appendChild(r.domElement); const miniR=new T.WebGLRenderer({antialias:true,alpha:false}); miniR.setPixelRatio(Math.min(2,devicePixelRatio||1)); miniR.shadowMap.enabled=false; if(miniHost)miniHost.appendChild(miniR.domElement);
 scene.add(new T.HemisphereLight(0xffffff,0x888888,2.8));
 const dl=new T.DirectionalLight(0xffffff,3.8); dl.position.set(-5,10,6); dl.castShadow=false; scene.add(dl);
@@ -37,10 +37,10 @@ const dm=new T.MeshPhysicalMaterial({color:0xeadbb9,roughness:.34,clearcoat:.28,
 const spots={1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[1,-1],[-1,1],[1,1]],5:[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],6:[[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]]};
 const faces=[[0,1,0,1],[0,-1,0,6],[1,0,0,3],[-1,0,0,4],[0,0,1,5],[0,0,-1,2]],Z=new T.Vector3(0,0,1);
 function roundedBox(size=1.02,radius=.14,segments=6){const g=new T.BoxGeometry(size,size,size,segments,segments,segments),p=g.attributes.position,half=size/2,inner=half-radius,v=new T.Vector3(),q=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);q.set(T.MathUtils.clamp(v.x,-inner,inner),T.MathUtils.clamp(v.y,-inner,inner),T.MathUtils.clamp(v.z,-inner,inner));v.sub(q).normalize().multiplyScalar(radius).add(q);p.setXYZ(i,v.x,v.y,v.z)}p.needsUpdate=true;g.computeVertexNormals();return g}
-function die(x){const g=new T.Group(),cube=new T.Mesh(roundedBox(),dm);cube.castShadow=false;g.add(cube);for(const [nx,ny,nz,num] of faces){const n=new T.Vector3(nx,ny,nz),up=Math.abs(n.y)>.5?new T.Vector3(0,0,-1):new T.Vector3(0,1,0),right=new T.Vector3().crossVectors(up,n).normalize(),vert=new T.Vector3().crossVectors(n,right).normalize();for(const [a,b] of spots[num]){const sh=new T.Mesh(new T.CircleGeometry(.093,18),new T.MeshBasicMaterial({color:0x5a3925,transparent:true,opacity:.38,side:T.DoubleSide}));sh.position.copy(n).multiplyScalar(.516).addScaledVector(right,a*.205).addScaledVector(vert,b*.205);sh.quaternion.setFromUnitVectors(Z,n);g.add(sh);const p=new T.Mesh(new T.CircleGeometry(.071,18),new T.MeshBasicMaterial({color:0x4a2b1b,side:T.DoubleSide}));p.position.copy(n).multiplyScalar(.518).addScaledVector(right,a*.205).addScaledVector(vert,b*.205);p.quaternion.setFromUnitVectors(Z,n);g.add(p)}}g.scale.setScalar(1.587);g.position.set(x,1.3,0);scene.add(g);return{m:g,v:new T.Vector3(),w:new T.Vector3(),t:0,rest:false}}
-const dice=[die(-.65),die(.65)],F=.69,DR=4.02,RR=1.40,SAFE_R=2.58; let rolling=false,last=performance.now(),audio;
+function die(x){const g=new T.Group(),cube=new T.Mesh(roundedBox(),dm);cube.castShadow=false;g.add(cube);for(const [nx,ny,nz,num] of faces){const n=new T.Vector3(nx,ny,nz),up=Math.abs(n.y)>.5?new T.Vector3(0,0,-1):new T.Vector3(0,1,0),right=new T.Vector3().crossVectors(up,n).normalize(),vert=new T.Vector3().crossVectors(n,right).normalize();for(const [a,b] of spots[num]){const sh=new T.Mesh(new T.CircleGeometry(.093,18),new T.MeshBasicMaterial({color:0x5a3925,transparent:true,opacity:.38,side:T.DoubleSide}));sh.position.copy(n).multiplyScalar(.516).addScaledVector(right,a*.205).addScaledVector(vert,b*.205);sh.quaternion.setFromUnitVectors(Z,n);g.add(sh);const p=new T.Mesh(new T.CircleGeometry(.071,18),new T.MeshBasicMaterial({color:0x4a2b1b,side:T.DoubleSide}));p.position.copy(n).multiplyScalar(.518).addScaledVector(right,a*.205).addScaledVector(vert,b*.205);p.quaternion.setFromUnitVectors(Z,n);g.add(p)}}g.scale.setScalar(1.72);g.position.set(x,1.3,0);scene.add(g);return{m:g,v:new T.Vector3(),w:new T.Vector3(),t:0,rest:false}}
+const dice=[die(-.82),die(.82)],F=.76,DR=4.02,RR=1.52,SAFE_R=2.38; let rolling=false,last=performance.now(),audio;
 function haptic(style){try{if(window.webkit?.messageHandlers?.popperHaptic){window.webkit.messageHandlers.popperHaptic.postMessage(style);return}const H=window.Capacitor?.Plugins?.Haptics;if(H?.impact){H.impact({style});return}if(navigator.vibrate)navigator.vibrate(style==='HEAVY'?45:18)}catch(e){}}
-function reset(d,i){d.rest=false;d.t=0;d.m.position.set(i?.65:-.65,1.25+Math.random()*.3,(Math.random()-.5)*.6);d.m.rotation.set(Math.random()*6,Math.random()*6,Math.random()*6);d.v.set((Math.random()-.5)*5.3,7.8+Math.random()*1.9,(Math.random()-.5)*5.3);d.w.set((Math.random()-.5)*18,(Math.random()-.5)*18,(Math.random()-.5)*18)}
+function reset(d,i){d.rest=false;d.t=0;d.m.position.set(i?.82:-.82,1.35+Math.random()*.3,(Math.random()-.5)*.6);d.m.rotation.set(Math.random()*6,Math.random()*6,Math.random()*6);d.v.set((Math.random()-.5)*5.3,7.8+Math.random()*1.9,(Math.random()-.5)*5.3);d.w.set((Math.random()-.5)*18,(Math.random()-.5)*18,(Math.random()-.5)*18)}
 function compressionSound(){
  audio||=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();
  const t=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(105,t);o.frequency.exponentialRampToValueAtTime(62,t+.13);g.gain.setValueAtTime(.19,t);g.gain.exponentialRampToValueAtTime(.001,t+.14);o.connect(g).connect(audio.destination);o.start(t);o.stop(t+.145);
@@ -51,7 +51,7 @@ function releaseSound(){
  const src=audio.createBufferSource(),bp=audio.createBiquadFilter(),ng=audio.createGain();src.buffer=buf;bp.type='bandpass';bp.frequency.setValueAtTime(1450,t);bp.Q.value=.8;ng.gain.setValueAtTime(.24,t);ng.gain.exponentialRampToValueAtTime(.001,t+.065);src.connect(bp).connect(ng).connect(audio.destination);src.start(t);
  const o=audio.createOscillator(),g=audio.createGain();o.type='triangle';o.frequency.setValueAtTime(390,t);o.frequency.exponentialRampToValueAtTime(155,t+.085);g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.09);o.connect(g).connect(audio.destination);o.start(t);o.stop(t+.095);
 }
-function pop(){if(rolling)return;audio||=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();rolling=true;push.disabled=true;status.textContent='Rolling…';dice.forEach(reset);
+function pop(){if(rolling)return;haptic('HEAVY');audio||=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();rolling=true;push.disabled=true;status.textContent='Rolling…';dice.forEach(reset);
  if(window.webkit?.messageHandlers?.popperFX) window.webkit.messageHandlers.popperFX.postMessage('compress'); else {compressionSound();haptic('LIGHT')}
  const start=performance.now(),releaseAt=150;let released=false;
  (function a(){const x=performance.now()-start;if(x<releaseAt){const k=x/releaseAt;dome.scale.set(1-.1*k,1-.27*k,1-.1*k);dome.position.y=.08-.2*k}else{if(!released){released=true;if(window.webkit?.messageHandlers?.popperFX) window.webkit.messageHandlers.popperFX.postMessage('release'); else {releaseSound();haptic('HEAVY')}}const k=Math.min(1,(x-releaseAt)/230),e=1-(1-k)**3;dome.scale.set(.9+.1*e,.73+.27*e,.9+.1*e);dome.position.y=-.12+.2*e}if(x<380)requestAnimationFrame(a);else{dome.scale.set(1,1,1);dome.position.y=.08}})()}
@@ -67,7 +67,7 @@ function step(dt){for(const d of dice){if(d.rest===true)continue;if(d.rest==='se
   const current=best.clone().applyQuaternion(d.m.quaternion),fix=new T.Quaternion().setFromUnitVectors(current,new T.Vector3(0,1,0));
   d.targetQ=fix.multiply(d.m.quaternion.clone());d.settleT=0;d.rest='settling';
  }
- }if(rolling&&dice.every(d=>d.rest===true)){rolling=false;push.disabled=false;status.textContent='Roll complete';const vals=dice.map(topFaceValue);if(rollread)rollread.textContent=`🎲 ${vals[0]} + ${vals[1]} = ${vals[0]+vals[1]}`}}
+ }if(rolling&&dice.every(d=>d.rest===true)){rolling=false;haptic('LIGHT');push.disabled=false;status.textContent='Roll complete';const vals=dice.map(topFaceValue);if(rollread)rollread.textContent=`🎲 ${vals[0]} + ${vals[1]} = ${vals[0]+vals[1]}`}}
 function topFaceValue(d){let best=faces[0],score=-99;for(const f of faces){const n=new T.Vector3(f[0],f[1],f[2]).applyQuaternion(d.m.quaternion);if(n.y>score){score=n.y;best=f}}return best[3]}
 function resize(){const side=Math.max(1,Math.round(Math.min(host.clientWidth||innerWidth,host.clientHeight||innerWidth,620)));r.setSize(side,side,false);r.domElement.style.width='100%';r.domElement.style.height='100%';if(miniHost){const ms=Math.max(1,Math.round(Math.min(miniHost.clientWidth,miniHost.clientHeight)));miniR.setSize(ms,ms,false);miniR.domElement.style.width='100%';miniR.domElement.style.height='100%'}camera.aspect=1;camera.updateProjectionMatrix();miniCamera.aspect=1;miniCamera.updateProjectionMatrix()}
 function loop(now){const dt=Math.min(.024,(now-last)/1000)*1.2;last=now;step(dt);r.render(scene,camera);if(miniHost)miniR.render(scene,miniCamera);requestAnimationFrame(loop)}
