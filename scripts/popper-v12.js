@@ -1,21 +1,21 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/+esm';
 
-const host=document.getElementById('stage'), miniHost=document.getElementById('miniStage'), push=document.getElementById('push'), status=document.getElementById('status'), rollread=document.getElementById('rollread');
+const host=document.getElementById('stage'), miniHost=document.getElementById('miniStage'), miniResult=document.getElementById('miniResult'), push=document.getElementById('push'), status=document.getElementById('status'), rollread=document.getElementById('rollread');
 // Classic Trouble-style topology: 28 unique outer spaces, four START spaces, four 4-space FINISH lanes.
 const trackEl=document.getElementById('track');
 const outer=[
 [8,8],[22,8],[36,8],[50,8],[64,8],[78,8],[92,8],
 [92,22],[92,36],[92,50],[92,64],[92,78],[92,92],
 [78,92],[64,92],[50,92],[36,92],[22,92],[8,92],
-[8,78],[8,64],[8,50],[8,36],[8,22]
+[8,78],[8,64],[8,50],[8,36],[8,22],[8,8],[22,8],[36,8],[50,8]
 ];
-const starts=new Map([[0,0],[6,1],[12,2],[18,3]]);
+const starts=new Map([[0,0],[7,1],[14,2],[21,3]]);
 outer.forEach(([x,y],i)=>{const s=document.createElement('i');const col=starts.get(i);s.className='space'+(col!==undefined?' start c'+col:'');s.style.left=x+'%';s.style.top=y+'%';trackEl.appendChild(s)});
 const finishCoords=[
-[[22,22],[28,28],[34,34],[40,40]],
-[[78,22],[72,28],[66,34],[60,40]],
-[[78,78],[72,72],[66,66],[60,60]],
-[[22,78],[28,72],[34,66],[40,60]]
+[[19,28],[24,32],[29,36],[34,40]],
+[[81,28],[76,32],[71,36],[66,40]],
+[[81,72],[76,68],[71,64],[66,60]],
+[[19,72],[24,68],[29,64],[34,60]]
 ];
 finishCoords.forEach((lane,n)=>{const el=document.getElementById('finish'+n);lane.forEach(([x,y])=>{const s=document.createElement('i');s.style.left=x+'%';s.style.top=y+'%';el.appendChild(s)})});
 const scene=new T.Scene(); scene.background=new T.Color(0xf5ead3);
@@ -51,7 +51,7 @@ function releaseSound(){
  const src=audio.createBufferSource(),bp=audio.createBiquadFilter(),ng=audio.createGain();src.buffer=buf;bp.type='bandpass';bp.frequency.setValueAtTime(1450,t);bp.Q.value=.8;ng.gain.setValueAtTime(.24,t);ng.gain.exponentialRampToValueAtTime(.001,t+.065);src.connect(bp).connect(ng).connect(audio.destination);src.start(t);
  const o=audio.createOscillator(),g=audio.createGain();o.type='triangle';o.frequency.setValueAtTime(390,t);o.frequency.exponentialRampToValueAtTime(155,t+.085);g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.09);o.connect(g).connect(audio.destination);o.start(t);o.stop(t+.095);
 }
-function pop(){if(rolling)return;haptic('HEAVY');audio||=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();rolling=true;push.disabled=true;status.textContent='Rolling…';dice.forEach(reset);
+function pop(){if(rolling)return;if(miniResult)miniResult.style.opacity='0';haptic('HEAVY');audio||=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();rolling=true;push.disabled=true;status.textContent='Rolling…';dice.forEach(reset);
  if(window.webkit?.messageHandlers?.popperFX) window.webkit.messageHandlers.popperFX.postMessage('compress'); else {compressionSound();haptic('LIGHT')}
  const start=performance.now(),releaseAt=150;let released=false;
  (function a(){const x=performance.now()-start;if(x<releaseAt){const k=x/releaseAt;dome.scale.set(1-.1*k,1-.27*k,1-.1*k);dome.position.y=.08-.2*k}else{if(!released){released=true;if(window.webkit?.messageHandlers?.popperFX) window.webkit.messageHandlers.popperFX.postMessage('release'); else {releaseSound();haptic('HEAVY')}}const k=Math.min(1,(x-releaseAt)/230),e=1-(1-k)**3;dome.scale.set(.9+.1*e,.73+.27*e,.9+.1*e);dome.position.y=-.12+.2*e}if(x<380)requestAnimationFrame(a);else{dome.scale.set(1,1,1);dome.position.y=.08}})()}
@@ -67,7 +67,7 @@ function step(dt){for(const d of dice){if(d.rest===true)continue;if(d.rest==='se
   const current=best.clone().applyQuaternion(d.m.quaternion),fix=new T.Quaternion().setFromUnitVectors(current,new T.Vector3(0,1,0));
   d.targetQ=fix.multiply(d.m.quaternion.clone());d.settleT=0;d.rest='settling';
  }
- }if(rolling&&dice.every(d=>d.rest===true)){rolling=false;haptic('LIGHT');push.disabled=false;status.textContent='Roll complete';const vals=dice.map(topFaceValue);if(rollread)rollread.textContent=`🎲 ${vals[0]} + ${vals[1]} = ${vals[0]+vals[1]}`}}
+ }if(rolling&&dice.every(d=>d.rest===true)){rolling=false;if(miniResult)miniResult.style.opacity='1';haptic('LIGHT');push.disabled=false;status.textContent='Roll complete';const vals=dice.map(topFaceValue);if(rollread)rollread.textContent=`🎲 ${vals[0]} + ${vals[1]} = ${vals[0]+vals[1]}`;if(miniResult){const md=miniResult.querySelectorAll('.miniDie');md[0].textContent=vals[0];md[1].textContent=vals[1]}}}
 function topFaceValue(d){let best=faces[0],score=-99;for(const f of faces){const n=new T.Vector3(f[0],f[1],f[2]).applyQuaternion(d.m.quaternion);if(n.y>score){score=n.y;best=f}}return best[3]}
 function resize(){const side=Math.max(1,Math.round(Math.min(host.clientWidth||innerWidth,host.clientHeight||innerWidth,620)));r.setSize(side,side,false);r.domElement.style.width='100%';r.domElement.style.height='100%';if(miniHost){const ms=Math.max(1,Math.round(Math.min(miniHost.clientWidth,miniHost.clientHeight)));miniR.setSize(ms,ms,false);miniR.domElement.style.width='100%';miniR.domElement.style.height='100%'}camera.aspect=1;camera.updateProjectionMatrix();miniCamera.aspect=1;miniCamera.updateProjectionMatrix()}
 function loop(now){const dt=Math.min(.024,(now-last)/1000)*1.2;last=now;step(dt);r.render(scene,camera);if(miniHost)miniR.render(scene,miniCamera);requestAnimationFrame(loop)}
