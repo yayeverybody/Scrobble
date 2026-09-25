@@ -146,9 +146,11 @@ class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
     private let audioEngine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
 
+    private var popperBridgeInstalled = false
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        bridge?.webView?.configuration.userContentController.add(self, name: "popperFX")
+        installPopperBridge()
         feedback.prepare()
         audioEngine.attach(player)
         let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
@@ -158,8 +160,23 @@ class ViewController: CAPBridgeViewController, WKScriptMessageHandler {
         try? audioEngine.start()
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        installPopperBridge()
+    }
+
+    private func installPopperBridge() {
+        guard !popperBridgeInstalled, let webView = bridge?.webView else { return }
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "popperFX")
+        webView.configuration.userContentController.add(self, name: "popperFX")
+        popperBridgeInstalled = true
+        print("POPPER_FX_BRIDGE_INSTALLED")
+    }
+
     deinit {
-        bridge?.webView?.configuration.userContentController.removeScriptMessageHandler(forName: "popperFX")
+        if popperBridgeInstalled {
+            bridge?.webView?.configuration.userContentController.removeScriptMessageHandler(forName: "popperFX")
+        }
     }
 
     private func playMechanical(_ release: Bool) {
