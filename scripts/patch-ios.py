@@ -170,125 +170,87 @@ if 'const H=()=>window.ScrobbleHaptics;' not in game:
 engine.write_text(game)
 
 
-# Scrobble 1.0.1 UI cleanup: progressive disclosure on New Game and Account.
-# Match by the actual controls at runtime instead of guessing a containing screen.
+# Scrobble 1.0.1 UI cleanup: use the real packaged controls.
 text = index.read_text()
-accordion_style = '''
-<style id="scrobble-101-accordions">
-.scrobble101-mode{width:100%;min-height:52px;margin:8px 0}
-.scrobble101-panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .28s ease,opacity .2s ease}
-.scrobble101-panel>div{overflow:hidden}
-.scrobble101-panel.open{grid-template-rows:1fr;opacity:1}
+old_game = '''    <button id="playFriendMode" class="modePrimary" type="button">PLAY A FRIEND</button>
+    <div class="weirdBox">
+      <div class="weirdTitle">MAKE IT WEIRD</div>
+      <div class="weirdSub">Optional. Choose one.</div>
+      <label class="weirdChoice"><input type="checkbox" value="all_or_none"><span><strong>All or None</strong><small>Only A, L, O, R, N and E tiles.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="vowel_movement"><span><strong>Vowel Movement</strong><small>Other letters are traded for extra vowels.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="high_roller"><span><strong>High Roller</strong><small>J, Q, X and Z are worth triple.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="too_many_tiles"><span><strong>Too Many Tiles</strong><small>Play with 9 tiles instead of 7.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="oops_all_ys"><span><strong>Oops! All Y’s</strong><small>Replace 20 other tiles with Y’s.</small></span></label>
+    </div>
+    <div class="modeDivider"><span>OR PLAY THE COMPUTER</span></div>
+    <div class="cpuChoices">
+      <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
+      <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
+      <button type="button" data-cpu-difficulty="hard"><strong>HARD</strong><span>Best move it can find</span></button>
+    </div>'''
+weird = '''<div class="weirdBox">
+        <div class="weirdTitle">MAKE IT WEIRD</div>
+        <div class="weirdSub">Optional. Choose one.</div>
+        <label class="weirdChoice"><input type="checkbox" value="all_or_none"><span><strong>All or None</strong><small>Only A, L, O, R, N and E tiles.</small></span></label>
+        <label class="weirdChoice"><input type="checkbox" value="vowel_movement"><span><strong>Vowel Movement</strong><small>Other letters are traded for extra vowels.</small></span></label>
+        <label class="weirdChoice"><input type="checkbox" value="high_roller"><span><strong>High Roller</strong><small>J, Q, X and Z are worth triple.</small></span></label>
+        <label class="weirdChoice"><input type="checkbox" value="too_many_tiles"><span><strong>Too Many Tiles</strong><small>Play with 9 tiles instead of 7.</small></span></label>
+        <label class="weirdChoice"><input type="checkbox" value="oops_all_ys"><span><strong>Oops! All Y’s</strong><small>Replace 20 other tiles with Y’s.</small></span></label>
+      </div>'''
+new_game = f'''    <div class="modeChooser"><button id="playFriendMode" class="modeChoice" type="button">PLAY A FRIEND</button><button id="playComputerMode" class="modeChoice" type="button">PLAY THE COMPUTER</button></div>
+    <div id="friendModePanel" class="modePanel hidden">
+      {weird}
+      <button id="startFriendGame" class="friendStart" type="button">SHARE INVITE</button>
+    </div>
+    <div id="computerModePanel" class="modePanel hidden">
+      <div class="cpuChoices">
+        <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
+        <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
+        <button type="button" data-cpu-difficulty="hard"><strong>HARD</strong><span>Best move it can find</span></button>
+      </div>
+      {weird}
+    </div>'''
+if old_game not in text:
+    raise SystemExit('New Game source block not found')
+text = text.replace(old_game,new_game,1)
+
+old_account = '<div id="accountState" class="accountState"></div><div id="passwordAccountForm" class="passwordAccountForm"><label class="accountLabel" for="accountUsername">USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span></label><input id="accountUsername" class="accountInput" type="text" autocomplete="nickname" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="Choose your player name"><div class="usernameHint">3–20 letters, numbers, or underscores. This is what other players will see.</div><label class="accountLabel" for="accountEmail">EMAIL</label><input id="accountEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountPassword">PASSWORD</label><input id="accountPassword" class="accountInput" type="password" autocomplete="current-password" placeholder="At least 6 characters"><button id="signInAccount" class="accountPrimary" type="button">SIGN IN</button><button id="createAccount" class="accountSecondary" type="button">CREATE ACCOUNT</button><button id="forgotPassword" class="accountLink" type="button">Forgot password?</button></div>'
+new_account = '<div id="accountState" class="accountState"></div><div id="passwordAccountForm" class="passwordAccountForm"><div class="accountModeChooser"><button id="showLoginAccount" class="accountModeChoice" type="button">LOGIN</button><button id="showCreateAccount" class="accountModeChoice" type="button">CREATE AN ACCOUNT</button></div><div id="loginAccountPanel" class="accountModePanel hidden"><label class="accountLabel" for="accountEmail">EMAIL</label><input id="accountEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountPassword">PASSWORD</label><input id="accountPassword" class="accountInput" type="password" autocomplete="current-password" placeholder="At least 6 characters"><button id="signInAccount" class="accountPrimary" type="button">SIGN IN</button><button id="forgotPassword" class="accountLink" type="button">Forgot password?</button></div><div id="createAccountPanel" class="accountModePanel hidden"><label class="accountLabel" for="accountUsername">USERNAME</label><input id="accountUsername" class="accountInput" type="text" autocomplete="nickname" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="Choose your player name"><div class="usernameHint">3–20 letters, numbers, or underscores. This is what other players will see.</div><label class="accountLabel" for="accountCreateEmail">EMAIL</label><input id="accountCreateEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountCreatePassword">PASSWORD</label><input id="accountCreatePassword" class="accountInput" type="password" autocomplete="new-password" placeholder="At least 6 characters"><button id="createAccount" class="accountPrimary" type="button">CREATE ACCOUNT</button></div></div>'
+if old_account not in text:
+    raise SystemExit('Account source block not found')
+text = text.replace(old_account,new_account,1)
+
+flow_style = '''
+<style id="scrobble-native-flow-cleanup">
+#gameModeBox .modeChooser,#accountBox .accountModeChooser{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+#gameModeBox .modeChoice,#accountBox .accountModeChoice{min-height:48px;border:2px solid #0d80cd;border-radius:12px;background:#fff;color:#0d80cd;font-weight:900}
+#gameModeBox .modeChoice.active,#accountBox .accountModeChoice.active{background:#0d80cd;color:#fff}
+#gameModeBox .modePanel.hidden,#accountBox .accountModePanel.hidden{display:none!important}
+#gameModeBox .friendStart{width:100%;min-height:48px;margin-top:12px;border:0;border-radius:12px;background:#0d80cd;color:#fff;font-weight:900}
 </style>
 '''
-accordion_script = '''
-<script id="scrobble-101-accordion-script">
-(function(){
- const H=()=>window.ScrobbleHaptics;
- const norm=s=>(s||'').replace(/\\s+/g,' ').trim().toLowerCase();
- const buttons=()=>[...document.querySelectorAll('button,[role="button"]')];
-
- function exact(re){return buttons().find(b=>re.test(norm(b.textContent)));}
- function commonParent(a,b){
-   let p=a&&a.parentElement;
-   while(p&&p!==document.body){if(p.contains(b))return p;p=p.parentElement}
-   return a&&a.parentElement;
- }
- function panelAfter(button,nodes,key){
-   let panel=document.querySelector('[data-scrobble101="'+key+'"]');
-   if(!panel){
-     panel=document.createElement('div'); panel.className='scrobble101-panel'; panel.dataset.scrobble101=key;
-     const inner=document.createElement('div'); panel.appendChild(inner);
-     button.insertAdjacentElement('afterend',panel);
-     nodes.filter(Boolean).forEach(n=>inner.appendChild(n));
-   }
-   return panel;
- }
- function wire(button,panel,other){
-   if(!button||button.dataset.scrobble101wired)return;
-   button.dataset.scrobble101wired='1'; button.classList.add('scrobble101-mode');
-   button.addEventListener('click',()=>{
-     setTimeout(()=>{
-       H()?.select();
-       const open=!panel.classList.contains('open');
-       document.querySelectorAll('.scrobble101-panel.open').forEach(p=>p.classList.remove('open'));
-       if(open)panel.classList.add('open');
-     },0);
-   });
- }
- function setupNewGame(){
-   const friend=exact(/^(play (a )?friend|friend)$/);
-   const computer=exact(/^(play (the )?computer|computer)$/);
-   if(!friend||!computer)return;
-   const host=commonParent(friend,computer); if(!host)return;
-   const children=[...host.children];
-   const fi=children.indexOf(friend), ci=children.indexOf(computer);
-   if(fi<0||ci<0)return;
-   // Existing controls between Friend and Computer belong to Friend.
-   const friendNodes=children.slice(fi+1,ci).filter(n=>!n.classList.contains('scrobble101-panel'));
-   // Existing controls following Computer belong to Computer; leave nav/footer outside.
-   const computerNodes=children.slice(ci+1).filter(n=>{
-     const t=norm(n.textContent);
-     return !n.classList.contains('scrobble101-panel') && !/^(cancel|close|back)$/.test(t);
-   });
-   const fp=panelAfter(friend,friendNodes,'friend');
-   const cp=panelAfter(computer,computerNodes,'computer');
-   wire(friend,fp,cp); wire(computer,cp,fp);
- }
- function setupAccount(){
-   const login=exact(/^(log in|login)$/);
-   const create=exact(/^(create (an )?account|sign up)$/);
-   if(!login||!create)return;
-   const host=commonParent(login,create); if(!host)return;
-   const children=[...host.children], li=children.indexOf(login), ci=children.indexOf(create);
-   if(li<0||ci<0)return;
-   const first=Math.min(li,ci), second=Math.max(li,ci);
-   const firstButton=children[first], secondButton=children[second];
-   const firstNodes=children.slice(first+1,second).filter(n=>!n.classList.contains('scrobble101-panel'));
-   const secondNodes=children.slice(second+1).filter(n=>!n.classList.contains('scrobble101-panel'));
-   const p1=panelAfter(firstButton,firstNodes,firstButton===login?'login':'create');
-   const p2=panelAfter(secondButton,secondNodes,secondButton===login?'login':'create');
-   wire(firstButton,p1,p2); wire(secondButton,p2,p1);
- }
- function install(){setupNewGame();setupAccount()}
- document.addEventListener('DOMContentLoaded',()=>{install();setTimeout(install,250);setTimeout(install,1000)});
- new MutationObserver(()=>install()).observe(document.documentElement,{childList:true,subtree:true});
-})();
-</script>
-'''
-if 'id="scrobble-101-accordions"' not in text:
-    text=text.replace('</head>',accordion_style+'</head>')
-if 'id="scrobble-101-accordion-script"' not in text:
-    text=text.replace('</body>',accordion_script+'</body>')
+text = text.replace('</head>',flow_style+'</head>',1)
 index.write_text(text)
 
-# Scrobble 1.0.1 invite URLs and sharing.
 app = Path('www/app-v3140.js')
-app_text = app.read_text()
-# Any invite copied/shared from the packaged capacitor origin must become a public HTTPS URL.
-invite_fix = '''
-;(()=>{
- const canonicalInvite=(raw)=>{
-   try{
-     const u=new URL(raw,location.href);
-     return 'https://yayeverybody.com'+u.pathname+u.search+u.hash;
-   }catch(e){return raw}
- };
- const nativeShare=navigator.share&&navigator.share.bind(navigator);
- if(nativeShare){
-   navigator.share=(data)=>{
-     const clean=Object.assign({},data||{});
-     if(clean.url)clean.url=canonicalInvite(clean.url);
-     return nativeShare(clean);
-   };
- }
- const nativeWrite=navigator.clipboard&&navigator.clipboard.writeText&&navigator.clipboard.writeText.bind(navigator.clipboard);
- if(nativeWrite){
-   navigator.clipboard.writeText=(value)=>nativeWrite(typeof value==='string'?canonicalInvite(value):value);
- }
- window.ScrobbleCanonicalInvite=canonicalInvite;
-})();
-'''
-if 'window.ScrobbleCanonicalInvite=canonicalInvite' not in app_text:
-    app_text = invite_fix + app_text
-app.write_text(app_text)
+js = app.read_text()
+js = js.replace("function inviteURL(code){return location.origin+location.pathname+'?join='+encodeURIComponent(code)}", "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}",1)
+
+needle = "const accountBox=document.getElementById('accountBox'),accountDash=document.getElementById('accountDash'),closeAccount=document.getElementById('closeAccount'),accountIdentity=document.getElementById('accountIdentity'),accountState=document.getElementById('accountState'),passwordAccountForm=document.getElementById('passwordAccountForm'),accountUsername=document.getElementById('accountUsername'),accountEmail=document.getElementById('accountEmail'),accountPassword=document.getElementById('accountPassword'),signInAccount=document.getElementById('signInAccount'),createAccount=document.getElementById('createAccount'),forgotPassword=document.getElementById('forgotPassword'),"
+if needle not in js:
+    raise SystemExit('Account JS controls not found')
+js = js.replace(needle,needle+"showLoginAccount=document.getElementById('showLoginAccount'),showCreateAccount=document.getElementById('showCreateAccount'),loginAccountPanel=document.getElementById('loginAccountPanel'),createAccountPanel=document.getElementById('createAccountPanel'),accountCreateEmail=document.getElementById('accountCreateEmail'),accountCreatePassword=document.getElementById('accountCreatePassword'),",1)
+
+render = '  function renderAccount(){\n'
+account_modes = "  function setAccountMode(mode){const login=mode==='login';loginAccountPanel.classList.toggle('hidden',!login);createAccountPanel.classList.toggle('hidden',login);showLoginAccount.classList.toggle('active',login);showCreateAccount.classList.toggle('active',!login)}\n  showLoginAccount.onclick=()=>setAccountMode('login');showCreateAccount.onclick=()=>setAccountMode('create');\n"
+js = js.replace(render,account_modes+render,1)
+js = js.replace("passwordAccountForm.classList.remove('hidden');\n      passwordSetupToggle.classList.add('hidden');","passwordAccountForm.classList.remove('hidden');loginAccountPanel.classList.add('hidden');createAccountPanel.classList.add('hidden');showLoginAccount.classList.remove('active');showCreateAccount.classList.remove('active');\n      passwordSetupToggle.classList.add('hidden');",1)
+js = js.replace("function authCredentials(){\n    const email=accountEmail.value.trim().toLowerCase();\n    const password=accountPassword.value;","function authCredentials(create=false){\n    const email=(create?accountCreateEmail:accountEmail).value.trim().toLowerCase();\n    const password=(create?accountCreatePassword:accountPassword).value;",1)
+js = js.replace("createAccount.onclick=async()=>{\n    const username=newAccountUsername();if(!username)return;\n    const credentials=authCredentials();if(!credentials)return;","createAccount.onclick=async()=>{\n    const username=newAccountUsername();if(!username)return;\n    const credentials=authCredentials(true);if(!credentials)return;",1)
+
+old_handlers = "  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
+new_handlers = "  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame');\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\n  document.getElementById('newGameDash').onclick=openGameMode;\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\n  playFriendMode.onclick=()=>setGameMode('friend');playComputerMode.onclick=()=>setGameMode('computer');startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
+if old_handlers not in js:
+    raise SystemExit('New Game JS handlers not found')
+js = js.replace(old_handlers,new_handlers,1)
+app.write_text(js)
