@@ -37,14 +37,19 @@ workflows:
           </dict>
           </plist>
           PLIST
-          /usr/libexec/PlistBuddy -c "Set :CODE_SIGN_ENTITLEMENTS App/App.entitlements" ios/App/App.xcodeproj/project.pbxproj 2>/dev/null || true
+          # Capacitor generates multiple Xcode build configurations. Set the
+          # entitlement on every App target configuration, not just one guessed block.
           python3 - <<'PY'
           from pathlib import Path
           p=Path("ios/App/App.xcodeproj/project.pbxproj")
           s=p.read_text()
-          if "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" not in s:
-              s=s.replace("PRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.scrobble;", "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.scrobble;")
+          marker="PRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.scrobble;"
+          if marker not in s:
+              raise SystemExit("Scrobble bundle identifier not found in Xcode project")
+          s=s.replace(marker, "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\t"+marker)
           p.write_text(s)
+          if "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" not in s:
+              raise SystemExit("Associated Domains entitlement was not attached to App target")
           PY
 
           /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
@@ -108,6 +113,18 @@ workflows:
           xcode-project build-ipa \
             --project ios/App/App.xcodeproj \
             --scheme App
+
+      - name: Verify Universal Links in signed app
+        script: |
+          cd scrobble-mobile
+          APP_PATH=$(find "$HOME/Library/Developer/Xcode/DerivedData" -path "*/Build/*/App.app" -type d | head -1)
+          test -n "$APP_PATH" || { echo "Signed App.app not found"; exit 1; }
+          codesign -d --entitlements :- "$APP_PATH" > /tmp/scrobble-entitlements.plist 2>&1
+          cat /tmp/scrobble-entitlements.plist
+          grep -q "applinks:yayeverybody.com" /tmp/scrobble-entitlements.plist || {
+            echo "ERROR: signed app is missing applinks:yayeverybody.com"
+            exit 1
+          }
 
     artifacts:
       - scrobble-mobile/build/ios/ipa/*.ipa
