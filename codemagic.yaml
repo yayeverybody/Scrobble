@@ -24,6 +24,30 @@ workflows:
           npx cap add ios
           npx cap sync ios
 
+          # Universal Links entitlement for Scrobble invites.
+          cat > ios/App/App/App.entitlements <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.developer.associated-domains</key>
+            <array>
+              <string>applinks:yayeverybody.com</string>
+              <string>applinks:www.yayeverybody.com</string>
+            </array>
+          </dict>
+          </plist>
+          PLIST
+          /usr/libexec/PlistBuddy -c "Set :CODE_SIGN_ENTITLEMENTS App/App.entitlements" ios/App/App.xcodeproj/project.pbxproj 2>/dev/null || true
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("ios/App/App.xcodeproj/project.pbxproj")
+          s=p.read_text()
+          if "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" not in s:
+              s=s.replace("PRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.scrobble;", "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.scrobble;")
+          p.write_text(s)
+          PY
+
           /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:0 integer 1" ios/App/App/Info.plist
