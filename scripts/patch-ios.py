@@ -254,3 +254,30 @@ if old_handlers not in js:
     raise SystemExit('New Game JS handlers not found')
 js = js.replace(old_handlers,new_handlers,1)
 app.write_text(js)
+
+
+# Universal Links: open https://yayeverybody.com/?join=... directly in Yay Everybody.
+# Capacitor delivers universal links through App.addListener('appUrlOpen', ...).
+app = Path('www/app-v3140.js')
+js = app.read_text()
+universal_link_handler = """
+;(()=>{
+  function consumeInviteUrl(raw){
+    try{
+      const u=new URL(raw);
+      if(u.hostname!=='yayeverybody.com' && u.hostname!=='www.yayeverybody.com')return;
+      const code=u.searchParams.get('join');
+      if(!code)return;
+      const target=location.pathname+'?join='+encodeURIComponent(code);
+      history.replaceState(null,'',target);
+      location.reload();
+    }catch(e){console.error('Invite link error',e)}
+  }
+  const cap=window.Capacitor;
+  const App=cap&&cap.Plugins&&cap.Plugins.App;
+  if(App&&App.addListener)App.addListener('appUrlOpen',({url})=>consumeInviteUrl(url));
+})();
+"""
+if "App.addListener('appUrlOpen'" not in js:
+    js += universal_link_handler
+app.write_text(js)
