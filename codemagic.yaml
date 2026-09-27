@@ -37,8 +37,8 @@ workflows:
           </dict>
           </plist>
           PLIST
-          # Capacitor generates multiple Xcode build configurations. Set the
-          # entitlement on every App target configuration, not just one guessed block.
+          # Attach the entitlement only to the native App target build configurations.
+          # Do not globally replace every matching bundle-id line in the project file.
           python3 - <<'PY'
           from pathlib import Path
           p=Path("ios/App/App.xcodeproj/project.pbxproj")
@@ -46,10 +46,19 @@ workflows:
           marker="PRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.scrobble;"
           if marker not in s:
               raise SystemExit("Scrobble bundle identifier not found in Xcode project")
-          s=s.replace(marker, "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\t"+marker)
+          blocks=s.split("};")
+          changed=0
+          for i,b in enumerate(blocks):
+              if marker in b and "INFOPLIST_FILE = App/Info.plist;" in b:
+                  if "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" not in b:
+                      b=b.replace(marker, "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\t"+marker)
+                      blocks[i]=b
+                      changed+=1
+          s="};".join(blocks)
           p.write_text(s)
-          if "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" not in s:
-              raise SystemExit("Associated Domains entitlement was not attached to App target")
+          if changed == 0 and "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" not in s:
+              raise SystemExit("Could not attach Associated Domains entitlement to App target")
+          print(f"Attached Associated Domains entitlement to {changed} App build configuration(s)")
           PY
 
           /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
@@ -107,34 +116,30 @@ workflows:
           cd scrobble-mobile
           xcode-project use-profiles
 
+      - name: Diagnose signing configuration
+        script: |
+          cd scrobble-mobile
+          echo "===== APP SIGNING SETTINGS ====="
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -showBuildSettings | \
+            grep -E "CODE_SIGN_ENTITLEMENTS|PRODUCT_BUNDLE_IDENTIFIER|PROVISIONING_PROFILE|CODE_SIGN_IDENTITY|DEVELOPMENT_TEAM" || true
+          echo "===== REQUESTED ENTITLEMENTS ====="
+          cat ios/App/App/App.entitlements
+          echo "===== INSTALLED PROVISIONING PROFILES ====="
+          for p in "$HOME"/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
+            [ -e "$p" ] || continue
+            echo "--- $p ---"
+            security cms -D -i "$p" > /tmp/profile.plist 2>/dev/null || continue
+            /usr/libexec/PlistBuddy -c "Print :Name" /tmp/profile.plist 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile.plist 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" /tmp/profile.plist 2>/dev/null || echo "NO ASSOCIATED DOMAINS IN PROFILE"
+          done
+
       - name: Build signed IPA
         script: |
           cd scrobble-mobile
-          mkdir -p /tmp/xcodebuild_logs
-
-          # Run Codemagic's normal signed-IPA build, but preserve its complete
-          # stdout/stderr so an Xcode archive failure is visible in the job log
-          # and downloadable as an artifact.
-          set +e
           xcode-project build-ipa \
             --project ios/App/App.xcodeproj \
-            --scheme App 2>&1 | tee /tmp/xcodebuild_logs/build-ipa-full.log
-          BUILD_STATUS=${PIPESTATUS[0]}
-          set -e
-
-          if [ "$BUILD_STATUS" -ne 0 ]; then
-            echo
-            echo "===== FULL BUILD-IPA OUTPUT ====="
-            cat /tmp/xcodebuild_logs/build-ipa-full.log || true
-            echo
-            echo "===== XCODE ERROR SUMMARY ====="
-            grep -nEi "error:|fatal error:|provision|entitlement|signing|requires a provisioning profile|doesn't include|does not support|failed" \
-              /tmp/xcodebuild_logs/build-ipa-full.log | tail -200 || true
-            echo
-            echo "===== AVAILABLE XCODEBUILD LOGS ====="
-            find /tmp/xcodebuild_logs -maxdepth 1 -type f -print -exec sh -c 'echo "--- $1 ---"; tail -300 "$1"' _ {} \; || true
-            exit "$BUILD_STATUS"
-          fi
+            --scheme App
 
       - name: Verify Universal Links in signed app
         script: |
