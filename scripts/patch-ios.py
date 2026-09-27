@@ -168,3 +168,88 @@ haptic_event_patch = '''
 if 'const H=()=>window.ScrobbleHaptics;' not in game:
     game += haptic_event_patch
 engine.write_text(game)
+
+
+# Scrobble 1.0.1 UI cleanup: progressive disclosure on New Game and Account.
+text = index.read_text()
+accordion_style = '''
+<style id="scrobble-101-accordions">
+.scrobble101-choice{width:100%;min-height:52px;margin:8px 0;border:0;border-radius:12px;font-weight:900}
+.scrobble101-panel{overflow:hidden;max-height:0;opacity:0;transition:max-height .28s ease,opacity .22s ease,padding .28s ease;padding:0}
+.scrobble101-panel.open{max-height:720px;opacity:1;padding:8px 0 14px}
+</style>
+'''
+accordion_script = '''
+<script id="scrobble-101-accordion-script">
+(function(){
+ const H=()=>window.ScrobbleHaptics;
+ function setupPair(host, first, second){
+   if(!host||!first||!second||first.dataset.scrobble101)return;
+   first.dataset.scrobble101=second.dataset.scrobble101='1';
+   [first,second].forEach((button,i)=>{
+     const panel=document.createElement('div'); panel.className='scrobble101-panel';
+     button.parentNode.insertBefore(panel,button.nextSibling);
+     let n=panel.nextSibling;
+     while(n && n!== (i===0?second:null)){
+       const next=n.nextSibling;
+       if(n.nodeType===1 && n!==second) panel.appendChild(n);
+       n=next;
+     }
+     button.addEventListener('click',()=>{
+       H()?.select();
+       const open=!panel.classList.contains('open');
+       host.querySelectorAll('.scrobble101-panel.open').forEach(p=>p.classList.remove('open'));
+       if(open)panel.classList.add('open');
+     });
+   });
+ }
+ function byText(root,re){return [...root.querySelectorAll('button')].find(b=>re.test((b.textContent||'').trim()));}
+ function install(){
+   // New Game: preserve existing controls/handlers; only reorganize their disclosure.
+   const ng=[...document.querySelectorAll('div,section,main')].find(x=>/new game/i.test(x.textContent||'')&&byText(x,/play.*friend/i)&&byText(x,/play.*computer/i));
+   if(ng) setupPair(ng,byText(ng,/play.*friend/i),byText(ng,/play.*computer/i));
+   // Signed-out Account: Login and Create Account use the same interaction.
+   const ac=[...document.querySelectorAll('div,section,main')].find(x=>/account/i.test((x.id||'')+' '+(x.className||'')+' '+(x.textContent||''))&&byText(x,/log ?in/i)&&byText(x,/create.*account/i));
+   if(ac) setupPair(ac,byText(ac,/log ?in/i),byText(ac,/create.*account/i));
+ }
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(install,100));
+ new MutationObserver(()=>install()).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
+'''
+if 'id="scrobble-101-accordions"' not in text:
+    text=text.replace('</head>',accordion_style+'</head>')
+if 'id="scrobble-101-accordion-script"' not in text:
+    text=text.replace('</body>',accordion_script+'</body>')
+index.write_text(text)
+
+# Scrobble 1.0.1 invite URLs and sharing.
+app = Path('www/app-v3140.js')
+app_text = app.read_text()
+# Any invite copied/shared from the packaged capacitor origin must become a public HTTPS URL.
+invite_fix = '''
+;(()=>{
+ const canonicalInvite=(raw)=>{
+   try{
+     const u=new URL(raw,location.href);
+     return 'https://yayeverybody.com'+u.pathname+u.search+u.hash;
+   }catch(e){return raw}
+ };
+ const nativeShare=navigator.share&&navigator.share.bind(navigator);
+ if(nativeShare){
+   navigator.share=(data)=>{
+     const clean=Object.assign({},data||{});
+     if(clean.url)clean.url=canonicalInvite(clean.url);
+     return nativeShare(clean);
+   };
+ }
+ const nativeWrite=navigator.clipboard&&navigator.clipboard.writeText&&navigator.clipboard.writeText.bind(navigator.clipboard);
+ if(nativeWrite){
+   navigator.clipboard.writeText=(value)=>nativeWrite(typeof value==='string'?canonicalInvite(value):value);
+ }
+ window.ScrobbleCanonicalInvite=canonicalInvite;
+})();
+'''
+if 'window.ScrobbleCanonicalInvite=canonicalInvite' not in app_text:
+    app_text = invite_fix + app_text
+app.write_text(app_text)
