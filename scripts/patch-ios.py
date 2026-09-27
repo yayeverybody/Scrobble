@@ -123,3 +123,48 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
 '''
     app_text = app_text.replace(auth_marker, handler + auth_marker, 1)
 app.write_text(app_text)
+
+
+# Scrobble 1.0.1: restrained native haptics.
+# Capacitor exposes registered plugins through window.Capacitor.Plugins in this
+# packaged app. Calls are deliberately best-effort so the web build still works.
+haptic_helper = '''
+<script id="scrobble-haptics">
+(function(){
+  function plugin(){ return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics; }
+  window.ScrobbleHaptics={
+    light:function(){ try{ var h=plugin(); if(h) h.impact({style:'LIGHT'}); }catch(e){} },
+    medium:function(){ try{ var h=plugin(); if(h) h.impact({style:'MEDIUM'}); }catch(e){} },
+    select:function(){ try{ var h=plugin(); if(h) h.selectionStart().then(function(){return h.selectionChanged()}).then(function(){return h.selectionEnd()}); }catch(e){} },
+    success:function(){ try{ var h=plugin(); if(h) h.notification({type:'SUCCESS'}); }catch(e){} },
+    error:function(){ try{ var h=plugin(); if(h) h.notification({type:'ERROR'}); }catch(e){} }
+  };
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-haptics"' not in text:
+    text = text.replace('</head>', haptic_helper + '</head>')
+index.write_text(text)
+
+# Add tactile feedback without turning every screen tap into a buzz-fest.
+engine = Path('www/game-engine-v3140.js')
+game = engine.read_text()
+haptic_event_patch = '''
+;(()=>{
+  const H=()=>window.ScrobbleHaptics;
+  document.addEventListener('pointerdown',e=>{
+    const tile=e.target.closest&&e.target.closest('.tile');
+    if(tile) H()?.light();
+  },{passive:true});
+  document.addEventListener('click',e=>{
+    const b=e.target.closest&&e.target.closest('button');
+    if(!b||b.disabled)return;
+    const t=(b.textContent||'').trim().toUpperCase();
+    if(/^(PLAY|SWAP|PASS|SHARE|COPY)/.test(t)) H()?.light();
+  },{passive:true});
+})();
+'''
+if 'const H=()=>window.ScrobbleHaptics;' not in game:
+    game += haptic_event_patch
+engine.write_text(game)
