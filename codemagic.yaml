@@ -110,9 +110,31 @@ workflows:
       - name: Build signed IPA
         script: |
           cd scrobble-mobile
+          mkdir -p /tmp/xcodebuild_logs
+
+          # Run Codemagic's normal signed-IPA build, but preserve its complete
+          # stdout/stderr so an Xcode archive failure is visible in the job log
+          # and downloadable as an artifact.
+          set +e
           xcode-project build-ipa \
             --project ios/App/App.xcodeproj \
-            --scheme App
+            --scheme App 2>&1 | tee /tmp/xcodebuild_logs/build-ipa-full.log
+          BUILD_STATUS=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$BUILD_STATUS" -ne 0 ]; then
+            echo
+            echo "===== FULL BUILD-IPA OUTPUT ====="
+            cat /tmp/xcodebuild_logs/build-ipa-full.log || true
+            echo
+            echo "===== XCODE ERROR SUMMARY ====="
+            grep -nEi "error:|fatal error:|provision|entitlement|signing|requires a provisioning profile|doesn't include|does not support|failed" \
+              /tmp/xcodebuild_logs/build-ipa-full.log | tail -200 || true
+            echo
+            echo "===== AVAILABLE XCODEBUILD LOGS ====="
+            find /tmp/xcodebuild_logs -maxdepth 1 -type f -print -exec sh -c 'echo "--- $1 ---"; tail -300 "$1"' _ {} \; || true
+            exit "$BUILD_STATUS"
+          fi
 
       - name: Verify Universal Links in signed app
         script: |
