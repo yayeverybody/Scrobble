@@ -171,48 +171,87 @@ engine.write_text(game)
 
 
 # Scrobble 1.0.1 UI cleanup: progressive disclosure on New Game and Account.
+# Match by the actual controls at runtime instead of guessing a containing screen.
 text = index.read_text()
 accordion_style = '''
 <style id="scrobble-101-accordions">
-.scrobble101-choice{width:100%;min-height:52px;margin:8px 0;border:0;border-radius:12px;font-weight:900}
-.scrobble101-panel{overflow:hidden;max-height:0;opacity:0;transition:max-height .28s ease,opacity .22s ease,padding .28s ease;padding:0}
-.scrobble101-panel.open{max-height:720px;opacity:1;padding:8px 0 14px}
+.scrobble101-mode{width:100%;min-height:52px;margin:8px 0}
+.scrobble101-panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .28s ease,opacity .2s ease}
+.scrobble101-panel>div{overflow:hidden}
+.scrobble101-panel.open{grid-template-rows:1fr;opacity:1}
 </style>
 '''
 accordion_script = '''
 <script id="scrobble-101-accordion-script">
 (function(){
  const H=()=>window.ScrobbleHaptics;
- function setupPair(host, first, second){
-   if(!host||!first||!second||first.dataset.scrobble101)return;
-   first.dataset.scrobble101=second.dataset.scrobble101='1';
-   [first,second].forEach((button,i)=>{
-     const panel=document.createElement('div'); panel.className='scrobble101-panel';
-     button.parentNode.insertBefore(panel,button.nextSibling);
-     let n=panel.nextSibling;
-     while(n && n!== (i===0?second:null)){
-       const next=n.nextSibling;
-       if(n.nodeType===1 && n!==second) panel.appendChild(n);
-       n=next;
-     }
-     button.addEventListener('click',()=>{
+ const norm=s=>(s||'').replace(/\\s+/g,' ').trim().toLowerCase();
+ const buttons=()=>[...document.querySelectorAll('button,[role="button"]')];
+
+ function exact(re){return buttons().find(b=>re.test(norm(b.textContent)));}
+ function commonParent(a,b){
+   let p=a&&a.parentElement;
+   while(p&&p!==document.body){if(p.contains(b))return p;p=p.parentElement}
+   return a&&a.parentElement;
+ }
+ function panelAfter(button,nodes,key){
+   let panel=document.querySelector('[data-scrobble101="'+key+'"]');
+   if(!panel){
+     panel=document.createElement('div'); panel.className='scrobble101-panel'; panel.dataset.scrobble101=key;
+     const inner=document.createElement('div'); panel.appendChild(inner);
+     button.insertAdjacentElement('afterend',panel);
+     nodes.filter(Boolean).forEach(n=>inner.appendChild(n));
+   }
+   return panel;
+ }
+ function wire(button,panel,other){
+   if(!button||button.dataset.scrobble101wired)return;
+   button.dataset.scrobble101wired='1'; button.classList.add('scrobble101-mode');
+   button.addEventListener('click',()=>{
+     setTimeout(()=>{
        H()?.select();
        const open=!panel.classList.contains('open');
-       host.querySelectorAll('.scrobble101-panel.open').forEach(p=>p.classList.remove('open'));
+       document.querySelectorAll('.scrobble101-panel.open').forEach(p=>p.classList.remove('open'));
        if(open)panel.classList.add('open');
-     });
+     },0);
    });
  }
- function byText(root,re){return [...root.querySelectorAll('button')].find(b=>re.test((b.textContent||'').trim()));}
- function install(){
-   // New Game: preserve existing controls/handlers; only reorganize their disclosure.
-   const ng=[...document.querySelectorAll('div,section,main')].find(x=>/new game/i.test(x.textContent||'')&&byText(x,/play.*friend/i)&&byText(x,/play.*computer/i));
-   if(ng) setupPair(ng,byText(ng,/play.*friend/i),byText(ng,/play.*computer/i));
-   // Signed-out Account: Login and Create Account use the same interaction.
-   const ac=[...document.querySelectorAll('div,section,main')].find(x=>/account/i.test((x.id||'')+' '+(x.className||'')+' '+(x.textContent||''))&&byText(x,/log ?in/i)&&byText(x,/create.*account/i));
-   if(ac) setupPair(ac,byText(ac,/log ?in/i),byText(ac,/create.*account/i));
+ function setupNewGame(){
+   const friend=exact(/^(play (a )?friend|friend)$/);
+   const computer=exact(/^(play (the )?computer|computer)$/);
+   if(!friend||!computer)return;
+   const host=commonParent(friend,computer); if(!host)return;
+   const children=[...host.children];
+   const fi=children.indexOf(friend), ci=children.indexOf(computer);
+   if(fi<0||ci<0)return;
+   // Existing controls between Friend and Computer belong to Friend.
+   const friendNodes=children.slice(fi+1,ci).filter(n=>!n.classList.contains('scrobble101-panel'));
+   // Existing controls following Computer belong to Computer; leave nav/footer outside.
+   const computerNodes=children.slice(ci+1).filter(n=>{
+     const t=norm(n.textContent);
+     return !n.classList.contains('scrobble101-panel') && !/^(cancel|close|back)$/.test(t);
+   });
+   const fp=panelAfter(friend,friendNodes,'friend');
+   const cp=panelAfter(computer,computerNodes,'computer');
+   wire(friend,fp,cp); wire(computer,cp,fp);
  }
- document.addEventListener('DOMContentLoaded',()=>setTimeout(install,100));
+ function setupAccount(){
+   const login=exact(/^(log in|login)$/);
+   const create=exact(/^(create (an )?account|sign up)$/);
+   if(!login||!create)return;
+   const host=commonParent(login,create); if(!host)return;
+   const children=[...host.children], li=children.indexOf(login), ci=children.indexOf(create);
+   if(li<0||ci<0)return;
+   const first=Math.min(li,ci), second=Math.max(li,ci);
+   const firstButton=children[first], secondButton=children[second];
+   const firstNodes=children.slice(first+1,second).filter(n=>!n.classList.contains('scrobble101-panel'));
+   const secondNodes=children.slice(second+1).filter(n=>!n.classList.contains('scrobble101-panel'));
+   const p1=panelAfter(firstButton,firstNodes,firstButton===login?'login':'create');
+   const p2=panelAfter(secondButton,secondNodes,secondButton===login?'login':'create');
+   wire(firstButton,p1,p2); wire(secondButton,p2,p1);
+ }
+ function install(){setupNewGame();setupAccount()}
+ document.addEventListener('DOMContentLoaded',()=>{install();setTimeout(install,250);setTimeout(install,1000)});
  new MutationObserver(()=>install()).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
