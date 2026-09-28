@@ -99,6 +99,17 @@ workflows:
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 
+      - name: Verify Associated Domains signing profile
+        script: |
+          cd scrobble-mobile
+          PROFILE="$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name '*.mobileprovision' | head -1)"
+          test -n "$PROFILE" || { echo "No provisioning profile found"; exit 1; }
+          security cms -D -i "$PROFILE" > /tmp/scrobble-profile.plist
+          /usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" /tmp/scrobble-profile.plist | grep -q "applinks:yayeverybody.com" || {
+            echo "ERROR: App Store provisioning profile is missing applinks:yayeverybody.com"
+            exit 1
+          }
+
       - name: Set up iOS code signing
         script: |
           cd scrobble-mobile
