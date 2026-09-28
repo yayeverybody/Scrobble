@@ -114,6 +114,14 @@ workflows:
       - name: Set up iOS code signing
         script: |
           cd scrobble-mobile
+
+          # Do not let Codemagic reuse the pre-Associated-Domains profile.
+          # Clear locally installed profiles, fetch fresh App Store profiles from Apple,
+          # then let xcode-project select from that fresh set.
+          rm -f "$HOME"/Library/MobileDevice/Provisioning\\ Profiles/*.mobileprovision 2>/dev/null || true
+          app-store-connect fetch-signing-files com.yayeverybody.scrobble \
+            --type IOS_APP_STORE \
+            --create
           xcode-project use-profiles
 
       - name: Diagnose signing configuration
