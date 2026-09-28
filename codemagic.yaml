@@ -115,13 +115,13 @@ workflows:
         script: |
           cd scrobble-mobile
 
-          # Do not let Codemagic reuse the pre-Associated-Domains profile.
-          # Clear locally installed profiles, fetch fresh App Store profiles from Apple,
-          # then let xcode-project select from that fresh set.
-          rm -f "$HOME"/Library/MobileDevice/Provisioning\\ Profiles/*.mobileprovision 2>/dev/null || true
-          app-store-connect fetch-signing-files com.yayeverybody.scrobble \
-            --type IOS_APP_STORE \
-            --create
+          # Codemagic's account-level signing store now contains the refreshed
+          # Apple Distribution certificate/private key and the newly fetched profile.
+          # Install those configured identities; do NOT call fetch-signing-files here,
+          # because that can pull Apple's stale pre-Associated-Domains profile again.
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
 
           # Reject stale profiles. Only keep an App Store profile whose embedded
           # entitlements actually include Associated Domains.
@@ -148,7 +148,7 @@ workflows:
             echo "Refusing to start Xcode with the stale profile."
             exit 1
           fi
-          xcode-project use-profiles
+          # The selected profile has now been validated above.
 
       - name: Diagnose signing configuration
         script: |
