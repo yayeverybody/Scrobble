@@ -135,16 +135,19 @@ workflows:
             DOMAINS=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" /tmp/candidate-profile.plist 2>/dev/null || true)
             NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /tmp/candidate-profile.plist 2>/dev/null || true)
             echo "Candidate profile: $NAME / $APP_ID"
-            if [ "$APP_ID" = "QX9HW7SCL2.com.yayeverybody.scrobble" ] && echo "$DOMAINS" | grep -q "applinks:yayeverybody.com"; then
+            # Apple distribution profiles may authorize Associated Domains with
+            # a wildcard ("*"). The app's signed entitlements below still request
+            # only applinks:yayeverybody.com.
+            if [ "$APP_ID" = "QX9HW7SCL2.com.yayeverybody.scrobble" ] && { echo "$DOMAINS" | grep -Fq "applinks:yayeverybody.com" || echo "$DOMAINS" | grep -Fq "*"; }; then
               GOOD_PROFILE="$p"
-              echo "Using Associated Domains profile: $NAME"
+              echo "Using Associated Domains profile: $NAME ($DOMAINS)"
             else
               echo "Rejecting stale/incompatible profile: $NAME"
               rm -f "$p"
             fi
           done
           if [ -z "$GOOD_PROFILE" ] || [ ! -f "$GOOD_PROFILE" ]; then
-            echo "ERROR: Apple/Codemagic did not supply a Scrobble App Store profile containing applinks:yayeverybody.com."
+            echo "ERROR: Apple/Codemagic did not supply a Scrobble App Store profile authorizing Associated Domains."
             echo "Refusing to start Xcode with the stale profile."
             exit 1
           fi
