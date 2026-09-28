@@ -20,9 +20,20 @@ workflows:
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
           cd scrobble-mobile
           npm install
+          # Install the native Capacitor haptics implementation. The web code already
+          # calls Capacitor.Plugins.Haptics; without this package those calls are no-ops.
+          npm install @capacitor/haptics
           python3 ../scripts/patch-ios.py
           npx cap add ios
           npx cap sync ios
+
+          # Refuse to build if the native Haptics plugin did not make it into iOS.
+          npm ls @capacitor/haptics
+          grep -R -q "HapticsPlugin" ios/App/Pods ios/App/App 2>/dev/null || {
+            echo "ERROR: Capacitor Haptics native plugin is not present in the generated iOS project."
+            exit 1
+          }
+          echo "Verified native Capacitor Haptics plugin in generated iOS project."
 
           # Universal Links entitlement for Scrobble invites.
           cat > ios/App/App/App.entitlements <<'PLIST'
