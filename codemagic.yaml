@@ -122,6 +122,32 @@ workflows:
           app-store-connect fetch-signing-files com.yayeverybody.scrobble \
             --type IOS_APP_STORE \
             --create
+
+          # Reject stale profiles. Only keep an App Store profile whose embedded
+          # entitlements actually include Associated Domains.
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_DIR"
+          GOOD_PROFILE=""
+          for p in "$PROFILE_DIR"/*.mobileprovision; do
+            [ -e "$p" ] || continue
+            security cms -D -i "$p" > /tmp/candidate-profile.plist 2>/dev/null || continue
+            APP_ID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/candidate-profile.plist 2>/dev/null || true)
+            DOMAINS=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" /tmp/candidate-profile.plist 2>/dev/null || true)
+            NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /tmp/candidate-profile.plist 2>/dev/null || true)
+            echo "Candidate profile: $NAME / $APP_ID"
+            if [ "$APP_ID" = "QX9HW7SCL2.com.yayeverybody.scrobble" ] && echo "$DOMAINS" | grep -q "applinks:yayeverybody.com"; then
+              GOOD_PROFILE="$p"
+              echo "Using Associated Domains profile: $NAME"
+            else
+              echo "Rejecting stale/incompatible profile: $NAME"
+              rm -f "$p"
+            fi
+          done
+          if [ -z "$GOOD_PROFILE" ] || [ ! -f "$GOOD_PROFILE" ]; then
+            echo "ERROR: Apple/Codemagic did not supply a Scrobble App Store profile containing applinks:yayeverybody.com."
+            echo "Refusing to start Xcode with the stale profile."
+            exit 1
+          fi
           xcode-project use-profiles
 
       - name: Diagnose signing configuration
