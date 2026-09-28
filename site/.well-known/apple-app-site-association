@@ -1,0 +1,20 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "QX9HW7SCL2.com.yayeverybody.scrobble"
+        ],
+        "components": [
+          {
+            "/": "/*",
+            "?": {
+              "join": "*"
+            },
+            "comment": "Open Scrobble game invitations in Yay Everybody"
+          }
+        ]
+      }
+    ]
+  }
+}
