@@ -124,17 +124,30 @@ workflows:
             echo "Associated Domains:"
             echo "$DOMAINS"
 
-            if [ "$APPID" = "QX9HW7SCL2.com.yayeverybody.scrobble" ] && echo "$DOMAINS" | grep -q "applinks:yayeverybody.com"; then
+            # Apple's provisioning profile may authorize Associated Domains
+            # with "*" while the app target carries the specific applinks domains.
+            if [ "$APPID" = "QX9HW7SCL2.com.yayeverybody.scrobble" ] && echo "$DOMAINS" | grep -Eq '(^|[[:space:]])(\*|applinks:yayeverybody\.com)($|[[:space:]])'; then
               FOUND="$PROFILE"
-              echo "MATCH: This profile is valid for Scrobble Universal Links."
+              echo "MATCH: This profile authorizes Associated Domains for Scrobble."
             fi
           done
 
           echo "=== End provisioning profile diagnostics ==="
           echo "Profiles inspected: $PROFILE_COUNT"
 
+          APP_ENTITLEMENTS="ios/App/App/App.entitlements"
+          test -f "$APP_ENTITLEMENTS" || {
+            echo "ERROR: App.entitlements is missing"
+            exit 1
+          }
+          /usr/libexec/PlistBuddy -c "Print :com.apple.developer.associated-domains" "$APP_ENTITLEMENTS" | grep -q "applinks:yayeverybody.com" || {
+            echo "ERROR: App.entitlements does not contain applinks:yayeverybody.com"
+            exit 1
+          }
+          echo "Verified app entitlement contains applinks:yayeverybody.com"
+
           test -n "$FOUND" || {
-            echo "ERROR: No App Store profile for Scrobble contains applinks:yayeverybody.com"
+            echo "ERROR: No App Store profile for Scrobble authorizes Associated Domains"
             exit 1
           }
           echo "Verified Associated Domains in $(basename "$FOUND")"
