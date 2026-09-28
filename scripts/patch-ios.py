@@ -124,6 +124,44 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
     app_text = app_text.replace(auth_marker, handler + auth_marker, 1)
 app.write_text(app_text)
 
+# iOS native share hotfix: Web Share can throw a TypeError inside Capacitor's
+# WKWebView. Use Capacitor Share when available, while preserving the existing
+# web share path as a fallback. Patch navigator.share itself so every existing
+# Scrobble invite-share call benefits without changing game logic.
+share_bridge = '''
+<script type="module" id="scrobble-ios-native-share">
+(()=>{
+  if(!window.Capacitor?.isNativePlatform?.()) return;
+  const NativeShare=window.Capacitor?.Plugins?.Share;
+  if(!NativeShare?.share) return;
+  const webShare=navigator.share?.bind(navigator);
+  try{
+    Object.defineProperty(navigator,'share',{
+      configurable:true,
+      value:async(data={})=>{
+        const payload={};
+        if(data.title) payload.title=String(data.title);
+        if(data.text) payload.text=String(data.text);
+        if(data.url) payload.url=String(data.url);
+        try{
+          return await NativeShare.share(payload);
+        }catch(err){
+          const message=String(err?.message||err||'');
+          if(/cancel/i.test(message)) return;
+          if(webShare) return webShare(data);
+          throw err;
+        }
+      }
+    });
+  }catch(e){ console.error('Scrobble native share setup failed',e); }
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-ios-native-share"' not in text:
+    text = text.replace('</body>', share_bridge + '</body>')
+index.write_text(text)
+
 
 # iOS Universal Link hotfix: preserve the incoming invite URL inside the
 # Capacitor WebView. Existing Scrobble invite parsing can then consume the
