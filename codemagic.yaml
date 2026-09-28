@@ -20,7 +20,7 @@ workflows:
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
           cd scrobble-mobile
           npm install
-          npm install @capacitor/app
+          npm install @capacitor/app @capacitor/share
           python3 ../scripts/patch-ios.py
           npx cap add ios
           npx cap sync ios
