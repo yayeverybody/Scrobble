@@ -123,3 +123,41 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
 '''
     app_text = app_text.replace(auth_marker, handler + auth_marker, 1)
 app.write_text(app_text)
+
+
+# iOS Universal Link hotfix: preserve the incoming invite URL inside the
+# Capacitor WebView. Existing Scrobble invite parsing can then consume the
+# same path/query/hash it receives on the website.
+deep_link_script = '''
+<script type="module" id="scrobble-ios-universal-links">
+(async()=>{
+  if(!window.Capacitor?.isNativePlatform?.()) return;
+  try{
+    const { App } = await import('@capacitor/app');
+    const routeInvite=(incoming)=>{
+      try{
+        const u=new URL(incoming);
+        if(!/(^|\\.)yayeverybody\\.com$/i.test(u.hostname)) return;
+        const next=u.pathname+u.search+u.hash;
+        if(next && next!=='/' && next!==location.pathname+location.search+location.hash){
+          sessionStorage.setItem('scrobbleIncomingInviteUrl', incoming);
+          history.replaceState({},'',next);
+          location.reload();
+        }else if(u.search||u.hash){
+          sessionStorage.setItem('scrobbleIncomingInviteUrl', incoming);
+          history.replaceState({},'',u.pathname+u.search+u.hash);
+          location.reload();
+        }
+      }catch(e){ console.error('Scrobble invite URL error',e); }
+    };
+    const launch=await App.getLaunchUrl();
+    if(launch?.url) routeInvite(launch.url);
+    App.addListener('appUrlOpen',({url})=>routeInvite(url));
+  }catch(e){ console.error('Scrobble universal-link setup failed',e); }
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-ios-universal-links"' not in text:
+    text = text.replace('</body>', deep_link_script + '</body>')
+index.write_text(text)
