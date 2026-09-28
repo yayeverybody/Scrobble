@@ -181,14 +181,21 @@ workflows:
       - name: Verify Universal Links in signed app
         script: |
           cd scrobble-mobile
-          APP_PATH=$(find "$HOME/Library/Developer/Xcode/DerivedData" -path "*/Build/*/App.app" -type d | head -1)
-          test -n "$APP_PATH" || { echo "Signed App.app not found"; exit 1; }
+          # Verify the actual exported IPA, not a transient DerivedData App.app.
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" -type f | head -1)
+          test -n "$IPA_PATH" || { echo "Exported IPA not found"; exit 1; }
+          rm -rf /tmp/scrobble-ipa
+          mkdir -p /tmp/scrobble-ipa
+          unzip -q "$IPA_PATH" -d /tmp/scrobble-ipa
+          APP_PATH=$(find /tmp/scrobble-ipa/Payload -maxdepth 1 -name "*.app" -type d | head -1)
+          test -n "$APP_PATH" || { echo "App bundle not found inside IPA"; exit 1; }
           codesign -d --entitlements :- "$APP_PATH" > /tmp/scrobble-entitlements.plist 2>&1
           cat /tmp/scrobble-entitlements.plist
-          grep -q "applinks:yayeverybody.com" /tmp/scrobble-entitlements.plist || {
-            echo "ERROR: signed app is missing applinks:yayeverybody.com"
+          grep -Fq "applinks:yayeverybody.com" /tmp/scrobble-entitlements.plist || {
+            echo "ERROR: exported signed app is missing applinks:yayeverybody.com"
             exit 1
           }
+          echo "Verified Universal Links entitlement in exported IPA."
 
     artifacts:
       - scrobble-mobile/build/ios/ipa/*.ipa
