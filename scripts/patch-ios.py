@@ -131,13 +131,31 @@ app.write_text(app_text)
 haptic_helper = '''
 <script id="scrobble-haptics">
 (function(){
-  function plugin(){ return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics; }
+  // Capacitor 7+ plugins are registered lazily. Accessing window.Capacitor.Plugins.Haptics
+  // is not a reliable way to obtain them, so create a proxy through registerPlugin.
+  function plugin(){
+    try{
+      var c=window.Capacitor;
+      if(!c)return null;
+      if(window.__ScrobbleNativeHaptics)return window.__ScrobbleNativeHaptics;
+      if(typeof c.registerPlugin==='function'){
+        window.__ScrobbleNativeHaptics=c.registerPlugin('Haptics');
+        return window.__ScrobbleNativeHaptics;
+      }
+      return c.Plugins&&c.Plugins.Haptics||null;
+    }catch(e){console.error('Haptics registration failed',e);return null}
+  }
+  function call(method,args){
+    var h=plugin();
+    if(!h||typeof h[method]!=='function'){console.error('Native Haptics unavailable:',method);return Promise.resolve(false)}
+    return Promise.resolve(h[method](args)).then(function(){return true}).catch(function(e){console.error('Native Haptics failed:',method,e);return false});
+  }
   window.ScrobbleHaptics={
-    light:function(){ try{ var h=plugin(); if(h) h.impact({style:'LIGHT'}); }catch(e){} },
-    medium:function(){ try{ var h=plugin(); if(h) h.impact({style:'MEDIUM'}); }catch(e){} },
-    select:function(){ try{ var h=plugin(); if(h) h.selectionStart().then(function(){return h.selectionChanged()}).then(function(){return h.selectionEnd()}); }catch(e){} },
-    success:function(){ try{ var h=plugin(); if(h) h.notification({type:'SUCCESS'}); }catch(e){} },
-    error:function(){ try{ var h=plugin(); if(h) h.notification({type:'ERROR'}); }catch(e){} }
+    light:function(){return call('impact',{style:'LIGHT'})},
+    medium:function(){return call('impact',{style:'MEDIUM'})},
+    select:function(){return call('selectionStart').then(function(){return call('selectionChanged')}).then(function(){return call('selectionEnd')})},
+    success:function(){return call('notification',{type:'SUCCESS'})},
+    error:function(){return call('notification',{type:'ERROR'})}
   };
 })();
 </script>
