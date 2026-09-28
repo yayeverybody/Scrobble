@@ -133,7 +133,8 @@ deep_link_script = '''
 (async()=>{
   if(!window.Capacitor?.isNativePlatform?.()) return;
   try{
-    const { App } = await import('@capacitor/app');
+    const App = window.Capacitor?.Plugins?.App;
+    if(!App) throw new Error('Capacitor App plugin unavailable');
     const routeInvite=(incoming)=>{
       try{
         const u=new URL(incoming);
