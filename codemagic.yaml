@@ -103,15 +103,36 @@ workflows:
         script: |
           cd scrobble-mobile
           FOUND=""
+          PROFILE_COUNT=0
+          echo "=== Provisioning profiles available to this build ==="
           for PROFILE in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision; do
             [ -f "$PROFILE" ] || continue
-            security cms -D -i "$PROFILE" > /tmp/scrobble-profile.plist
-            APPID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/scrobble-profile.plist 2>/dev/null || true)
-            if [ "$APPID" = "QX9HW7SCL2.com.yayeverybody.scrobble" ] &&                /usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" /tmp/scrobble-profile.plist 2>/dev/null | grep -q "applinks:yayeverybody.com"; then
+            PROFILE_COUNT=$((PROFILE_COUNT + 1))
+            PLIST="/tmp/scrobble-profile-$PROFILE_COUNT.plist"
+            security cms -D -i "$PROFILE" > "$PLIST"
+
+            NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PLIST" 2>/dev/null || echo "<unknown>")
+            UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PLIST" 2>/dev/null || echo "<unknown>")
+            APPID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "$PLIST" 2>/dev/null || echo "<none>")
+            DOMAINS=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" "$PLIST" 2>/dev/null || echo "<none>")
+
+            echo "--- Profile $PROFILE_COUNT ---"
+            echo "File: $(basename "$PROFILE")"
+            echo "Name: $NAME"
+            echo "UUID: $UUID"
+            echo "Application identifier: $APPID"
+            echo "Associated Domains:"
+            echo "$DOMAINS"
+
+            if [ "$APPID" = "QX9HW7SCL2.com.yayeverybody.scrobble" ] && echo "$DOMAINS" | grep -q "applinks:yayeverybody.com"; then
               FOUND="$PROFILE"
-              break
+              echo "MATCH: This profile is valid for Scrobble Universal Links."
             fi
           done
+
+          echo "=== End provisioning profile diagnostics ==="
+          echo "Profiles inspected: $PROFILE_COUNT"
+
           test -n "$FOUND" || {
             echo "ERROR: No App Store profile for Scrobble contains applinks:yayeverybody.com"
             exit 1
