@@ -136,6 +136,48 @@ app.write_text(app_text)
 
 
 
+
+# Haptics bridge + diagnostic. Keep this observable during TestFlight validation:
+# a long press on the SCROBBLE wordmark fires a native MEDIUM impact and briefly
+# shows HAPTIC TEST. Once device validation passes, gameplay hooks can use the
+# same bridge and this diagnostic can be removed.
+haptic_helper = r'''
+<script id="scrobble-haptics">
+(()=>{
+  const plugin=()=>window.Capacitor?.Plugins?.Haptics;
+  async function impact(style='LIGHT'){
+    const h=plugin();
+    if(!h?.impact) throw new Error('Capacitor Haptics plugin unavailable');
+    await h.impact({style});
+    return true;
+  }
+  window.ScrobbleHaptics={impact,light:()=>impact('LIGHT'),medium:()=>impact('MEDIUM'),heavy:()=>impact('HEAVY')};
+
+  let timer;
+  document.addEventListener('pointerdown',e=>{
+    const target=e.target.closest?.('.brand,.logo,[class*="logo"],[id*="logo"]');
+    if(!target || !/SCROBBLE/i.test(target.textContent||'')) return;
+    timer=setTimeout(async()=>{
+      try{
+        await impact('MEDIUM');
+        const old=target.textContent;
+        target.textContent='HAPTIC TEST';
+        setTimeout(()=>{target.textContent=old},700);
+      }catch(err){
+        console.error('SCROBBLE HAPTIC DIAGNOSTIC FAILED',err);
+        alert('Haptic test failed: '+err.message);
+      }
+    },650);
+  },{passive:true});
+  for(const ev of ['pointerup','pointercancel','pointermove']) document.addEventListener(ev,()=>clearTimeout(timer),{passive:true});
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-haptics"' not in text:
+    text = text.replace('</body>',haptic_helper+'</body>',1)
+index.write_text(text)
+
 # Games-page cleanup: progressively disclose friend/computer setup instead of
 # showing every option at once. Keep "Make It Weird" inside the chosen mode.
 text = index.read_text()
