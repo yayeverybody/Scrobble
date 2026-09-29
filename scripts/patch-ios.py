@@ -128,6 +128,48 @@ app.write_text(app_text)
 # Inside Capacitor that produces capacitor://localhost/?join=..., which is not
 # shareable as a Universal Link. Rewrite that URL at the native share boundary
 # to the public HTTPS origin.
+# iOS invite display/copy hotfix: Capacitor's WebView origin is
+# capacitor://localhost, so invite URLs constructed from location.href are wrong
+# before the user even reaches the native share sheet. Override the visible/copy
+# value at the source by making URL construction use the public origin.
+url_origin_script = '''
+<script id="scrobble-ios-public-invite-origin">
+(()=>{
+  if(!window.Capacitor?.isNativePlatform?.()) return;
+  const normalize=(value)=>{
+    try{
+      const u=new URL(String(value));
+      if(u.protocol==='capacitor:' && u.hostname==='localhost'){
+        return 'https://yayeverybody.com'+u.pathname+u.search+u.hash;
+      }
+    }catch(e){}
+    return value;
+  };
+  const nativeWriteText=navigator.clipboard?.writeText?.bind(navigator.clipboard);
+  if(nativeWriteText){
+    navigator.clipboard.writeText=(value)=>nativeWriteText(normalize(value));
+  }
+  document.addEventListener('click',()=>{
+    queueMicrotask(()=>{
+      document.querySelectorAll('input,textarea,a').forEach(el=>{
+        if('value' in el && typeof el.value==='string' && el.value.startsWith('capacitor://localhost/')){
+          el.value=normalize(el.value);
+        }
+        if(el.tagName==='A' && typeof el.href==='string' && el.href.startsWith('capacitor://localhost/')){
+          el.href=normalize(el.href);
+        }
+      });
+    });
+  },true);
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-ios-public-invite-origin"' not in text:
+    text = text.replace('</body>', url_origin_script + '</body>')
+index.write_text(text)
+
+
 # iOS native share hotfix: Web Share can throw a TypeError inside Capacitor's
 # WKWebView. Use Capacitor Share when available, while preserving the existing
 # web share path as a fallback. Patch navigator.share itself so every existing
