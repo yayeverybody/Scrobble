@@ -317,6 +317,18 @@ if 'id="scrobble-ios-public-invite-origin"' not in text:
     text = text.replace('</body>', url_origin_script + '</body>')
 index.write_text(text)
 
+# Build-time regression checks for invite/deep-link behavior. These deliberately
+# fail the release build if a future edit brings back Capacitor localhost invite
+# URLs, script re-bootstrap, or omits the public HTTPS invite function.
+app_source = app.read_text()
+index_source = index.read_text()
+assert "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}" in app_source, "Public inviteURL regression"
+assert "capacitor://localhost/?join=" not in app_source, "Native localhost invite URL regression"
+assert "location.replace(next);" in index_source, "Universal Link must clean-bootstrap exact invite"
+assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
+assert "App.addListener('appUrlOpen'" in index_source, "Warm-app Universal Link listener missing"
+assert "App.getLaunchUrl()" in index_source, "Cold-launch Universal Link handling missing"
+
 
 # iOS native share hotfix: Web Share can throw a TypeError inside Capacitor's
 # WKWebView. Use Capacitor Share when available, while preserving the existing
@@ -387,6 +399,10 @@ deep_link_script = '''
         // Allow a different invite while the app is already running. The old
         // boolean latch incorrectly ignored every invite after the first one.
         if(routing && join===lastJoin) return;
+        // Ignore an exact duplicate callback only while it is being routed.
+        // Once the destination document has loaded, the same invite must remain
+        // usable later (for example after the player visits Games and taps the
+        // invite again).
         routing=true;
         lastJoin=join;
         // Do not reload the Capacitor WebView. Reloading caused the launch URL
