@@ -266,7 +266,20 @@ deep_link_script = '''
         // to be returned again on startup, creating an infinite splash/white-screen loop.
         const next='/?join='+encodeURIComponent(join);
         history.replaceState({},'',next);
-        window.dispatchEvent(new PopStateEvent('popstate'));
+        // Scrobble reads ?join= during normal startup. We cannot reload the
+        // native shell (that loops), so restart only the web app bootstrap:
+        // persist the invite once, then re-run the existing app script.
+        sessionStorage.setItem('scrobbleNativeJoin',join);
+        const existing=document.querySelector('script[src*="app-v3140.js"]');
+        if(existing){
+          existing.remove();
+          const script=document.createElement('script');
+          script.src='app-v3140.js?nativejoin='+Date.now();
+          script.onload=()=>sessionStorage.removeItem('scrobbleNativeJoin');
+          document.body.appendChild(script);
+        }else{
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
       }catch(e){
         routing=false;
         console.error('Scrobble invite URL error',e);
