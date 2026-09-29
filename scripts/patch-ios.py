@@ -124,6 +124,10 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
     app_text = app_text.replace(auth_marker, handler + auth_marker, 1)
 app.write_text(app_text)
 
+# iOS invite URL normalization: the web app builds invites from location.href.
+# Inside Capacitor that produces capacitor://localhost/?join=..., which is not
+# shareable as a Universal Link. Rewrite that URL at the native share boundary
+# to the public HTTPS origin.
 # iOS native share hotfix: Web Share can throw a TypeError inside Capacitor's
 # WKWebView. Use Capacitor Share when available, while preserving the existing
 # web share path as a fallback. Patch navigator.share itself so every existing
@@ -142,7 +146,16 @@ share_bridge = '''
         const payload={};
         if(data.title) payload.title=String(data.title);
         if(data.text) payload.text=String(data.text);
-        if(data.url) payload.url=String(data.url);
+        if(data.url){
+          let shareUrl=String(data.url);
+          try{
+            const u=new URL(shareUrl);
+            if(u.protocol==='capacitor:' && u.hostname==='localhost'){
+              shareUrl='https://yayeverybody.com'+u.pathname+u.search+u.hash;
+            }
+          }catch(e){}
+          payload.url=shareUrl;
+        }
         try{
           return await NativeShare.share(payload);
         }catch(err){
