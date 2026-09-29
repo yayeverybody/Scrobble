@@ -253,21 +253,24 @@ deep_link_script = '''
   try{
     const App = window.Capacitor?.Plugins?.App;
     if(!App) throw new Error('Capacitor App plugin unavailable');
+    let routing=false;
     const routeInvite=(incoming)=>{
       try{
+        if(routing) return;
         const u=new URL(incoming);
         if(!/(^|\\.)yayeverybody\\.com$/i.test(u.hostname)) return;
-        const next=u.pathname+u.search+u.hash;
-        if(next && next!=='/' && next!==location.pathname+location.search+location.hash){
-          sessionStorage.setItem('scrobbleIncomingInviteUrl', incoming);
-          history.replaceState({},'',next);
-          location.reload();
-        }else if(u.search||u.hash){
-          sessionStorage.setItem('scrobbleIncomingInviteUrl', incoming);
-          history.replaceState({},'',u.pathname+u.search+u.hash);
-          location.reload();
-        }
-      }catch(e){ console.error('Scrobble invite URL error',e); }
+        const join=u.searchParams.get('join');
+        if(!join) return;
+        routing=true;
+        // Do not reload the Capacitor WebView. Reloading caused the launch URL
+        // to be returned again on startup, creating an infinite splash/white-screen loop.
+        const next='/?join='+encodeURIComponent(join);
+        history.replaceState({},'',next);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }catch(e){
+        routing=false;
+        console.error('Scrobble invite URL error',e);
+      }
     };
     const launch=await App.getLaunchUrl();
     if(launch?.url) routeInvite(launch.url);
