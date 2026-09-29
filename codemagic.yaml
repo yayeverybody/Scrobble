@@ -20,9 +20,36 @@ workflows:
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
           cd scrobble-mobile
           npm install
+          npm install @capacitor/app @capacitor/share
           python3 ../scripts/patch-ios.py
           npx cap add ios
           npx cap sync ios
+
+          # Universal Links: the App Store build must be signed with Associated
+          # Domains enabled for this bundle ID. The matching AASA file must be
+          # served by yayeverybody.com.
+          cat > ios/App/App/App.entitlements <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.developer.associated-domains</key>
+            <array>
+              <string>applinks:yayeverybody.com</string>
+              <string>applinks:www.yayeverybody.com</string>
+            </array>
+          </dict>
+          </plist>
+          PLIST
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("ios/App/App.xcodeproj/project.pbxproj")
+          s=p.read_text()
+          marker="CODE_SIGN_STYLE = Automatic;"
+          if "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" not in s:
+              s=s.replace(marker, "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\t"+marker)
+          p.write_text(s)
+          PY
 
           /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" ios/App/App/Info.plist
@@ -69,8 +96,65 @@ workflows:
           }
           JSON
 
+          # App Store Connect requires the marketing version to be greater than
+          # the currently approved 1.0.1 release.
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.2" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.2" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
+
+      - name: Verify Associated Domains signing profile
+        script: |
+          cd scrobble-mobile
+          FOUND=""
+          PROFILE_COUNT=0
+          echo "=== Provisioning profiles available to this build ==="
+          for PROFILE in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision; do
+            [ -f "$PROFILE" ] || continue
+            PROFILE_COUNT=$((PROFILE_COUNT + 1))
+            PLIST="/tmp/scrobble-profile-$PROFILE_COUNT.plist"
+            security cms -D -i "$PROFILE" > "$PLIST"
+
+            NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PLIST" 2>/dev/null || echo "<unknown>")
+            UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PLIST" 2>/dev/null || echo "<unknown>")
+            APPID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "$PLIST" 2>/dev/null || echo "<none>")
+            DOMAINS=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" "$PLIST" 2>/dev/null || echo "<none>")
+
+            echo "--- Profile $PROFILE_COUNT ---"
+            echo "File: $(basename "$PROFILE")"
+            echo "Name: $NAME"
+            echo "UUID: $UUID"
+            echo "Application identifier: $APPID"
+            echo "Associated Domains:"
+            echo "$DOMAINS"
+
+            # Apple's provisioning profile may authorize Associated Domains
+            # with "*" while the app target carries the specific applinks domains.
+            if [ "$APPID" = "QX9HW7SCL2.com.yayeverybody.scrobble" ] && echo "$DOMAINS" | grep -Eq '(^|[[:space:]])(\*|applinks:yayeverybody\.com)($|[[:space:]])'; then
+              FOUND="$PROFILE"
+              echo "MATCH: This profile authorizes Associated Domains for Scrobble."
+            fi
+          done
+
+          echo "=== End provisioning profile diagnostics ==="
+          echo "Profiles inspected: $PROFILE_COUNT"
+
+          APP_ENTITLEMENTS="ios/App/App/App.entitlements"
+          test -f "$APP_ENTITLEMENTS" || {
+            echo "ERROR: App.entitlements is missing"
+            exit 1
+          }
+          /usr/libexec/PlistBuddy -c "Print :com.apple.developer.associated-domains" "$APP_ENTITLEMENTS" | grep -q "applinks:yayeverybody.com" || {
+            echo "ERROR: App.entitlements does not contain applinks:yayeverybody.com"
+            exit 1
+          }
+          echo "Verified app entitlement contains applinks:yayeverybody.com"
+
+          test -n "$FOUND" || {
+            echo "ERROR: No App Store profile for Scrobble authorizes Associated Domains"
+            exit 1
+          }
+          echo "Verified Associated Domains in $(basename "$FOUND")"
 
       - name: Set up iOS code signing
         script: |

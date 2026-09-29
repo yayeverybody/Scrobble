@@ -87,6 +87,15 @@ index.write_text(text)
 
 app = Path('www/app-v3140.js')
 app_text = app.read_text()
+
+# Reuse the exact source-level invite fix proven in Scrobble 1.0.1 (commit
+# 9455d48): do not derive invite links from Capacitor's localhost origin.
+old_invite_fn = "function inviteURL(code){return location.origin+location.pathname+'?join='+encodeURIComponent(code)}"
+new_invite_fn = "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}"
+if old_invite_fn in app_text:
+    app_text = app_text.replace(old_invite_fn, new_invite_fn, 1)
+elif new_invite_fn not in app_text:
+    raise SystemExit('Known Scrobble inviteURL function not found')
 if "const deleteAccount=document.getElementById('deleteAccount');" not in app_text:
     marker = "  logoutAccount.onclick=async()=>{"
     if marker not in app_text:
@@ -123,3 +132,175 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
 '''
     app_text = app_text.replace(auth_marker, handler + auth_marker, 1)
 app.write_text(app_text)
+
+# iOS invite URL normalization: the web app builds invites from location.href.
+# Inside Capacitor that produces capacitor://localhost/?join=..., which is not
+# shareable as a Universal Link. Rewrite that URL at the native share boundary
+# to the public HTTPS origin.
+# Fix invite URL at its source in the packaged app. The web app uses the current
+# origin to construct invite links; in Capacitor that origin is capacitor://localhost.
+# Replace those origin expressions with the public HTTPS origin before packaging.
+for web_file in Path('www').glob('*.js'):
+    source = web_file.read_text()
+    original = source
+    source = source.replace("location.origin+'/?join='", "'https://yayeverybody.com/?join='")
+    source = source.replace('location.origin+"/?join="', '"https://yayeverybody.com/?join="')
+    source = source.replace("window.location.origin+'/?join='", "'https://yayeverybody.com/?join='")
+    source = source.replace('window.location.origin+"/?join="', '"https://yayeverybody.com/?join="')
+    source = source.replace("location.href.split('?')[0]+'?join='", "'https://yayeverybody.com/?join='")
+    source = source.replace('location.href.split("?")[0]+"?join="', '"https://yayeverybody.com/?join="')
+    if source != original:
+        web_file.write_text(source)
+
+# iOS invite display/copy hotfix: Capacitor's WebView origin is
+# capacitor://localhost, so invite URLs constructed from location.href are wrong
+# before the user even reaches the native share sheet. Override the visible/copy
+# value at the source by making URL construction use the public origin.
+url_origin_script = '''
+<script id="scrobble-ios-public-invite-origin">
+(()=>{
+  if(!window.Capacitor?.isNativePlatform?.()) return;
+  const normalize=(value)=>{
+    try{
+      const u=new URL(String(value));
+      if(u.protocol==='capacitor:' && u.hostname==='localhost'){
+        return 'https://yayeverybody.com'+u.pathname+u.search+u.hash;
+      }
+    }catch(e){}
+    return value;
+  };
+  const nativeWriteText=navigator.clipboard?.writeText?.bind(navigator.clipboard);
+  if(nativeWriteText){
+    navigator.clipboard.writeText=(value)=>nativeWriteText(normalize(value));
+  }
+  const normalizeDom=()=>{
+    document.querySelectorAll('input,textarea,a').forEach(el=>{
+      if('value' in el && typeof el.value==='string' && el.value.startsWith('capacitor://localhost/')){
+        el.value=normalize(el.value);
+      }
+      if(el.tagName==='A' && typeof el.href==='string' && el.href.startsWith('capacitor://localhost/')){
+        el.href=normalize(el.href);
+      }
+    });
+  };
+  normalizeDom();
+  new MutationObserver(normalizeDom).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['value','href']});
+  document.addEventListener('click',()=>queueMicrotask(normalizeDom),true);
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-ios-public-invite-origin"' not in text:
+    text = text.replace('</body>', url_origin_script + '</body>')
+index.write_text(text)
+
+
+# iOS native share hotfix: Web Share can throw a TypeError inside Capacitor's
+# WKWebView. Use Capacitor Share when available, while preserving the existing
+# web share path as a fallback. Patch navigator.share itself so every existing
+# Scrobble invite-share call benefits without changing game logic.
+share_bridge = '''
+<script type="module" id="scrobble-ios-native-share">
+(()=>{
+  if(!window.Capacitor?.isNativePlatform?.()) return;
+  const NativeShare=window.Capacitor?.Plugins?.Share;
+  if(!NativeShare?.share) return;
+  const webShare=navigator.share?.bind(navigator);
+  try{
+    Object.defineProperty(navigator,'share',{
+      configurable:true,
+      value:async(data={})=>{
+        const payload={};
+        if(data.title) payload.title=String(data.title);
+        if(data.text) payload.text=String(data.text);
+        if(data.url){
+          let shareUrl=String(data.url);
+          try{
+            const u=new URL(shareUrl);
+            if(u.protocol==='capacitor:' && u.hostname==='localhost'){
+              shareUrl='https://yayeverybody.com'+u.pathname+u.search+u.hash;
+            }
+          }catch(e){}
+          payload.url=shareUrl;
+        }
+        try{
+          return await NativeShare.share(payload);
+        }catch(err){
+          const message=String(err?.message||err||'');
+          if(/cancel/i.test(message)) return;
+          if(webShare) return webShare(data);
+          throw err;
+        }
+      }
+    });
+  }catch(e){ console.error('Scrobble native share setup failed',e); }
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-ios-native-share"' not in text:
+    text = text.replace('</body>', share_bridge + '</body>')
+index.write_text(text)
+
+
+# iOS Universal Link hotfix: preserve the incoming invite URL inside the
+# Capacitor WebView. Existing Scrobble invite parsing can then consume the
+# same path/query/hash it receives on the website.
+deep_link_script = '''
+<script type="module" id="scrobble-ios-universal-links">
+(async()=>{
+  if(!window.Capacitor?.isNativePlatform?.()) return;
+  try{
+    const App = window.Capacitor?.Plugins?.App;
+    if(!App) throw new Error('Capacitor App plugin unavailable');
+    let routing=false;
+    let lastJoin='';
+    const routeInvite=(incoming)=>{
+      try{
+        const u=new URL(incoming);
+        if(!/(^|\\.)yayeverybody\\.com$/i.test(u.hostname)) return;
+        const join=u.searchParams.get('join');
+        if(!join) return;
+        // Allow a different invite while the app is already running. The old
+        // boolean latch incorrectly ignored every invite after the first one.
+        if(routing && join===lastJoin) return;
+        routing=true;
+        lastJoin=join;
+        // Do not reload the Capacitor WebView. Reloading caused the launch URL
+        // to be returned again on startup, creating an infinite splash/white-screen loop.
+        const next='/?join='+encodeURIComponent(join);
+        history.replaceState({},'',next);
+        // Scrobble reads ?join= during normal startup. We cannot reload the
+        // native shell (that loops), so restart only the web app bootstrap:
+        // persist the invite once, then re-run the existing app script.
+        sessionStorage.setItem('scrobbleNativeJoin',join);
+        const existing=document.querySelector('script[src*="app-v3140.js"]');
+        if(existing){
+          existing.remove();
+          const script=document.createElement('script');
+          script.src='app-v3140.js?nativejoin='+Date.now();
+          script.onload=()=>{
+            sessionStorage.removeItem('scrobbleNativeJoin');
+            routing=false;
+          };
+          script.onerror=()=>{ routing=false; };
+          document.body.appendChild(script);
+        }else{
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
+      }catch(e){
+        routing=false;
+        console.error('Scrobble invite URL error',e);
+      }
+    };
+    const launch=await App.getLaunchUrl();
+    if(launch?.url) routeInvite(launch.url);
+    App.addListener('appUrlOpen',({url})=>routeInvite(url));
+  }catch(e){ console.error('Scrobble universal-link setup failed',e); }
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-ios-universal-links"' not in text:
+    text = text.replace('</body>', deep_link_script + '</body>')
+index.write_text(text)
