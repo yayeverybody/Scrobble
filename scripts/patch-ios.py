@@ -134,6 +134,51 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
 app.write_text(app_text)
 
 
+
+# Branded startup splash. iOS still provides the native launch screen while the
+# process starts; this in-app layer makes the Scrobble brand visible long enough
+# to register, then hands off without delaying returning players unnecessarily.
+splash = r'''
+<style id="scrobble-startup-splash-style">
+#scrobbleStartupSplash{position:fixed;inset:0;z-index:2147483646;background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%);display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity .22s ease;font-family:Arial,Helvetica,sans-serif}
+#scrobbleStartupSplash.dismiss{opacity:0;pointer-events:none}
+#scrobbleStartupSplash .splashInner{text-align:center;padding:28px}
+#scrobbleStartupSplash .splashLogo{font-size:clamp(36px,10vw,58px);font-weight:1000;letter-spacing:.06em;color:#f4c052;text-shadow:0 3px 0 #704611,0 5px 14px rgba(0,0,0,.28)}
+#scrobbleStartupSplash .splashStudio{margin-top:14px;color:#fff;font-size:14px;font-weight:800;letter-spacing:.28em}
+</style>
+<div id="scrobbleStartupSplash" aria-hidden="true">
+  <div class="splashInner">
+    <div class="splashLogo">SCROBBLE</div>
+    <div class="splashStudio">YAY EVERYBODY GAMES</div>
+  </div>
+</div>
+<script id="scrobble-startup-splash-script">
+(()=>{
+  const splash=document.getElementById('scrobbleStartupSplash');
+  if(!splash) return;
+  const started=performance.now();
+  // First launch gets enough time for the brand to register. Returning launches
+  // remain quick; never hold the UI beyond 1.25 seconds.
+  const minVisible=sessionStorage.getItem('scrobbleSplashSeen') ? 450 : 1050;
+  sessionStorage.setItem('scrobbleSplashSeen','1');
+  const finish=()=>{
+    const wait=Math.max(0,minVisible-(performance.now()-started));
+    setTimeout(()=>{
+      splash.classList.add('dismiss');
+      setTimeout(()=>splash.remove(),240);
+    },wait);
+  };
+  if(document.readyState==='complete') finish();
+  else window.addEventListener('load',finish,{once:true});
+  setTimeout(finish,1250);
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobbleStartupSplash"' not in text:
+    text = text.replace('<body>', '<body>' + splash)
+index.write_text(text)
+
 # Next-release onboarding: replace the dense combined auth/profile screen with a
 # simple choice first. Existing authenticated users never see this overlay.
 onboarding = r'''
