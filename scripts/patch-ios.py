@@ -133,6 +133,84 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
     app_text = app_text.replace(auth_marker, handler + auth_marker, 1)
 app.write_text(app_text)
 
+
+# Next-release onboarding: replace the dense combined auth/profile screen with a
+# simple choice first. Existing authenticated users never see this overlay.
+onboarding = r'''
+<style id="scrobble-onboarding-v2-style">
+#scrobbleOnboardingV2{position:fixed;inset:0;z-index:2147483000;background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%);display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 22px) 22px calc(env(safe-area-inset-bottom) + 22px);font-family:Arial,Helvetica,sans-serif}
+#scrobbleOnboardingV2.hidden{display:none!important}
+#scrobbleOnboardingV2 .obCard{width:min(100%,430px);background:#fff;border-radius:28px;padding:34px 26px 28px;box-shadow:0 24px 70px rgba(0,0,0,.25);text-align:center}
+#scrobbleOnboardingV2 h1{margin:0 0 10px;color:#16232d;font-size:36px;line-height:1.04}
+#scrobbleOnboardingV2 p{margin:0 0 28px;color:#65727b;font-size:18px;line-height:1.35}
+#scrobbleOnboardingV2 .obActions{display:flex;gap:12px}
+#scrobbleOnboardingV2 button{flex:1;min-height:58px;border-radius:14px;border:2px solid #1488cf;background:#fff;color:#1179b8;font-size:16px;font-weight:900;padding:10px}
+#scrobbleOnboardingV2 button.primary{background:#1488cf;color:#fff}
+@media(max-width:360px){#scrobbleOnboardingV2 .obActions{flex-direction:column}}
+</style>
+<div id="scrobbleOnboardingV2" class="hidden" role="dialog" aria-modal="true" aria-labelledby="scrobbleWelcomeTitle">
+  <div class="obCard">
+    <h1 id="scrobbleWelcomeTitle">Welcome to Scrobble</h1>
+    <p>Play words with friends and family. Your games stay with you.</p>
+    <div class="obActions">
+      <button id="scrobbleCreateChoice" class="primary" type="button">CREATE ACCOUNT</button>
+      <button id="scrobbleLoginChoice" type="button">LOG IN</button>
+    </div>
+  </div>
+</div>
+<script id="scrobble-onboarding-v2-script">
+(()=>{
+  const overlay=document.getElementById('scrobbleOnboardingV2');
+  const account=document.getElementById('accountBox');
+  if(!overlay||!account) return;
+  const createBtn=document.getElementById('scrobbleCreateChoice');
+  const loginBtn=document.getElementById('scrobbleLoginChoice');
+  const signIn=document.getElementById('signInAccount');
+  const create=document.getElementById('createAccount');
+  const username=document.getElementById('accountUsername');
+  const photo=account.querySelector('input[type="file"]')?.closest('div');
+
+  const signedIn=()=>{
+    const logout=document.getElementById('logoutAccount');
+    return !!logout && !logout.classList.contains('hidden');
+  };
+  const showAccount=(mode)=>{
+    overlay.classList.add('hidden');
+    account.classList.remove('hidden');
+    if(mode==='login'){
+      if(username) username.closest('label,div')?.classList.add('scrobbleCreateOnly');
+      if(create) create.style.display='none';
+      if(signIn) signIn.style.display='';
+    }else{
+      if(username) username.closest('label,div')?.classList.remove('scrobbleCreateOnly');
+      if(signIn) signIn.style.display='none';
+      if(create) create.style.display='';
+    }
+    // Photo belongs after successful account creation, not before it.
+    if(photo) photo.style.display='none';
+  };
+  createBtn.onclick=()=>showAccount('create');
+  loginBtn.onclick=()=>showAccount('login');
+
+  // Auth initialization is async. Wait briefly for the existing app to restore
+  // a session; only unauthenticated users get first-run onboarding.
+  let checks=0;
+  const decide=()=>{
+    if(signedIn()){ overlay.classList.add('hidden'); return; }
+    if(++checks<12){ setTimeout(decide,125); return; }
+    // Do not cover an invite while Scrobble is resolving it; the normal auth
+    // flow can request credentials if the invite requires them.
+    if(!new URLSearchParams(location.search).get('join')) overlay.classList.remove('hidden');
+  };
+  decide();
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobbleOnboardingV2"' not in text:
+    text = text.replace('</body>', onboarding + '</body>')
+index.write_text(text)
+
 # iOS invite URL normalization: the web app builds invites from location.href.
 # Inside Capacitor that produces capacitor://localhost/?join=..., which is not
 # shareable as a Universal Link. Rewrite that URL at the native share boundary
