@@ -128,6 +128,21 @@ app.write_text(app_text)
 # Inside Capacitor that produces capacitor://localhost/?join=..., which is not
 # shareable as a Universal Link. Rewrite that URL at the native share boundary
 # to the public HTTPS origin.
+# Fix invite URL at its source in the packaged app. The web app uses the current
+# origin to construct invite links; in Capacitor that origin is capacitor://localhost.
+# Replace those origin expressions with the public HTTPS origin before packaging.
+for web_file in Path('www').glob('*.js'):
+    source = web_file.read_text()
+    original = source
+    source = source.replace("location.origin+'/?join='", "'https://yayeverybody.com/?join='")
+    source = source.replace('location.origin+"/?join="', '"https://yayeverybody.com/?join="')
+    source = source.replace("window.location.origin+'/?join='", "'https://yayeverybody.com/?join='")
+    source = source.replace('window.location.origin+"/?join="', '"https://yayeverybody.com/?join="')
+    source = source.replace("location.href.split('?')[0]+'?join='", "'https://yayeverybody.com/?join='")
+    source = source.replace('location.href.split("?")[0]+"?join="', '"https://yayeverybody.com/?join="')
+    if source != original:
+        web_file.write_text(source)
+
 # iOS invite display/copy hotfix: Capacitor's WebView origin is
 # capacitor://localhost, so invite URLs constructed from location.href are wrong
 # before the user even reaches the native share sheet. Override the visible/copy
