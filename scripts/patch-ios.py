@@ -149,18 +149,19 @@ url_origin_script = '''
   if(nativeWriteText){
     navigator.clipboard.writeText=(value)=>nativeWriteText(normalize(value));
   }
-  document.addEventListener('click',()=>{
-    queueMicrotask(()=>{
-      document.querySelectorAll('input,textarea,a').forEach(el=>{
-        if('value' in el && typeof el.value==='string' && el.value.startsWith('capacitor://localhost/')){
-          el.value=normalize(el.value);
-        }
-        if(el.tagName==='A' && typeof el.href==='string' && el.href.startsWith('capacitor://localhost/')){
-          el.href=normalize(el.href);
-        }
-      });
+  const normalizeDom=()=>{
+    document.querySelectorAll('input,textarea,a').forEach(el=>{
+      if('value' in el && typeof el.value==='string' && el.value.startsWith('capacitor://localhost/')){
+        el.value=normalize(el.value);
+      }
+      if(el.tagName==='A' && typeof el.href==='string' && el.href.startsWith('capacitor://localhost/')){
+        el.href=normalize(el.href);
+      }
     });
-  },true);
+  };
+  normalizeDom();
+  new MutationObserver(normalizeDom).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['value','href']});
+  document.addEventListener('click',()=>queueMicrotask(normalizeDom),true);
 })();
 </script>
 '''
