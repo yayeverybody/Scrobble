@@ -87,6 +87,15 @@ index.write_text(text)
 
 app = Path('www/app-v3140.js')
 app_text = app.read_text()
+
+# Reuse the exact source-level invite fix proven in Scrobble 1.0.1 (commit
+# 9455d48): do not derive invite links from Capacitor's localhost origin.
+old_invite_fn = "function inviteURL(code){return location.origin+location.pathname+'?join='+encodeURIComponent(code)}"
+new_invite_fn = "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}"
+if old_invite_fn in app_text:
+    app_text = app_text.replace(old_invite_fn, new_invite_fn, 1)
+elif new_invite_fn not in app_text:
+    raise SystemExit('Known Scrobble inviteURL function not found')
 if "const deleteAccount=document.getElementById('deleteAccount');" not in app_text:
     marker = "  logoutAccount.onclick=async()=>{"
     if marker not in app_text:
