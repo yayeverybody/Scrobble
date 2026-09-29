@@ -254,14 +254,18 @@ deep_link_script = '''
     const App = window.Capacitor?.Plugins?.App;
     if(!App) throw new Error('Capacitor App plugin unavailable');
     let routing=false;
+    let lastJoin='';
     const routeInvite=(incoming)=>{
       try{
-        if(routing) return;
         const u=new URL(incoming);
         if(!/(^|\\.)yayeverybody\\.com$/i.test(u.hostname)) return;
         const join=u.searchParams.get('join');
         if(!join) return;
+        // Allow a different invite while the app is already running. The old
+        // boolean latch incorrectly ignored every invite after the first one.
+        if(routing && join===lastJoin) return;
         routing=true;
+        lastJoin=join;
         // Do not reload the Capacitor WebView. Reloading caused the launch URL
         // to be returned again on startup, creating an infinite splash/white-screen loop.
         const next='/?join='+encodeURIComponent(join);
@@ -275,7 +279,11 @@ deep_link_script = '''
           existing.remove();
           const script=document.createElement('script');
           script.src='app-v3140.js?nativejoin='+Date.now();
-          script.onload=()=>sessionStorage.removeItem('scrobbleNativeJoin');
+          script.onload=()=>{
+            sessionStorage.removeItem('scrobbleNativeJoin');
+            routing=false;
+          };
+          script.onerror=()=>{ routing=false; };
           document.body.appendChild(script);
         }else{
           window.dispatchEvent(new PopStateEvent('popstate'));
