@@ -270,24 +270,15 @@ deep_link_script = '''
         // to be returned again on startup, creating an infinite splash/white-screen loop.
         const next='/?join='+encodeURIComponent(join);
         history.replaceState({},'',next);
-        // Scrobble reads ?join= during normal startup. We cannot reload the
-        // native shell (that loops), so restart only the web app bootstrap:
-        // persist the invite once, then re-run the existing app script.
+        // Scrobble's bootstrap owns the actual invite acceptance/join flow.
+        // Re-running app-v3140.js on a live page duplicates module state and can
+        // leave the board showing the new invite while the join/save handlers
+        // still belong to the previous game (especially with crossed invites).
+        // Give the existing app a clean web-document bootstrap instead. This is
+        // a WebView navigation, not a native-app relaunch, so App.getLaunchUrl()
+        // is not re-consumed and the old splash/white-screen loop is avoided.
         sessionStorage.setItem('scrobbleNativeJoin',join);
-        const existing=document.querySelector('script[src*="app-v3140.js"]');
-        if(existing){
-          existing.remove();
-          const script=document.createElement('script');
-          script.src='app-v3140.js?nativejoin='+Date.now();
-          script.onload=()=>{
-            sessionStorage.removeItem('scrobbleNativeJoin');
-            routing=false;
-          };
-          script.onerror=()=>{ routing=false; };
-          document.body.appendChild(script);
-        }else{
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        }
+        location.replace(next);
       }catch(e){
         routing=false;
         console.error('Scrobble invite URL error',e);
