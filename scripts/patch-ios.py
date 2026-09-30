@@ -379,8 +379,11 @@ final_auth_css = '''
 #accountBox .scrobbleAuthPanel{display:block!important}
 #accountBox .scrobbleAuthPanel.hidden{display:none!important}
 #accountBox .accountState:empty{display:none!important}
-#accountBox .accountLabel,#accountBox .usernameHint{color:#e9f7ff!important}
+#accountBox .accountLabel,#accountBox .usernameHint{color:#fff!important}
 #accountBox .accountInput{background:#fff!important;color:#173044!important}
+#accountBox .accountSub,#accountBox .accountSubtitle,#accountBox p{color:#e9f7ff!important}
+#accountBox .accountPrimary{background:#f2bd45!important;color:#173044!important;border-color:#f2bd45!important}
+#accountBox .accountLink{color:#fff!important}
 #accountBox .profilePhotoRow,#accountBox .accountPhoto,#accountBox [id*="Photo"],#accountBox [id*="photo"],#accountBox [class*="photo"],#accountBox [class*="Photo"]{display:none!important}
 </style>
 <script id="scrobble-final-auth-cleanup">
