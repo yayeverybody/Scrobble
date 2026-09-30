@@ -406,7 +406,7 @@ final_auth_css = '''
 #accountBox .accountSub,#accountBox .accountSubtitle,#accountBox p{color:#e9f7ff!important}
 #accountBox .accountPrimary{background:#f2bd45!important;color:#173044!important;border-color:#f2bd45!important}
 #accountBox .accountLink{color:#fff!important}
-#accountBox #accountIdentity,#accountBox .profilePhotoRow,#accountBox .accountPhoto,#accountBox [id*="Photo"],#accountBox [id*="photo"],#accountBox [class*="photo"],#accountBox [class*="Photo"]{display:none!important}
+#accountBox #accountIdentity{display:none!important}\n#accountBox.scrobbleCreateMode #accountIdentity{display:block!important}\n#accountBox.scrobbleLoginMode #accountIdentity{display:none!important}\n#accountBox #closeAccount{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
 </style>
 <script id="scrobble-final-auth-cleanup">
 (()=>{
@@ -421,6 +421,42 @@ final_auth_css = '''
 '''
 if 'id="scrobble-final-auth-layout"' not in text:
     text = text.replace('</head>', final_auth_css + '</head>', 1)
+index.write_text(text)
+
+# New-game activity isolation. The activity banner is transient game state; a fresh
+# game must never inherit the previous game's last-move message.
+activity_fix = r'''
+<script id="scrobble-new-game-activity-reset">
+(()=>{
+  let armedUntil=0;
+  const isNewGameAction=(el)=>{
+    const t=(el?.textContent||'').trim();
+    return /PLAY (THE )?COMPUTER|PLAY (A )?FRIEND|NEW GAME|REMATCH/i.test(t);
+  };
+  const clearStale=()=>{
+    if(Date.now()>armedUntil) return;
+    document.querySelectorAll('div,span,p').forEach(el=>{
+      if(el.children.length) return;
+      const t=(el.textContent||'').trim();
+      if(/^[^\\n]{1,40} played .+ for \\d+$/i.test(t)) el.textContent='';
+    });
+  };
+  document.addEventListener('click',e=>{
+    const control=e.target.closest?.('button,a,[role="button"]');
+    if(!isNewGameAction(control)) return;
+    armedUntil=Date.now()+1500;
+    clearStale();
+    setTimeout(clearStale,50);
+    setTimeout(clearStale,250);
+    setTimeout(clearStale,700);
+    setTimeout(clearStale,1400);
+  },true);
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-new-game-activity-reset"' not in text:
+    text = text.replace('</body>', activity_fix + '</body>', 1)
 index.write_text(text)
 
 final_index = index.read_text()
