@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 index = Path('www/index.html')
 text = index.read_text()
