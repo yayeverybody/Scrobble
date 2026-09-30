@@ -28,8 +28,8 @@ workflows:
           grep -q 'id="scrobbleOnboardingV2"' www/index.html || { echo "ERROR: new onboarding missing"; exit 1; }
           grep -q 'id="loginAccountPanel"' www/index.html || { echo "ERROR: login panel missing"; exit 1; }
           grep -q 'id="createAccountPanel"' www/index.html || { echo "ERROR: create panel missing"; exit 1; }
-          if grep -q 'id="accountIdentity"' www/index.html; then echo "ERROR: legacy accountIdentity still present"; exit 1; fi
-          echo "PATCHED_AUTH_MARKER=AUTH_V4_2ca59db"
+          grep -q 'id="accountIdentity" class="hidden" style="display:none!important"' www/index.html || { echo "ERROR: hidden auth compatibility node missing"; exit 1; }
+          echo "PATCHED_AUTH_MARKER=AUTH_V4_LOGIN_COMPAT"
 
           npx cap add ios
           npx cap sync ios
@@ -37,8 +37,8 @@ workflows:
           # Prove Capacitor copied that exact patched bundle into the native app.
           grep -q 'id="scrobbleOnboardingV2"' ios/App/App/public/index.html || { echo "ERROR: onboarding not copied to iOS public"; exit 1; }
           grep -q 'id="loginAccountPanel"' ios/App/App/public/index.html || { echo "ERROR: login panel not copied to iOS public"; exit 1; }
-          if grep -q 'id="accountIdentity"' ios/App/App/public/index.html; then echo "ERROR: legacy accountIdentity copied to iOS public"; exit 1; fi
-          echo "IOS_AUTH_MARKER=AUTH_V4_2ca59db"
+          grep -q 'id="accountIdentity" class="hidden" style="display:none!important"' ios/App/App/public/index.html || { echo "ERROR: hidden auth compatibility node not copied to iOS"; exit 1; }
+          echo "IOS_AUTH_MARKER=AUTH_V4_LOGIN_COMPAT"
 
           # Universal Links: the App Store build must be signed with Associated
           # Domains enabled for this bundle ID. The matching AASA file must be
