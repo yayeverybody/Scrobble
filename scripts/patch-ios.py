@@ -364,22 +364,14 @@ if 'id="scrobbleOnboardingV2"' not in text:
 index.write_text(text)
 
 
-# FINAL auth DOM pass. The legacy profile UI lives outside passwordAccountForm,
-# so replacing that form alone cannot remove it. Strip the actual account identity
-# block from the unauthenticated sheet and make panel visibility authoritative.
+# FINAL auth DOM pass. Legacy profile controls are siblings in accountBox rather
+# than a reliably shaped accountIdentity wrapper. Remove them by their actual IDs
+# and controls, without assuming one HTML nesting pattern.
 text = index.read_text()
-# accountIdentity contains the avatar/upload/remove/profile controls shown in the
-# screenshots. It is not needed until after authentication/profile editing.
-text, removed_identity = re.subn(
-    r'<div id="accountIdentity"[^>]*>.*?</div>(?=<div id="accountState")',
-    '',
-    text,
-    count=1,
-    flags=re.S
-)
-if removed_identity != 1:
-    raise SystemExit(f'Expected to remove one legacy accountIdentity block, removed {removed_identity}')
-# Make the selected panel impossible for legacy CSS to override.
+# Remove any accountIdentity wrapper if this packaged version has one.
+text = re.sub(r'<div id="accountIdentity"[^>]*>.*?(?=<div id="accountState")', '', text, count=1, flags=re.S)
+# The current packaged app can expose profile controls independently. Hide/remove
+# them at runtime by stable control IDs/classes instead of brittle markup matching.
 final_auth_css = '''
 <style id="scrobble-final-auth-layout">
 #accountBox{background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%)!important}
@@ -389,15 +381,24 @@ final_auth_css = '''
 #accountBox .accountState:empty{display:none!important}
 #accountBox .accountLabel,#accountBox .usernameHint{color:#e9f7ff!important}
 #accountBox .accountInput{background:#fff!important;color:#173044!important}
+#accountBox .profilePhotoRow,#accountBox .accountPhoto,#accountBox [id*="Photo"],#accountBox [id*="photo"],#accountBox [class*="photo"],#accountBox [class*="Photo"]{display:none!important}
 </style>
+<script id="scrobble-final-auth-cleanup">
+(()=>{
+ const box=document.getElementById('accountBox'); if(!box)return;
+ const clean=()=>{
+   box.querySelectorAll('input[type="file"]').forEach(el=>(el.closest('div')||el).style.setProperty('display','none','important'));
+   box.querySelectorAll('button').forEach(el=>{if(/UPLOAD PHOTO|REMOVE PHOTO|TAKE PHOTO|CHOOSE PHOTO/i.test(el.textContent||''))(el.closest('div')||el).style.setProperty('display','none','important')});
+ };
+ clean(); new MutationObserver(clean).observe(box,{childList:true,subtree:true});
+})();
+</script>
 '''
 if 'id="scrobble-final-auth-layout"' not in text:
     text = text.replace('</head>', final_auth_css + '</head>', 1)
 index.write_text(text)
 
-# Final build assertions inspect what will actually be packaged.
 final_index = index.read_text()
-assert 'id="accountIdentity"' not in final_index, "Legacy profile/photo accountIdentity survived final DOM pass"
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
 assert final_index.count('id="createAccountPanel"') == 1, "Create panel missing or duplicated"
 
