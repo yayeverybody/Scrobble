@@ -227,6 +227,28 @@ if 'id="scrobbleStartupSplash"' not in text:
     text = text.replace('<body>', '<body>' + splash)
 index.write_text(text)
 
+
+# Replace the packaged unauthenticated account form itself. This runs before the
+# onboarding overlay is injected, so Login/Create no longer fight the legacy
+# combined form or its profile-photo controls.
+text = index.read_text()
+old_account = '<div id="accountState" class="accountState"></div><div id="passwordAccountForm" class="passwordAccountForm"><label class="accountLabel" for="accountUsername">USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span></label><input id="accountUsername" class="accountInput" type="text" autocomplete="nickname" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="Choose your player name"><div class="usernameHint">3–20 letters, numbers, or underscores. This is what other players will see.</div><label class="accountLabel" for="accountEmail">EMAIL</label><input id="accountEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountPassword">PASSWORD</label><input id="accountPassword" class="accountInput" type="password" autocomplete="current-password" placeholder="At least 6 characters"><button id="signInAccount" class="accountPrimary" type="button">SIGN IN</button><button id="createAccount" class="accountSecondary" type="button">CREATE ACCOUNT</button><button id="forgotPassword" class="accountLink" type="button">Forgot password?</button></div>'
+new_account = '<div id="accountState" class="accountState"></div><div id="passwordAccountForm" class="passwordAccountForm"><div id="loginAccountPanel" class="scrobbleAuthPanel hidden"><label class="accountLabel" for="accountEmail">EMAIL</label><input id="accountEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountPassword">PASSWORD</label><input id="accountPassword" class="accountInput" type="password" autocomplete="current-password" placeholder="At least 6 characters"><button id="signInAccount" class="accountPrimary" type="button">SIGN IN</button><button id="forgotPassword" class="accountLink" type="button">Forgot password?</button></div><div id="createAccountPanel" class="scrobbleAuthPanel hidden"><label class="accountLabel" for="accountUsername">USERNAME</label><input id="accountUsername" class="accountInput" type="text" autocomplete="nickname" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="Choose your player name"><div class="usernameHint">3–20 letters, numbers, or underscores. This is what other players will see.</div><label class="accountLabel" for="accountCreateEmail">EMAIL</label><input id="accountCreateEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountCreatePassword">PASSWORD</label><input id="accountCreatePassword" class="accountInput" type="password" autocomplete="new-password" placeholder="At least 6 characters"><button id="createAccount" class="accountPrimary" type="button">CREATE ACCOUNT</button></div></div>'
+if old_account not in text:
+    raise SystemExit('Exact packaged account form not found; refusing partial onboarding patch')
+text = text.replace(old_account,new_account,1)
+index.write_text(text)
+
+app = Path('www/app-v3140.js')
+js = app.read_text()
+needle = "const accountBox=document.getElementById('accountBox'),accountDash=document.getElementById('accountDash'),closeAccount=document.getElementById('closeAccount'),accountIdentity=document.getElementById('accountIdentity'),accountState=document.getElementById('accountState'),passwordAccountForm=document.getElementById('passwordAccountForm'),accountUsername=document.getElementById('accountUsername'),accountEmail=document.getElementById('accountEmail'),accountPassword=document.getElementById('accountPassword'),signInAccount=document.getElementById('signInAccount'),createAccount=document.getElementById('createAccount'),forgotPassword=document.getElementById('forgotPassword'),"
+if needle not in js:
+    raise SystemExit('Exact packaged account JS controls not found')
+js = js.replace(needle,needle+"loginAccountPanel=document.getElementById('loginAccountPanel'),createAccountPanel=document.getElementById('createAccountPanel'),accountCreateEmail=document.getElementById('accountCreateEmail'),accountCreatePassword=document.getElementById('accountCreatePassword'),",1)
+js = js.replace("function authCredentials(){\\n    const email=accountEmail.value.trim().toLowerCase();\\n    const password=accountPassword.value;","function authCredentials(create=false){\\n    const email=(create?accountCreateEmail:accountEmail).value.trim().toLowerCase();\\n    const password=(create?accountCreatePassword:accountPassword).value;",1)
+js = js.replace("createAccount.onclick=async()=>{\\n    const username=newAccountUsername();if(!username)return;\\n    const credentials=authCredentials();if(!credentials)return;","createAccount.onclick=async()=>{\\n    const username=newAccountUsername();if(!username)return;\\n    const credentials=authCredentials(true);if(!credentials)return;",1)
+app.write_text(js)
+
 # Next-release onboarding. Use the game's blue visual language and drive the
 # existing account form explicitly instead of relying on its previous mode.
 onboarding = r'''
@@ -246,7 +268,7 @@ onboarding = r'''
 #accountBox>div{background:linear-gradient(180deg,#0e83c7,#0867a5)!important;border:2px solid rgba(255,255,255,.22)!important;color:#fff!important}
 #accountBox h1,#accountBox h2,#accountBox h3,#accountBox .accountLabel,#accountBox label,#accountBox .usernameHint,#accountBox .accountState{color:#fff!important}
 #accountBox input{background:#fff!important;color:#173044!important}
-#accountBox .scrobbleAuthHide{display:none!important}
+#accountBox .scrobbleAuthHide,#accountBox .scrobbleAuthPanel.hidden{display:none!important}\n#accountBox .accountIdentity:has(+ .accountState){display:none!important}
 </style>
 <div id="scrobbleOnboardingV2" class="hidden" role="dialog" aria-modal="true" aria-labelledby="scrobbleWelcomeTitle">
   <div class="obCard">
@@ -304,12 +326,11 @@ onboarding = r'''
     hideProfileChrome();
     setHeading(mode);
     const login=mode==='login';
-    hideCreateExtras(login);
-    if(create) create.style.display=login?'none':'';
-    if(signIn) signIn.style.display=login?'':'none';
-    if(forgot) forgot.style.display=login?'':'none';
-    // Existing packaged form uses the same email/password fields for both paths.
-    // Clear stale values so Login cannot inherit Create Account state.
+    const loginPanel=document.getElementById('loginAccountPanel');
+    const createPanel=document.getElementById('createAccountPanel');
+    loginPanel?.classList.toggle('hidden',!login);
+    createPanel?.classList.toggle('hidden',login);
+    // Clear stale values so one auth path never inherits the other path's state.
     account.querySelectorAll('input[type="email"],input[type="password"]').forEach(el=>el.value='');
   };
   createBtn.onclick=()=>showAccount('create');
