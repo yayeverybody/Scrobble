@@ -346,6 +346,26 @@ onboarding = r'''
   createBtn.onclick=()=>showAccount('create');
   loginBtn.onclick=()=>showAccount('login');
 
+  // On first-run authentication, X means Back to Welcome, not dismiss the
+  // required login gate and reveal an unusable unauthenticated Games screen.
+  const close=document.getElementById('closeAccount');
+  if(close){
+    close.addEventListener('click',e=>{
+      if(signedIn()) return; // Preserve the normal Account-sheet close behavior.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      account.classList.add('hidden');
+      overlay.classList.remove('hidden');
+    },true);
+  }
+  // The packaged account description has its own legacy gray color rule.
+  // Style the exact explanatory line, not just generic paragraph selectors.
+  [...account.querySelectorAll('p,div,span')].forEach(el=>{
+    if(el.children.length===0 && /Create an account or sign in to keep your games/i.test(el.textContent||'')){
+      el.style.setProperty('color','#e9f7ff','important');
+    }
+  });
+
   let checks=0;
   const decide=()=>{
     if(signedIn()){overlay.classList.add('hidden');return}
