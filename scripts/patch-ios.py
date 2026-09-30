@@ -214,14 +214,14 @@ new_game = f'''    <div class="modeChooser">
     <div id="friendModePanel" class="modePanel hidden">
       <button id="startFriendGame" class="friendStart" type="button">SHARE INVITE</button>
     </div>
+    {weird}
     <div id="computerModePanel" class="modePanel hidden">
       <div class="cpuChoices">
         <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
         <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
         <button type="button" data-cpu-difficulty="hard"><strong>HARD</strong><span>Best move it can find</span></button>
       </div>
-    </div>
-    {weird}'''
+    </div>'''
 if old_game in text:
     text = text.replace(old_game,new_game,1)
 elif 'id="playComputerMode"' not in text:
