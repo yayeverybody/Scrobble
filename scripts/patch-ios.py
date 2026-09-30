@@ -261,7 +261,7 @@ app.write_text(js)
 # to register, then hands off without delaying returning players unnecessarily.
 splash = r'''
 <style id="scrobble-startup-splash-style">
-#scrobbleStartupSplash{position:fixed;inset:0;z-index:2147483646;background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%);display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity .22s ease;font-family:Arial,Helvetica,sans-serif}
+html.scrobbleBooting body>*:not(#scrobbleStartupSplash){visibility:hidden!important}\n#scrobbleStartupSplash{position:fixed;inset:0;z-index:2147483646;background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%);display:flex!important;visibility:visible!important;align-items:center;justify-content:center;opacity:1;transition:opacity .22s ease;font-family:Arial,Helvetica,sans-serif}
 #scrobbleStartupSplash.dismiss{opacity:0;pointer-events:none}
 #scrobbleStartupSplash .splashInner{text-align:center;padding:28px}
 #scrobbleStartupSplash .splashLogo{font-size:clamp(36px,10vw,58px);font-weight:1000;letter-spacing:.06em;color:#f4c052;text-shadow:0 3px 0 #704611,0 5px 14px rgba(0,0,0,.28)}
@@ -297,6 +297,9 @@ splash = r'''
 '''
 text = index.read_text()
 if 'id="scrobbleStartupSplash"' not in text:
+    # Boot class is present in the initial parsed HTML, before account/auth UI can
+    # paint. Only the branded splash is visible until startup finishes.
+    text = text.replace('<html', '<html class="scrobbleBooting"', 1)
     text = text.replace('<body>', '<body>' + splash)
 index.write_text(text)
 
@@ -538,6 +541,8 @@ assert final_index.count('id="sharedWeirdBox"') == 1, "Make It Weird missing or 
 assert 'OR PLAY THE COMPUTER' not in final_index, "Legacy giant New Game layout survived"
 assert ("playFriendMode.onclick=()=>setGameMode('friend')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Friend chooser handler regression"
 assert ("playComputerMode.onclick=()=>setGameMode('computer')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Computer chooser handler regression"
+assert 'class="scrobbleBooting"' in final_index, "Boot paint guard missing"
+assert 'document.documentElement.classList.remove(\'scrobbleBooting\')' in final_index, "Boot paint guard never released"
 assert final_index.count('id="accountIdentity"') == 1, "Original account identity DOM missing"
 assert '#accountBox #accountIdentity{display:block!important}' in final_index, "Signed-in profile photo UI hidden"
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
