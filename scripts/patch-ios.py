@@ -388,13 +388,10 @@ index.write_text(text)
 # than a reliably shaped accountIdentity wrapper. Remove them by their actual IDs
 # and controls, without assuming one HTML nesting pattern.
 text = index.read_text()
-# Remove any accountIdentity wrapper if this packaged version has one.
-# Keep the element ID: packaged app-v3140.js references accountIdentity during
-# renderAccount(). Removing it makes the auth renderer throw before Sign In works.
-# Replace its old contents with an empty, hidden compatibility node instead.
-text = re.sub(r'<div id="accountIdentity"[^>]*>.*?(?=<div id="accountState")',
-              '<div id="accountIdentity" class="hidden" style="display:none!important"></div>',
-              text, count=1, flags=re.S)
+# Preserve the original profile DOM and all its IDs: app-v3140.js binds photo
+# handlers during bootstrap even when onboarding hides the profile UI. Removing
+# the children (or replacing them with an empty node) crashes initialization,
+# leaving both Sign In and Forgot Password inert. Hide it with CSS only.
 # The current packaged app can expose profile controls independently. Hide/remove
 # them at runtime by stable control IDs/classes instead of brittle markup matching.
 final_auth_css = '''
@@ -409,7 +406,7 @@ final_auth_css = '''
 #accountBox .accountSub,#accountBox .accountSubtitle,#accountBox p{color:#e9f7ff!important}
 #accountBox .accountPrimary{background:#f2bd45!important;color:#173044!important;border-color:#f2bd45!important}
 #accountBox .accountLink{color:#fff!important}
-#accountBox .profilePhotoRow,#accountBox .accountPhoto,#accountBox [id*="Photo"],#accountBox [id*="photo"],#accountBox [class*="photo"],#accountBox [class*="Photo"]{display:none!important}
+#accountBox #accountIdentity,#accountBox .profilePhotoRow,#accountBox .accountPhoto,#accountBox [id*="Photo"],#accountBox [id*="photo"],#accountBox [class*="photo"],#accountBox [class*="Photo"]{display:none!important}
 </style>
 <script id="scrobble-final-auth-cleanup">
 (()=>{
@@ -427,7 +424,7 @@ if 'id="scrobble-final-auth-layout"' not in text:
 index.write_text(text)
 
 final_index = index.read_text()
-assert final_index.count('id="accountIdentity"') == 1, "Authentication compatibility node missing"
+assert final_index.count('id="accountIdentity"') == 1, "Original account identity DOM missing"
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
 assert final_index.count('id="createAccountPanel"') == 1, "Create panel missing or duplicated"
 
