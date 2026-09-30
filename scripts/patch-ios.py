@@ -178,74 +178,10 @@ if 'id="scrobble-haptics"' not in text:
     text = text.replace('</body>',haptic_helper+'</body>',1)
 index.write_text(text)
 
-# Games-page cleanup: progressively disclose friend/computer setup instead of
-# showing every option at once. Keep "Make It Weird" inside the chosen mode.
-text = index.read_text()
-old_game = '''    <button id="playFriendMode" class="modePrimary" type="button">PLAY A FRIEND</button>
-    <div class="weirdBox">
-      <div class="weirdTitle">MAKE IT WEIRD</div>
-      <div class="weirdSub">Optional. Choose one.</div>
-      <label class="weirdChoice"><input type="checkbox" value="all_or_none"><span><strong>All or None</strong><small>Only A, L, O, R, N and E tiles.</small></span></label>
-      <label class="weirdChoice"><input type="checkbox" value="vowel_movement"><span><strong>Vowel Movement</strong><small>Other letters are traded for extra vowels.</small></span></label>
-      <label class="weirdChoice"><input type="checkbox" value="high_roller"><span><strong>High Roller</strong><small>J, Q, X and Z are worth triple.</small></span></label>
-      <label class="weirdChoice"><input type="checkbox" value="too_many_tiles"><span><strong>Too Many Tiles</strong><small>Play with 9 tiles instead of 7.</small></span></label>
-      <label class="weirdChoice"><input type="checkbox" value="oops_all_ys"><span><strong>Oops! All Y’s</strong><small>Replace 20 other tiles with Y’s.</small></span></label>
-    </div>
-    <div class="modeDivider"><span>OR PLAY THE COMPUTER</span></div>
-    <div class="cpuChoices">
-      <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
-      <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
-      <button type="button" data-cpu-difficulty="hard"><strong>HARD</strong><span>Best move it can find</span></button>
-    </div>'''
-weird = '''<div class="weirdBox">
-        <div class="weirdTitle">MAKE IT WEIRD</div>
-        <div class="weirdSub">Optional. Choose one.</div>
-        <label class="weirdChoice"><input type="checkbox" value="all_or_none"><span><strong>All or None</strong><small>Only A, L, O, R, N and E tiles.</small></span></label>
-        <label class="weirdChoice"><input type="checkbox" value="vowel_movement"><span><strong>Vowel Movement</strong><small>Other letters are traded for extra vowels.</small></span></label>
-        <label class="weirdChoice"><input type="checkbox" value="high_roller"><span><strong>High Roller</strong><small>J, Q, X and Z are worth triple.</small></span></label>
-        <label class="weirdChoice"><input type="checkbox" value="too_many_tiles"><span><strong>Too Many Tiles</strong><small>Play with 9 tiles instead of 7.</small></span></label>
-        <label class="weirdChoice"><input type="checkbox" value="oops_all_ys"><span><strong>Oops! All Y’s</strong><small>Replace 20 other tiles with Y’s.</small></span></label>
-      </div>'''
-new_game = f'''    <div class="modeChooser"><button id="playFriendMode" class="modeChoice" type="button">PLAY A FRIEND</button><button id="playComputerMode" class="modeChoice" type="button">PLAY THE COMPUTER</button></div>
-    <div id="friendModePanel" class="modePanel hidden">
-      {weird}
-      <button id="startFriendGame" class="friendStart" type="button">SHARE INVITE</button>
-    </div>
-    <div id="computerModePanel" class="modePanel hidden">
-      <div class="cpuChoices">
-        <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
-        <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
-        <button type="button" data-cpu-difficulty="hard"><strong>HARD</strong><span>Best move it can find</span></button>
-      </div>
-      {weird}
-    </div>'''
-if old_game in text:
-    text = text.replace(old_game,new_game,1)
-elif 'id="playComputerMode"' not in text:
-    raise SystemExit('New Game source block not found')
-
-flow_style = '''
-<style id="scrobble-game-flow-cleanup">
-#gameModeBox .modeChooser{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
-#gameModeBox .modeChoice{min-height:52px;border:2px solid #0d80cd;border-radius:12px;background:#fff;color:#0d80cd;font-weight:900;padding:8px}
-#gameModeBox .modeChoice.active{background:#0d80cd;color:#fff}
-#gameModeBox .modePanel.hidden{display:none!important}
-#gameModeBox .friendStart{width:100%;min-height:50px;margin-top:12px;border:0;border-radius:12px;background:#0d80cd;color:#fff;font-weight:900}
-</style>
-'''
-if 'id="scrobble-game-flow-cleanup"' not in text:
-    text = text.replace('</head>',flow_style+'</head>',1)
-index.write_text(text)
-
-app = Path('www/app-v3140.js')
-js = app.read_text()
-old_handlers = "  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
-new_handlers = "  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame');\\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\\n  document.getElementById('newGameDash').onclick=openGameMode;\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>setGameMode('friend');playComputerMode.onclick=()=>setGameMode('computer');startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
-if old_handlers in js:
-    js = js.replace(old_handlers,new_handlers,1)
-elif "const playComputerMode=document.getElementById('playComputerMode')" not in js:
-    raise SystemExit('New Game JS handlers not found')
-app.write_text(js)
+# Games-page controls: preserve the original, proven game-creation handlers.
+# The prior progressive-disclosure patch changed the DOM/handlers and broke the
+# friend/computer actions in TestFlight. Do not rewrite those controls here.
+# "Make It Weird" remains in the packaged app's original New Game sheet.
 
 # Branded startup splash. iOS still provides the native launch screen while the
 # process starts; this in-app layer makes the Scrobble brand visible long enough
