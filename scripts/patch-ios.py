@@ -478,7 +478,7 @@ final_auth_css = '''
 #accountBox .accountSub,#accountBox .accountSubtitle,#accountBox p{color:#e9f7ff!important}
 #accountBox .accountPrimary{background:#f2bd45!important;color:#173044!important;border-color:#f2bd45!important}
 #accountBox .accountLink{color:#fff!important}
-#accountBox #accountIdentity{display:none!important}\n#accountBox.scrobbleCreateMode #accountIdentity{display:block!important}\n#accountBox.scrobbleLoginMode #accountIdentity{display:none!important}\n#accountBox #closeAccount{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+#accountBox #accountIdentity{display:block!important}\n#accountBox.scrobbleLoginMode #accountIdentity{display:none!important}\n#accountBox.scrobbleCreateMode #accountIdentity{display:block!important}\n#accountBox #closeAccount{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
 </style>
 <script id="scrobble-final-auth-cleanup">
 (()=>{
@@ -539,6 +539,7 @@ assert 'OR PLAY THE COMPUTER' not in final_index, "Legacy giant New Game layout 
 assert ("playFriendMode.onclick=()=>setGameMode('friend')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Friend chooser handler regression"
 assert ("playComputerMode.onclick=()=>setGameMode('computer')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Computer chooser handler regression"
 assert final_index.count('id="accountIdentity"') == 1, "Original account identity DOM missing"
+assert '#accountBox #accountIdentity{display:block!important}' in final_index, "Signed-in profile photo UI hidden"
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
 assert final_index.count('id="createAccountPanel"') == 1, "Create panel missing or duplicated"
 
