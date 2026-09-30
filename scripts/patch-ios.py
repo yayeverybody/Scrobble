@@ -471,7 +471,8 @@ assert "capacitor://localhost/?join=" not in app_source, "Native localhost invit
 assert "location.replace(next);" in index_source, "Universal Link must clean-bootstrap exact invite"
 assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
 assert "App.addListener('appUrlOpen'" in index_source, "Warm-app Universal Link listener missing"
-assert "App.getLaunchUrl()" in index_source, "Cold-launch Universal Link handling missing"\nassert 'id="loginAccountPanel"' in index_source and 'id="createAccountPanel"' in index_source, "Separate auth panels missing"
+assert "App.getLaunchUrl()" in index_source, "Cold-launch Universal Link handling missing"
+assert 'id="loginAccountPanel"' in index_source and 'id="createAccountPanel"' in index_source, "Separate auth panels missing"
 assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' not in index_source, "Legacy combined auth form survived"
 assert 'scrobbleAuthPanel hidden' in index_source, "Auth panels must default hidden"
 
