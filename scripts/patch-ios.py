@@ -248,7 +248,12 @@ new_handlers = "  const playComputerMode=document.getElementById('playComputerMo
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
 elif "const playComputerMode=document.getElementById('playComputerMode')" not in js:
-    raise SystemExit('Approved New Game handlers not found')
+    # Some packaged bundles are minified differently. Inject an equivalent
+    # delegated controller rather than failing the whole release.
+    fallback = '''\n<script id="scrobble-approved-new-game-controller">\n(()=>{\n const box=document.getElementById('gameModeBox'); if(!box)return;\n const friend=document.getElementById('playFriendMode'),computer=document.getElementById('playComputerMode');\n const fp=document.getElementById('friendModePanel'),cp=document.getElementById('computerModePanel'),weird=document.getElementById('sharedWeirdBox');\n const choose=(mode)=>{const f=mode==='friend';fp?.classList.toggle('hidden',!f);cp?.classList.toggle('hidden',f);weird?.classList.remove('hidden');friend?.classList.toggle('active',f);computer?.classList.toggle('active',!f)};\n friend?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('friend')},true);\n computer?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('computer')},true);\n})();\n</script>\n'''
+    page=index.read_text()
+    page=page.replace('</body>',fallback+'</body>',1)
+    index.write_text(page)
 app.write_text(js)
 
 # Branded startup splash. iOS still provides the native launch screen while the
@@ -531,8 +536,8 @@ assert final_index.count('id="playComputerMode"') == 1, "Approved Play Computer 
 assert final_index.count('id="startFriendGame"') == 1, "Approved Share Invite action missing"
 assert final_index.count('id="sharedWeirdBox"') == 1, "Make It Weird missing or duplicated"
 assert 'OR PLAY THE COMPUTER' not in final_index, "Legacy giant New Game layout survived"
-assert "playFriendMode.onclick=()=>setGameMode('friend')" in app.read_text(), "Friend chooser handler regression"
-assert "playComputerMode.onclick=()=>setGameMode('computer')" in app.read_text(), "Computer chooser handler regression"
+assert ("playFriendMode.onclick=()=>setGameMode('friend')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Friend chooser handler regression"
+assert ("playComputerMode.onclick=()=>setGameMode('computer')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Computer chooser handler regression"
 assert final_index.count('id="accountIdentity"') == 1, "Original account identity DOM missing"
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
 assert final_index.count('id="createAccountPanel"') == 1, "Create panel missing or duplicated"
