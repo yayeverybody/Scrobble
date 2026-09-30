@@ -227,19 +227,26 @@ if 'id="scrobbleStartupSplash"' not in text:
     text = text.replace('<body>', '<body>' + splash)
 index.write_text(text)
 
-# Next-release onboarding: replace the dense combined auth/profile screen with a
-# simple choice first. Existing authenticated users never see this overlay.
+# Next-release onboarding. Use the game's blue visual language and drive the
+# existing account form explicitly instead of relying on its previous mode.
 onboarding = r'''
-<style id="scrobble-onboarding-v2-style">
+<style id="scrobble-onboarding-v3-style">
 #scrobbleOnboardingV2{position:fixed;inset:0;z-index:2147483000;background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%);display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 22px) 22px calc(env(safe-area-inset-bottom) + 22px);font-family:Arial,Helvetica,sans-serif}
 #scrobbleOnboardingV2.hidden{display:none!important}
-#scrobbleOnboardingV2 .obCard{width:min(100%,430px);background:#fff;border-radius:28px;padding:34px 26px 28px;box-shadow:0 24px 70px rgba(0,0,0,.25);text-align:center}
-#scrobbleOnboardingV2 h1{margin:0 0 10px;color:#16232d;font-size:36px;line-height:1.04}
-#scrobbleOnboardingV2 p{margin:0 0 28px;color:#65727b;font-size:18px;line-height:1.35}
+#scrobbleOnboardingV2 .obCard{width:min(100%,430px);background:linear-gradient(180deg,#0e83c7,#0867a5);border:2px solid rgba(255,255,255,.22);border-radius:28px;padding:34px 26px 28px;box-shadow:0 24px 70px rgba(0,0,0,.25);text-align:center}
+#scrobbleOnboardingV2 h1{margin:0 0 10px;color:#fff;font-size:36px;line-height:1.04}
+#scrobbleOnboardingV2 p{margin:0 0 28px;color:#d9f1ff;font-size:18px;line-height:1.35}
 #scrobbleOnboardingV2 .obActions{display:flex;gap:12px}
-#scrobbleOnboardingV2 button{flex:1;min-height:58px;border-radius:14px;border:2px solid #1488cf;background:#fff;color:#1179b8;font-size:16px;font-weight:900;padding:10px}
-#scrobbleOnboardingV2 button.primary{background:#1488cf;color:#fff}
+#scrobbleOnboardingV2 button{flex:1;min-height:58px;border-radius:14px;border:2px solid #fff;background:transparent;color:#fff;font-size:16px;font-weight:900;padding:10px}
+#scrobbleOnboardingV2 button.primary{background:#f2bd45;border-color:#f2bd45;color:#173044}
 @media(max-width:360px){#scrobbleOnboardingV2 .obActions{flex-direction:column}}
+
+/* Account sheet: same family as Welcome, with no mystery profile/photo blocks. */
+#accountBox{background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%)!important}
+#accountBox>div{background:linear-gradient(180deg,#0e83c7,#0867a5)!important;border:2px solid rgba(255,255,255,.22)!important;color:#fff!important}
+#accountBox h1,#accountBox h2,#accountBox h3,#accountBox .accountLabel,#accountBox label,#accountBox .usernameHint,#accountBox .accountState{color:#fff!important}
+#accountBox input{background:#fff!important;color:#173044!important}
+#accountBox .scrobbleAuthHide{display:none!important}
 </style>
 <div id="scrobbleOnboardingV2" class="hidden" role="dialog" aria-modal="true" aria-labelledby="scrobbleWelcomeTitle">
   <div class="obCard">
@@ -251,7 +258,7 @@ onboarding = r'''
     </div>
   </div>
 </div>
-<script id="scrobble-onboarding-v2-script">
+<script id="scrobble-onboarding-v3-script">
 (()=>{
   const overlay=document.getElementById('scrobbleOnboardingV2');
   const account=document.getElementById('accountBox');
@@ -261,38 +268,57 @@ onboarding = r'''
   const signIn=document.getElementById('signInAccount');
   const create=document.getElementById('createAccount');
   const username=document.getElementById('accountUsername');
-  const photo=account.querySelector('input[type="file"]')?.closest('div');
+  const forgot=document.getElementById('forgotPassword');
 
   const signedIn=()=>{
     const logout=document.getElementById('logoutAccount');
     return !!logout && !logout.classList.contains('hidden');
   };
+  const setHeading=(mode)=>{
+    const heading=[...account.querySelectorAll('h1,h2,h3')].find(el=>/SCROBBLE|ACCOUNT|SIGN/i.test(el.textContent||''));
+    if(heading) heading.textContent=mode==='login'?'Log In to Scrobble':'Create Your Scrobble Account';
+  };
+  const hideCreateExtras=(hide)=>{
+    if(username){
+      const wrap=username.closest('label')||username.parentElement;
+      if(wrap) wrap.classList.toggle('scrobbleAuthHide',hide);
+      const hint=[...account.querySelectorAll('*')].find(el=>/3.?20 letters/i.test(el.textContent||''));
+      if(hint) hint.classList.toggle('scrobbleAuthHide',hide);
+    }
+  };
+  const hideProfileChrome=()=>{
+    // The pale bars/avatar seen above USERNAME are legacy profile controls.
+    // Profile setup belongs after account creation, so hide those containers.
+    account.querySelectorAll('input[type="file"],img').forEach(el=>{
+      const wrap=el.closest('button,label,div')||el;
+      wrap.classList.add('scrobbleAuthHide');
+    });
+    [...account.querySelectorAll('button,div')].forEach(el=>{
+      const t=(el.textContent||'').trim();
+      if(/^(ADD PHOTO|TAKE PHOTO|CHOOSE PHOTO|PROFILE PHOTO)$/i.test(t)) el.classList.add('scrobbleAuthHide');
+    });
+  };
   const showAccount=(mode)=>{
     overlay.classList.add('hidden');
     account.classList.remove('hidden');
-    if(mode==='login'){
-      if(username) username.closest('label,div')?.classList.add('scrobbleCreateOnly');
-      if(create) create.style.display='none';
-      if(signIn) signIn.style.display='';
-    }else{
-      if(username) username.closest('label,div')?.classList.remove('scrobbleCreateOnly');
-      if(signIn) signIn.style.display='none';
-      if(create) create.style.display='';
-    }
-    // Photo belongs after successful account creation, not before it.
-    if(photo) photo.style.display='none';
+    hideProfileChrome();
+    setHeading(mode);
+    const login=mode==='login';
+    hideCreateExtras(login);
+    if(create) create.style.display=login?'none':'';
+    if(signIn) signIn.style.display=login?'':'none';
+    if(forgot) forgot.style.display=login?'':'none';
+    // Existing packaged form uses the same email/password fields for both paths.
+    // Clear stale values so Login cannot inherit Create Account state.
+    account.querySelectorAll('input[type="email"],input[type="password"]').forEach(el=>el.value='');
   };
   createBtn.onclick=()=>showAccount('create');
   loginBtn.onclick=()=>showAccount('login');
 
-  // Auth initialization is async. Wait briefly for the existing app to restore
-  // a session; only unauthenticated users get first-run onboarding.
   let checks=0;
   const decide=()=>{
-    if(signedIn()){ overlay.classList.add('hidden'); return; }
-    if(++checks<12){ setTimeout(decide,125); return; }
-    // Do not cover an invite while Scrobble is resolving it; the normal auth
-    // flow can request credentials if the invite requires them.
+    if(signedIn()){overlay.classList.add('hidden');return}
+    if(++checks<12){setTimeout(decide,125);return}
     if(!new URLSearchParams(location.search).get('join')) overlay.classList.remove('hidden');
   };
   decide();
@@ -300,6 +326,8 @@ onboarding = r'''
 </script>
 '''
 text = index.read_text()
+# Remove prior onboarding if present, then insert v3 once.
+text = re.sub(r'<style id="scrobble-onboarding-v2-style">.*?</script>\s*', '', text, flags=re.S)
 if 'id="scrobbleOnboardingV2"' not in text:
     text = text.replace('</body>', onboarding + '</body>')
 index.write_text(text)
