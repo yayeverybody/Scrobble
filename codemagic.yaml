@@ -22,8 +22,23 @@ workflows:
           npm install
           npm install @capacitor/app @capacitor/share @capacitor/haptics
           python3 ../scripts/patch-ios.py
+
+          # Prove the patched web bundle is the one Capacitor is about to package.
+          echo "=== Scrobble patched-auth verification ==="
+          grep -q 'id="scrobbleOnboardingV2"' www/index.html || { echo "ERROR: new onboarding missing"; exit 1; }
+          grep -q 'id="loginAccountPanel"' www/index.html || { echo "ERROR: login panel missing"; exit 1; }
+          grep -q 'id="createAccountPanel"' www/index.html || { echo "ERROR: create panel missing"; exit 1; }
+          if grep -q 'id="accountIdentity"' www/index.html; then echo "ERROR: legacy accountIdentity still present"; exit 1; fi
+          echo "PATCHED_AUTH_MARKER=AUTH_V4_2ca59db"
+
           npx cap add ios
           npx cap sync ios
+
+          # Prove Capacitor copied that exact patched bundle into the native app.
+          grep -q 'id="scrobbleOnboardingV2"' ios/App/App/public/index.html || { echo "ERROR: onboarding not copied to iOS public"; exit 1; }
+          grep -q 'id="loginAccountPanel"' ios/App/App/public/index.html || { echo "ERROR: login panel not copied to iOS public"; exit 1; }
+          if grep -q 'id="accountIdentity"' ios/App/App/public/index.html; then echo "ERROR: legacy accountIdentity copied to iOS public"; exit 1; fi
+          echo "IOS_AUTH_MARKER=AUTH_V4_2ca59db"
 
           # Universal Links: the App Store build must be signed with Associated
           # Domains enabled for this bundle ID. The matching AASA file must be
@@ -97,9 +112,9 @@ workflows:
           JSON
 
           # App Store Connect requires the marketing version to be greater than
-          # the closed 1.0.2 pre-release train.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.3" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.3" ios/App/App/Info.plist
+          # the the prior TestFlight train so this diagnostic build is unmistakable.
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.4" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.4" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 
