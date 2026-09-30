@@ -267,7 +267,7 @@ onboarding = r'''
 /* Account sheet: same family as Welcome, with no mystery profile/photo blocks. */
 #accountBox{background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%)!important}
 #accountBox>div{background:linear-gradient(180deg,#0e83c7,#0867a5)!important;border:2px solid rgba(255,255,255,.22)!important;color:#fff!important}
-#accountBox h1,#accountBox h2,#accountBox h3,#accountBox .accountLabel,#accountBox label,#accountBox .usernameHint{color:#fff!important}\n#accountBox .accountState:empty{display:none!important}\n#accountBox .passwordAccountForm{background:transparent!important}
+#accountBox h1,#accountBox h2,#accountBox h3,#accountBox .accountLabel,#accountBox label,#accountBox .usernameHint{color:#fff!important}\n#accountBox .accountState:empty,#accountBox #accountIdentity{display:none!important}\n#accountBox .passwordAccountForm{background:transparent!important}
 #accountBox input{background:#fff!important;color:#173044!important}
 #accountBox .scrobbleAuthHide,#accountBox .scrobbleAuthPanel.hidden{display:none!important}\n#accountBox .accountIdentity:has(+ .accountState){display:none!important}
 </style>
@@ -389,7 +389,12 @@ index.write_text(text)
 # and controls, without assuming one HTML nesting pattern.
 text = index.read_text()
 # Remove any accountIdentity wrapper if this packaged version has one.
-text = re.sub(r'<div id="accountIdentity"[^>]*>.*?(?=<div id="accountState")', '', text, count=1, flags=re.S)
+# Keep the element ID: packaged app-v3140.js references accountIdentity during
+# renderAccount(). Removing it makes the auth renderer throw before Sign In works.
+# Replace its old contents with an empty, hidden compatibility node instead.
+text = re.sub(r'<div id="accountIdentity"[^>]*>.*?(?=<div id="accountState")',
+              '<div id="accountIdentity" class="hidden" style="display:none!important"></div>',
+              text, count=1, flags=re.S)
 # The current packaged app can expose profile controls independently. Hide/remove
 # them at runtime by stable control IDs/classes instead of brittle markup matching.
 final_auth_css = '''
@@ -422,6 +427,7 @@ if 'id="scrobble-final-auth-layout"' not in text:
 index.write_text(text)
 
 final_index = index.read_text()
+assert final_index.count('id="accountIdentity"') == 1, "Authentication compatibility node missing"
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
 assert final_index.count('id="createAccountPanel"') == 1, "Create panel missing or duplicated"
 
