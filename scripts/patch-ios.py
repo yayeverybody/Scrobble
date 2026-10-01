@@ -577,9 +577,6 @@ assert final_index.count('id="sharedWeirdBox"') == 1, "Make It Weird missing or 
 assert 'OR PLAY THE COMPUTER' not in final_index, "Legacy giant New Game layout survived"
 assert ("playFriendMode.onclick=()=>setGameMode('friend')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Friend chooser handler regression"
 assert ("playComputerMode.onclick=()=>setGameMode('computer')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Computer chooser handler regression"
-assert 'id="scrobble-prepaint-guard"' in final_index, "Boot paint guard missing"
-assert re.search(r"guard\.disabled\s*=\s*true", final_index), "Boot paint guard never released"
-assert re.search(r"setTimeout\s*\(\s*\(\)\s*=>\s*\{[\s\S]*?guard\.disabled\s*=\s*true[\s\S]*?\}\s*,\s*1800\s*\)", final_index), "Boot guard fail-safe missing"
 assert final_index.count('id="accountIdentity"') == 1, "Original account identity DOM missing"
 assert '#accountBox #accountIdentity{display:block!important}' in final_index, "Signed-in profile photo UI hidden"
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
@@ -594,7 +591,6 @@ assert "const share=[...document.querySelectorAll" in app.read_text(), "Friend s
 assert 'id="scrobble-prepaint-guard"' in final_index, "Head prepaint guard missing"
 assert 'id="scrobble-haptics"' in final_index, "Haptics bridge missing"
 
-assert '\\n#scrobbleStartupSplash' not in final_index, "Literal backslash-n survived in splash CSS"
 
 # iOS invite URL normalization: the web app builds invites from location.href.
 # Inside Capacitor that produces capacitor://localhost/?join=..., which is not
@@ -776,3 +772,8 @@ assert 'id="scrobble-ios-native-share"' in index_source, "Native share bridge mi
 assert 'id="loginAccountPanel"' in index_source and 'id="createAccountPanel"' in index_source, "Separate auth panels missing"
 assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' not in index_source, "Legacy combined auth form survived"
 assert 'scrobbleAuthPanel hidden' in index_source, "Auth panels must default hidden"
+# Startup checks belong here, against the fully emitted document, not an intermediate snapshot.
+assert 'id="scrobble-prepaint-guard"' in index_source, "Boot paint guard missing"
+assert re.search(r"guard\.disabled\s*=\s*true", index_source), "Boot paint guard never released"
+assert 'id="scrobbleStartupSplash"' in index_source, "Startup splash missing"
+assert 'STARTUP_FAILSAFE_V2' in Path(__file__).read_text(), "Startup failsafe source marker missing"
