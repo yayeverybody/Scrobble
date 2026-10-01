@@ -286,6 +286,7 @@ html.scrobbleBooting body>*:not(#scrobbleStartupSplash){visibility:hidden!import
     const wait=Math.max(0,minVisible-(performance.now()-started));
     setTimeout(()=>{
       splash.classList.add('dismiss');
+      document.documentElement.classList.remove('scrobbleBooting');
       setTimeout(()=>splash.remove(),240);
     },wait);
   };
