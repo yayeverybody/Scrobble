@@ -375,7 +375,7 @@ onboarding = r'''
   };
   const setHeading=(mode)=>{
     const heading=[...account.querySelectorAll('h1,h2,h3')].find(el=>/SCROBBLE|ACCOUNT|SIGN/i.test(el.textContent||''));
-    if(heading) heading.textContent=mode==='login'?'Log In to Scrobble':'Create Your Scrobble Account';
+    if(heading) heading.textContent=mode==='login'?'Welcome Back!':'Create Your Scrobble Account';
   };
   const hideCreateExtras=(hide)=>{
     if(username){
@@ -385,32 +385,39 @@ onboarding = r'''
       if(hint) hint.classList.toggle('scrobbleAuthHide',hide);
     }
   };
-  const hideProfileChrome=()=>{
-    // The pale bars/avatar seen above USERNAME are legacy profile controls.
-    // Profile setup belongs after account creation, so hide those containers.
+  const setProfileChrome=(show)=>{
+    const identity=document.getElementById('accountIdentity');
+    if(identity){
+      identity.classList.toggle('scrobbleAuthHide',!show);
+      identity.style.removeProperty('display');
+    }
     account.querySelectorAll('input[type="file"],img').forEach(el=>{
       const wrap=el.closest('button,label,div')||el;
-      wrap.classList.add('scrobbleAuthHide');
+      wrap.classList.toggle('scrobbleAuthHide',!show);
     });
     [...account.querySelectorAll('button,div')].forEach(el=>{
       const t=(el.textContent||'').trim();
-      if(/^(ADD PHOTO|TAKE PHOTO|CHOOSE PHOTO|PROFILE PHOTO)$/i.test(t)) el.classList.add('scrobbleAuthHide');
+      if(/^(UPLOAD PHOTO|ADD PHOTO|EDIT PHOTO|CHANGE PHOTO|REMOVE|REMOVE PHOTO|TAKE PHOTO|CHOOSE PHOTO|PROFILE PHOTO)$/i.test(t)){
+        el.classList.toggle('scrobbleAuthHide',!show);
+      }
     });
   };
   const showAccount=(mode)=>{
     overlay.classList.add('hidden');
     account.classList.remove('hidden');
-    hideProfileChrome();
     setHeading(mode);
     const login=mode==='login';
+    account.classList.toggle('scrobbleLoginMode',login);
+    account.classList.toggle('scrobbleCreateMode',!login);
+    setProfileChrome(!login);
     const loginPanel=document.getElementById('loginAccountPanel');
     const createPanel=document.getElementById('createAccountPanel');
     const enforce=()=>{
       loginPanel?.classList.toggle('hidden',!login);
       createPanel?.classList.toggle('hidden',login);
-      // Legacy profile/photo/status controls are not part of authentication.
-      const identity=document.getElementById('accountIdentity');
-      if(identity) identity.style.setProperty('display','none','important');
+      account.classList.toggle('scrobbleLoginMode',login);
+      account.classList.toggle('scrobbleCreateMode',!login);
+      setProfileChrome(!login);
     };
     enforce();
     // The packaged renderAccount routine can run asynchronously after this click.
@@ -560,6 +567,11 @@ assert '#accountBox #accountIdentity{display:block!important}' in final_index, "
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
 assert final_index.count('id="createAccountPanel"') == 1, "Create panel missing or duplicated"
 assert 'PATCH_20260930_FINAL' in final_index, "Final patch marker missing"
+assert "account.classList.toggle('scrobbleCreateMode',!login)" in final_index, "Create mode class wiring missing"
+assert "setProfileChrome(!login)" in final_index, "Create photo controls wiring missing"
+assert "Welcome Back!" in final_index, "Login heading regression"
+assert final_index.index('id="sharedWeirdBox"') < final_index.index('id="computerModePanel"'), "Make It Weird must precede computer difficulty"
+
 assert '\\n#scrobbleStartupSplash' not in final_index, "Literal backslash-n survived in splash CSS"
 
 # iOS invite URL normalization: the web app builds invites from location.href.
