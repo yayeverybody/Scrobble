@@ -259,7 +259,7 @@ app.write_text(js)
 text = index.read_text()
 prepaint_guard = '''
 <style id="scrobble-prepaint-guard">
-html,body{margin:0;background:#0877bb}
+html,body{margin:0;background:#0877bb;overflow:hidden}
 body>*{visibility:hidden!important}
 body>#scrobbleStartupSplash{visibility:visible!important}
 </style>
@@ -299,8 +299,9 @@ splash = r'''
     setTimeout(()=>{
       splash.classList.add('dismiss');
       const guard=document.getElementById('scrobble-prepaint-guard');
-      if(guard) guard.disabled = true;
-      document.body.querySelectorAll(':scope > *').forEach(el=>el.style.removeProperty('visibility'));
+      if(guard) guard.remove();
+      document.documentElement.style.removeProperty('overflow');
+      document.body.style.removeProperty('overflow');
       setTimeout(()=>splash.remove(),240);
     },wait);
   };
@@ -309,7 +310,7 @@ splash = r'''
   setTimeout(finish,1250);
   setTimeout(()=>{
     const guard=document.getElementById('scrobble-prepaint-guard');
-    if(guard) guard.disabled = true;
+    if(guard) guard.remove();
   },1800);
 })();
 </script>
@@ -774,6 +775,6 @@ assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' not in ind
 assert 'scrobbleAuthPanel hidden' in index_source, "Auth panels must default hidden"
 # Startup checks belong here, against the fully emitted document, not an intermediate snapshot.
 assert 'id="scrobble-prepaint-guard"' in index_source, "Boot paint guard missing"
-assert re.search(r"guard\.disabled\s*=\s*true", index_source), "Boot paint guard never released"
+assert "guard.remove()" in index_source, "Boot paint guard never released"
 assert 'id="scrobbleStartupSplash"' in index_source, "Startup splash missing"
 assert 'STARTUP_FAILSAFE_V2' in Path(__file__).read_text(), "Startup failsafe source marker missing"
