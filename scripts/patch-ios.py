@@ -617,7 +617,7 @@ app_source = app.read_text()
 index_source = index.read_text()
 assert "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}" in app_source, "Public inviteURL regression"
 assert "capacitor://localhost/?join=" not in app_source, "Native localhost invite URL regression"
-assert "location.replace(next);" in index_source, "Universal Link must clean-bootstrap exact invite"
+assert "location.replace(next)" in index_source, "Universal Link must clean-bootstrap exact invite"
 assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
 assert "App.addListener('appUrlOpen'" in index_source, "Warm-app Universal Link listener missing"
 assert "App.getLaunchUrl()" in index_source, "Cold-launch Universal Link handling missing"
