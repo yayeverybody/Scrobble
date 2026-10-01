@@ -233,7 +233,16 @@ index.write_text(text)
 app = Path('www/app-v3140.js')
 js = app.read_text()
 old_handlers = "  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
-new_handlers = "  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');\\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\\n  document.getElementById('newGameDash').onclick=openGameMode;\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>setGameMode('friend');\\n  playComputerMode.onclick=()=>setGameMode('computer');\\n  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;try{gameModeBox.classList.add('hidden');await createGame();await new Promise(r=>setTimeout(r,80));const share=[...document.querySelectorAll('button,[role="button"]')].find(b=>b!==startFriendGame&&/^(SHARE|SHARE INVITE|INVITE)$/i.test((b.textContent||'').trim())&&!b.disabled);if(share)share.click()}finally{startFriendGame.disabled=false}};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
+new_handlers = '''  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');
+  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}
+  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}
+  document.getElementById('newGameDash').onclick=openGameMode;
+  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');
+  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
+  playFriendMode.onclick=()=>setGameMode('friend');
+  playComputerMode.onclick=()=>setGameMode('computer');
+  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;try{gameModeBox.classList.add('hidden');await createGame();await new Promise(r=>setTimeout(r,80));const share=[...document.querySelectorAll("button,[role='button']")].find(b=>b!==startFriendGame&&/^(SHARE|SHARE INVITE|INVITE)$/i.test((b.textContent||'').trim())&&!b.disabled);if(share)share.click()}finally{startFriendGame.disabled=false}};
+  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
 elif "const playComputerMode=document.getElementById('playComputerMode')" not in js:
@@ -573,7 +582,7 @@ assert "account.classList.toggle('scrobbleCreateMode',!login)" in final_index, "
 assert "setProfileChrome(!login)" in final_index, "Create photo controls wiring missing"
 assert "Welcome Back!" in final_index, "Login heading regression"
 assert final_index.index('id="sharedWeirdBox"') < final_index.index('id="computerModePanel"'), "Make It Weird must precede computer difficulty"
-assert "startFriendGame.onclick=async()=>" in app.read_text(), "Friend share action wiring missing"
+assert "startFriendGame.onclick=async()=>{" in app.read_text(), "Friend share action wiring missing"
 assert "const share=[...document.querySelectorAll" in app.read_text(), "Friend share fallback missing"
 assert 'id="scrobble-prepaint-guard"' in final_index, "Head prepaint guard missing"
 assert 'id="scrobble-haptics"' in final_index, "Haptics bridge missing"
