@@ -270,7 +270,7 @@ html.scrobbleBooting body>*:not(#scrobbleStartupSplash){visibility:hidden!import
 <div id="scrobbleStartupSplash" aria-hidden="true">
   <div class="splashInner">
     <div class="splashLogo">SCROBBLE</div>
-    <div class="splashStudio">YAY EVERYBODY GAMES</div>
+    <div class="splashStudio">YAY EVERYBODY GAMES</div>\n    <div style="display:none" id="scrobblePatchMarker">PATCH_20260930_FINAL</div>
   </div>
 </div>
 <script id="scrobble-startup-splash-script">
@@ -559,6 +559,8 @@ assert final_index.count('id="accountIdentity"') == 1, "Original account identit
 assert '#accountBox #accountIdentity{display:block!important}' in final_index, "Signed-in profile photo UI hidden"
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
 assert final_index.count('id="createAccountPanel"') == 1, "Create panel missing or duplicated"
+assert 'PATCH_20260930_FINAL' in final_index, "Final patch marker missing"
+assert '\\n#scrobbleStartupSplash' not in final_index, "Literal backslash-n survived in splash CSS"
 
 # iOS invite URL normalization: the web app builds invites from location.href.
 # Inside Capacitor that produces capacitor://localhost/?join=..., which is not
