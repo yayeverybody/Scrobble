@@ -488,10 +488,21 @@ final_auth_css = '''
 (()=>{
  const box=document.getElementById('accountBox'); if(!box)return;
  const clean=()=>{
-   box.querySelectorAll('input[type="file"]').forEach(el=>(el.closest('div')||el).style.setProperty('display','none','important'));
-   box.querySelectorAll('button').forEach(el=>{if(/UPLOAD PHOTO|REMOVE PHOTO|TAKE PHOTO|CHOOSE PHOTO/i.test(el.textContent||''))(el.closest('div')||el).style.setProperty('display','none','important')});
+   const hideProfile=box.classList.contains('scrobbleLoginMode');
+   box.querySelectorAll('input[type="file"]').forEach(el=>{
+     const wrap=el.closest('div')||el;
+     if(hideProfile) wrap.style.setProperty('display','none','important');
+     else wrap.style.removeProperty('display');
+   });
+   box.querySelectorAll('button').forEach(el=>{
+     if(/UPLOAD PHOTO|ADD PHOTO|EDIT PHOTO|CHANGE PHOTO|REMOVE PHOTO|TAKE PHOTO|CHOOSE PHOTO/i.test(el.textContent||'')){
+       const wrap=el.closest('div')||el;
+       if(hideProfile) wrap.style.setProperty('display','none','important');
+       else wrap.style.removeProperty('display');
+     }
+   });
  };
- clean(); new MutationObserver(clean).observe(box,{childList:true,subtree:true});
+ clean(); new MutationObserver(clean).observe(box,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
 })();
 </script>
 '''
