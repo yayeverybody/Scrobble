@@ -21,6 +21,7 @@ workflows:
           cd scrobble-mobile
           npm install
           npm install @capacitor/app @capacitor/share @capacitor/haptics
+          python3 -m py_compile ../scripts/patch-ios.py
           python3 ../scripts/patch-ios.py
 
           # Prove the patched web bundle is the one Capacitor is about to package.
@@ -29,9 +30,9 @@ workflows:
           grep -q 'id="loginAccountPanel"' www/index.html || { echo "ERROR: login panel missing"; exit 1; }
           grep -q 'id="createAccountPanel"' www/index.html || { echo "ERROR: create panel missing"; exit 1; }
           grep -q 'id="accountIdentity"' www/index.html || { echo "ERROR: original auth profile DOM missing"; exit 1; }
-          grep -q 'class="scrobbleBooting"' www/index.html || { echo "ERROR: startup paint guard missing from patched web bundle"; exit 1; }
-          grep -q 'scrobbleBooting' www/index.html || { echo "ERROR: startup paint guard missing from patched web bundle"; exit 1; }
-          grep -q 'classList.remove' www/index.html || { echo "ERROR: startup paint guard release operation missing"; exit 1; }
+          grep -q 'id="scrobble-prepaint-guard"' www/index.html || { echo "ERROR: startup paint guard missing from patched web bundle"; exit 1; }
+          grep -q 'guard.disabled=true' www/index.html || { echo "ERROR: startup paint guard release operation missing"; exit 1; }
+          grep -q 'STARTUP_FAILSAFE_V2' ../scripts/patch-ios.py || { echo "ERROR: startup failsafe marker missing"; exit 1; }
           echo "PATCHED_AUTH_MARKER=AUTH_V4_PRESERVE_DOM"
           echo "STARTUP_GUARD_MARKER=BOOT_GUARD_V1"
 
@@ -122,8 +123,8 @@ workflows:
 
           # App Store Connect requires the marketing version to be greater than
           # the the prior TestFlight train so this diagnostic build is unmistakable.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.11" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.11" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.12" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.12" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 
