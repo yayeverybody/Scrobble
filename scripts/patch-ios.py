@@ -241,7 +241,7 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
   gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
   playFriendMode.onclick=()=>setGameMode('friend');
   playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;try{gameModeBox.classList.add('hidden');await createGame();await new Promise(r=>setTimeout(r,80));const share=[...document.querySelectorAll("button,[role='button']")].find(b=>b!==startFriendGame&&/^(SHARE|SHARE INVITE|INVITE)$/i.test((b.textContent||'').trim())&&!b.disabled);if(share)share.click()}finally{startFriendGame.disabled=false}};
+  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;try{await createGame();gameModeBox.classList.add('hidden');}finally{startFriendGame.disabled=false}};
   gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
@@ -522,7 +522,8 @@ assert "setProfileChrome(!login)" in final_index, "Create photo controls wiring 
 assert "Welcome Back!" in final_index, "Login heading regression"
 assert final_index.index('id="sharedWeirdBox"') < final_index.index('id="computerModePanel"'), "Make It Weird must precede computer difficulty"
 assert "startFriendGame.onclick=async()=>{" in app.read_text(), "Friend share action wiring missing"
-assert "const share=[...document.querySelectorAll" in app.read_text(), "Friend share fallback missing"
+assert "await createGame();gameModeBox.classList.add('hidden')" in app.read_text(), "Friend create/share flow missing"
+assert "const share=[...document.querySelectorAll" not in app.read_text(), "Recursive share-button heuristic returned"
 assert 'id="scrobble-haptics"' in final_index, "Haptics bridge missing"
 
 
