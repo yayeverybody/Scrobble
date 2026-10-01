@@ -299,7 +299,7 @@ splash = r'''
     setTimeout(()=>{
       splash.classList.add('dismiss');
       const guard=document.getElementById('scrobble-prepaint-guard');
-      if(guard) guard.disabled=true;
+      if(guard) guard.disabled = true;
       document.body.querySelectorAll(':scope > *').forEach(el=>el.style.removeProperty('visibility'));
       setTimeout(()=>splash.remove(),240);
     },wait);
@@ -309,7 +309,7 @@ splash = r'''
   setTimeout(finish,1250);
   setTimeout(()=>{
     const guard=document.getElementById('scrobble-prepaint-guard');
-    if(guard) guard.disabled=true;
+    if(guard) guard.disabled = true;
   },1800);
 })();
 </script>
@@ -578,7 +578,7 @@ assert 'OR PLAY THE COMPUTER' not in final_index, "Legacy giant New Game layout 
 assert ("playFriendMode.onclick=()=>setGameMode('friend')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Friend chooser handler regression"
 assert ("playComputerMode.onclick=()=>setGameMode('computer')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Computer chooser handler regression"
 assert 'id="scrobble-prepaint-guard"' in final_index, "Boot paint guard missing"
-assert "guard.disabled=true" in final_index, "Boot paint guard never released"
+assert "guard.disabled = true" in final_index, "Boot paint guard never released"
 assert "setTimeout(()=>{" in final_index and "},1800)" in final_index, "Boot guard fail-safe missing"
 assert final_index.count('id="accountIdentity"') == 1, "Original account identity DOM missing"
 assert '#accountBox #accountIdentity{display:block!important}' in final_index, "Signed-in profile photo UI hidden"
