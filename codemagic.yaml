@@ -31,7 +31,7 @@ workflows:
           grep -q 'id="createAccountPanel"' www/index.html || { echo "ERROR: create panel missing"; exit 1; }
           grep -q 'id="accountIdentity"' www/index.html || { echo "ERROR: original auth profile DOM missing"; exit 1; }
           grep -q 'id="scrobble-prepaint-guard"' www/index.html || { echo "ERROR: startup paint guard missing from patched web bundle"; exit 1; }
-          grep -q 'guard.disabled=true' www/index.html || { echo "ERROR: startup paint guard release operation missing"; exit 1; }
+          grep -q 'guard.disabled = true' www/index.html || { echo "ERROR: startup paint guard release operation missing"; exit 1; }
           grep -q 'STARTUP_FAILSAFE_V2' ../scripts/patch-ios.py || { echo "ERROR: startup failsafe marker missing"; exit 1; }
           echo "PATCHED_AUTH_MARKER=AUTH_V4_PRESERVE_DOM"
           echo "STARTUP_GUARD_MARKER=BOOT_GUARD_V1"
