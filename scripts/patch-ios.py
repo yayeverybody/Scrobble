@@ -147,30 +147,19 @@ haptic_helper = r'''
 (()=>{
   const plugin=()=>window.Capacitor?.Plugins?.Haptics;
   async function impact(style='LIGHT'){
-    const h=plugin();
-    if(!h?.impact) throw new Error('Capacitor Haptics plugin unavailable');
-    await h.impact({style});
-    return true;
+    try{ const h=plugin(); if(h?.impact) await h.impact({style}); }catch(e){ console.warn('Scrobble haptic skipped',e); }
   }
-  window.ScrobbleHaptics={impact,light:()=>impact('LIGHT'),medium:()=>impact('MEDIUM'),heavy:()=>impact('HEAVY')};
-
-  let timer;
-  document.addEventListener('pointerdown',e=>{
-    const target=e.target.closest?.('.brand,.logo,[class*="logo"],[id*="logo"]');
-    if(!target || !/SCROBBLE/i.test(target.textContent||'')) return;
-    timer=setTimeout(async()=>{
-      try{
-        await impact('MEDIUM');
-        const old=target.textContent;
-        target.textContent='HAPTIC TEST';
-        setTimeout(()=>{target.textContent=old},700);
-      }catch(err){
-        console.error('SCROBBLE HAPTIC DIAGNOSTIC FAILED',err);
-        alert('Haptic test failed: '+err.message);
-      }
-    },650);
+  async function selection(){
+    try{ const h=plugin(); if(h?.selectionStart){await h.selectionStart();await h.selectionChanged();await h.selectionEnd();} else await impact('LIGHT'); }catch(e){}
+  }
+  window.ScrobbleHaptics={impact,selection,light:()=>impact('LIGHT'),medium:()=>impact('MEDIUM'),heavy:()=>impact('HEAVY')};
+  document.addEventListener('pointerup',e=>{
+    const el=e.target.closest?.('button,[role="button"],.tile,.rackTile,.weirdChoice');
+    if(!el || el.disabled) return;
+    const label=(el.textContent||'').trim().toUpperCase();
+    if(/^(PLAY|SHARE INVITE|SWAP|PASS)/.test(label)) impact('MEDIUM');
+    else selection();
   },{passive:true});
-  for(const ev of ['pointerup','pointercancel','pointermove']) document.addEventListener(ev,()=>clearTimeout(timer),{passive:true});
 })();
 </script>
 '''
@@ -244,7 +233,7 @@ index.write_text(text)
 app = Path('www/app-v3140.js')
 js = app.read_text()
 old_handlers = "  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
-new_handlers = "  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');\\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\\n  document.getElementById('newGameDash').onclick=openGameMode;\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>setGameMode('friend');\\n  playComputerMode.onclick=()=>setGameMode('computer');\\n  startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
+new_handlers = "  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');\\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\\n  document.getElementById('newGameDash').onclick=openGameMode;\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>setGameMode('friend');\\n  playComputerMode.onclick=()=>setGameMode('computer');\\n  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;try{gameModeBox.classList.add('hidden');await createGame();await new Promise(r=>setTimeout(r,80));const share=[...document.querySelectorAll('button,[role="button"]')].find(b=>b!==startFriendGame&&/^(SHARE|SHARE INVITE|INVITE)$/i.test((b.textContent||'').trim())&&!b.disabled);if(share)share.click()}finally{startFriendGame.disabled=false}};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
 elif "const playComputerMode=document.getElementById('playComputerMode')" not in js:
@@ -255,6 +244,19 @@ elif "const playComputerMode=document.getElementById('playComputerMode')" not in
     page=page.replace('</body>',fallback+'</body>',1)
     index.write_text(page)
 app.write_text(js)
+
+# Earliest possible WebView paint guard. This CSS is inserted in <head> so no
+# account/onboarding content can render for even one frame before the branded splash.
+text = index.read_text()
+prepaint_guard = '''
+<style id="scrobble-prepaint-guard">
+html.scrobbleBooting,html.scrobbleBooting body{margin:0!important;background:#0877bb!important}
+html.scrobbleBooting body>*:not(#scrobbleStartupSplash){visibility:hidden!important}
+</style>
+'''
+if 'id="scrobble-prepaint-guard"' not in text:
+    text = text.replace('</head>', prepaint_guard + '</head>', 1)
+index.write_text(text)
 
 # Branded startup splash. iOS still provides the native launch screen while the
 # process starts; this in-app layer makes the Scrobble brand visible long enough
@@ -571,6 +573,10 @@ assert "account.classList.toggle('scrobbleCreateMode',!login)" in final_index, "
 assert "setProfileChrome(!login)" in final_index, "Create photo controls wiring missing"
 assert "Welcome Back!" in final_index, "Login heading regression"
 assert final_index.index('id="sharedWeirdBox"') < final_index.index('id="computerModePanel"'), "Make It Weird must precede computer difficulty"
+assert "startFriendGame.onclick=async()=>" in app.read_text(), "Friend share action wiring missing"
+assert "const share=[...document.querySelectorAll" in app.read_text(), "Friend share fallback missing"
+assert 'id="scrobble-prepaint-guard"' in final_index, "Head prepaint guard missing"
+assert 'id="scrobble-haptics"' in final_index, "Haptics bridge missing"
 
 assert '\\n#scrobbleStartupSplash' not in final_index, "Literal backslash-n survived in splash CSS"
 
