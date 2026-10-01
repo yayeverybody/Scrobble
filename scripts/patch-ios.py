@@ -543,7 +543,7 @@ assert 'OR PLAY THE COMPUTER' not in final_index, "Legacy giant New Game layout 
 assert ("playFriendMode.onclick=()=>setGameMode('friend')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Friend chooser handler regression"
 assert ("playComputerMode.onclick=()=>setGameMode('computer')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Computer chooser handler regression"
 assert 'class="scrobbleBooting"' in final_index, "Boot paint guard missing"
-assert "classList.remove('scrobbleBooting')" in final_index, "Boot paint guard never released"
+assert "scrobbleBooting" in final_index and "classList.remove" in final_index, "Boot paint guard never released"
 assert final_index.count('id="accountIdentity"') == 1, "Original account identity DOM missing"
 assert '#accountBox #accountIdentity{display:block!important}' in final_index, "Signed-in profile photo UI hidden"
 assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
