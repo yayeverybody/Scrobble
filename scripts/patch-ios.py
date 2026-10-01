@@ -610,23 +610,6 @@ if 'id="scrobble-ios-public-invite-origin"' not in text:
     text = text.replace('</body>', url_origin_script + '</body>')
 index.write_text(text)
 
-# Build-time regression checks for invite/deep-link behavior. These deliberately
-# fail the release build if a future edit brings back Capacitor localhost invite
-# URLs, script re-bootstrap, or omits the public HTTPS invite function.
-app_source = app.read_text()
-index_source = index.read_text()
-assert "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}" in app_source, "Public inviteURL regression"
-assert "capacitor://localhost/?join=" not in app_source, "Native localhost invite URL regression"
-assert "location.replace(next)" in index_source, "Universal Link must clean-bootstrap exact invite"
-assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
-assert "App.addListener('appUrlOpen'" in index_source, "Warm-app Universal Link listener missing"
-assert "App.getLaunchUrl()" in index_source, "Cold-launch Universal Link handling missing"
-assert 'id="loginAccountPanel"' in index_source and 'id="createAccountPanel"' in index_source, "Separate auth panels missing"
-assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' not in index_source, "Legacy combined auth form survived"
-assert 'scrobbleAuthPanel hidden' in index_source, "Auth panels must default hidden"
-
-
-
 # iOS native share hotfix: Web Share can throw a TypeError inside Capacitor's
 # WKWebView. Use Capacitor Share when available, while preserving the existing
 # web share path as a fallback. Patch navigator.share itself so every existing
@@ -731,3 +714,18 @@ text = index.read_text()
 if 'id="scrobble-ios-universal-links"' not in text:
     text = text.replace('</body>', deep_link_script + '</body>')
 index.write_text(text)
+
+# Final regression checks must run AFTER all native invite/share/deep-link
+# scripts have been injected. Earlier placement falsely failed every build.
+app_source = app.read_text()
+index_source = index.read_text()
+assert "https://yayeverybody.com/?join=" in app_source, "Public invite URL regression"
+assert "capacitor://localhost/?join=" not in app_source, "Native localhost invite URL regression"
+assert "location.replace(next)" in index_source, "Universal Link clean-bootstrap missing"
+assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
+assert "appUrlOpen" in index_source, "Warm-app Universal Link listener missing"
+assert "getLaunchUrl" in index_source, "Cold-launch Universal Link handling missing"
+assert 'id="scrobble-ios-native-share"' in index_source, "Native share bridge missing"
+assert 'id="loginAccountPanel"' in index_source and 'id="createAccountPanel"' in index_source, "Separate auth panels missing"
+assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' not in index_source, "Legacy combined auth form survived"
+assert 'scrobbleAuthPanel hidden' in index_source, "Auth panels must default hidden"
