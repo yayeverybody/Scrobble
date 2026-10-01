@@ -343,7 +343,7 @@ onboarding = r'''
 /* Account sheet: same family as Welcome, with no mystery profile/photo blocks. */
 #accountBox{background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%)!important}
 #accountBox>div{background:linear-gradient(180deg,#0e83c7,#0867a5)!important;border:2px solid rgba(255,255,255,.22)!important;color:#fff!important}
-#accountBox h1,#accountBox h2,#accountBox h3,#accountBox .accountLabel,#accountBox label,#accountBox .usernameHint{color:#fff!important}\n#accountBox .accountState:empty,#accountBox #accountIdentity{display:none!important}\n#accountBox .passwordAccountForm{background:transparent!important}
+#accountBox h1,#accountBox h2,#accountBox h3,#accountBox .accountLabel,#accountBox label,#accountBox .usernameHint{color:#fff!important}\n#accountBox .accountState:empty{display:none!important}\n#accountBox .passwordAccountForm{background:transparent!important}
 #accountBox input{background:#fff!important;color:#173044!important}
 #accountBox .scrobbleAuthHide,#accountBox .scrobbleAuthPanel.hidden{display:none!important}\n#accountBox .accountIdentity:has(+ .accountState){display:none!important}
 </style>
