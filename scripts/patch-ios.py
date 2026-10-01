@@ -254,74 +254,8 @@ elif "const playComputerMode=document.getElementById('playComputerMode')" not in
     index.write_text(page)
 app.write_text(js)
 
-# Earliest possible WebView paint guard. This CSS is inserted in <head> so no
-# account/onboarding content can render for even one frame before the branded splash.
-text = index.read_text()
-prepaint_guard = '''
-<style id="scrobble-prepaint-guard">
-html,body{margin:0;background:#0877bb;overflow:hidden}
-body>*{visibility:hidden!important}
-body>#scrobbleStartupSplash{visibility:visible!important}
-</style>
-'''
-if 'id="scrobble-prepaint-guard"' not in text:
-    text = text.replace('</head>', prepaint_guard + '</head>', 1)
-index.write_text(text)
-
-# STARTUP_FAILSAFE_V2: guard releases directly and has an independent timeout.\n# Branded startup splash. iOS still provides the native launch screen while the
-# process starts; this in-app layer makes the Scrobble brand visible long enough
-# to register, then hands off without delaying returning players unnecessarily.
-splash = r'''
-<style id="scrobble-startup-splash-style">
-#scrobbleStartupSplash{position:fixed;inset:0;z-index:2147483646;background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%);display:flex!important;visibility:visible!important;align-items:center;justify-content:center;opacity:1;transition:opacity .22s ease;font-family:Arial,Helvetica,sans-serif}
-#scrobbleStartupSplash.dismiss{opacity:0;pointer-events:none}
-#scrobbleStartupSplash .splashInner{text-align:center;padding:28px}
-#scrobbleStartupSplash .splashLogo{font-size:clamp(36px,10vw,58px);font-weight:1000;letter-spacing:.06em;color:#f4c052;text-shadow:0 3px 0 #704611,0 5px 14px rgba(0,0,0,.28)}
-#scrobbleStartupSplash .splashStudio{margin-top:14px;color:#fff;font-size:14px;font-weight:800;letter-spacing:.28em}
-</style>
-<div id="scrobbleStartupSplash" aria-hidden="true">
-  <div class="splashInner">
-    <div class="splashLogo">SCROBBLE</div>
-    <div class="splashStudio">YAY EVERYBODY GAMES</div>\n    <div style="display:none" id="scrobblePatchMarker">PATCH_20260930_FINAL</div>
-  </div>
-</div>
-<script id="scrobble-startup-splash-script">
-(()=>{
-  const splash=document.getElementById('scrobbleStartupSplash');
-  if(!splash) return;
-  const started=performance.now();
-  // First launch gets enough time for the brand to register. Returning launches
-  // remain quick; never hold the UI beyond 1.25 seconds.
-  const minVisible=sessionStorage.getItem('scrobbleSplashSeen') ? 450 : 1050;
-  sessionStorage.setItem('scrobbleSplashSeen','1');
-  const finish=()=>{
-    const wait=Math.max(0,minVisible-(performance.now()-started));
-    setTimeout(()=>{
-      splash.classList.add('dismiss');
-      const guard=document.getElementById('scrobble-prepaint-guard');
-      if(guard) guard.remove();
-      document.documentElement.style.removeProperty('overflow');
-      document.body.style.removeProperty('overflow');
-      setTimeout(()=>splash.remove(),240);
-    },wait);
-  };
-  if(document.readyState==='complete') finish();
-  else window.addEventListener('load',finish,{once:true});
-  setTimeout(finish,1250);
-  setTimeout(()=>{
-    const guard=document.getElementById('scrobble-prepaint-guard');
-    if(guard) guard.remove();
-  },1800);
-})();
-</script>
-'''
-text = index.read_text()
-if 'id="scrobbleStartupSplash"' not in text:
-    # Boot class is present in the initial parsed HTML, before account/auth UI can
-    # paint. Only the branded splash is visible until startup finishes.
-    text = text.replace('<body>', '<body>' + splash)
-index.write_text(text)
-
+# Startup masking intentionally removed after 1.0.11-1.0.13 WKWebView regressions.
+# Native iOS launch-screen work will address the cosmetic pre-splash flash separately.
 
 # Replace the packaged unauthenticated account form itself. This runs before the
 # onboarding overlay is injected, so Login/Create no longer fight the legacy
@@ -589,7 +523,6 @@ assert "Welcome Back!" in final_index, "Login heading regression"
 assert final_index.index('id="sharedWeirdBox"') < final_index.index('id="computerModePanel"'), "Make It Weird must precede computer difficulty"
 assert "startFriendGame.onclick=async()=>{" in app.read_text(), "Friend share action wiring missing"
 assert "const share=[...document.querySelectorAll" in app.read_text(), "Friend share fallback missing"
-assert 'id="scrobble-prepaint-guard"' in final_index, "Head prepaint guard missing"
 assert 'id="scrobble-haptics"' in final_index, "Haptics bridge missing"
 
 
@@ -773,8 +706,5 @@ assert 'id="scrobble-ios-native-share"' in index_source, "Native share bridge mi
 assert 'id="loginAccountPanel"' in index_source and 'id="createAccountPanel"' in index_source, "Separate auth panels missing"
 assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' not in index_source, "Legacy combined auth form survived"
 assert 'scrobbleAuthPanel hidden' in index_source, "Auth panels must default hidden"
-# Startup checks belong here, against the fully emitted document, not an intermediate snapshot.
-assert 'id="scrobble-prepaint-guard"' in index_source, "Boot paint guard missing"
-assert "guard.remove()" in index_source, "Boot paint guard never released"
-assert 'id="scrobbleStartupSplash"' in index_source, "Startup splash missing"
-assert 'STARTUP_FAILSAFE_V2' in Path(__file__).read_text(), "Startup failsafe source marker missing"
+assert 'scrobble-prepaint-guard' not in index_source, "Unsafe custom startup guard returned"
+assert 'scrobbleStartupSplash' not in index_source, "Unsafe custom web splash returned"
