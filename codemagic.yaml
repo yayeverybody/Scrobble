@@ -30,7 +30,7 @@ workflows:
           grep -q 'id="createAccountPanel"' www/index.html || { echo "ERROR: create panel missing"; exit 1; }
           grep -q 'id="accountIdentity"' www/index.html || { echo "ERROR: original auth profile DOM missing"; exit 1; }
           grep -q 'class="scrobbleBooting"' www/index.html || { echo "ERROR: startup paint guard missing from patched web bundle"; exit 1; }
-          grep -q 'document.documentElement.classList.remove' www/index.html || { echo "ERROR: startup paint guard release missing"; exit 1; }
+          grep -q "classList.remove('scrobbleBooting')" www/index.html || { echo "ERROR: startup paint guard release missing"; exit 1; }
           echo "PATCHED_AUTH_MARKER=AUTH_V4_PRESERVE_DOM"
           echo "STARTUP_GUARD_MARKER=BOOT_GUARD_V1"
 
