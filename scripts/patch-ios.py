@@ -240,7 +240,7 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
   gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
   playFriendMode.onclick=()=>setGameMode('friend');
   playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');playFriendMode.click()};
+  startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};
   gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
@@ -520,8 +520,7 @@ assert "account.classList.toggle('scrobbleCreateMode',!login)" in final_index, "
 assert "setProfileChrome(!login)" in final_index, "Create photo controls wiring missing"
 assert "Welcome Back!" in final_index, "Login heading regression"
 assert final_index.index('id="sharedWeirdBox"') < final_index.index('id="computerModePanel"'), "Make It Weird must precede computer difficulty"
-assert "startFriendGame.onclick=async()=>{" in app.read_text(), "Friend share action wiring missing"
-assert "NativeShare.share({title:'Play Scrobble with me'" in app.read_text(), "Explicit native friend share missing"
+assert "startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()}" in app.read_text(), "Friend create-game action wiring missing"
 assert "const share=[...document.querySelectorAll" not in app.read_text(), "Recursive share-button heuristic returned"
 assert 'id="scrobble-haptics"' in final_index, "Haptics bridge missing"
 
@@ -697,7 +696,7 @@ index.write_text(text)
 app_source = app.read_text()
 index_source = index.read_text()
 assert "https://yayeverybody.com/?join=" in app_source, "Public invite URL regression"
-assert "startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');playFriendMode.click()}" in app_source, "Friend action must delegate to packaged Play Friend handler"
+assert "startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()}" in app_source, "Friend action must call packaged createGame"
 assert "capacitor://localhost/?join=" not in app_source, "Native localhost invite URL regression"
 assert "location.replace(next)" in index_source, "Universal Link clean-bootstrap missing"
 assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
