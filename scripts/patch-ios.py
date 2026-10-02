@@ -722,7 +722,7 @@ runtime_diag = r'''
 </script>
 '''
 text=index.read_text()
-if 'id="scrobble-runtime-diagnostic-style"' not in text:
+if '<style id="scrobble-runtime-diagnostic-style">' not in text:
     if '</body>' in text:
         text=text.replace('</body>',runtime_diag+'</body>',1)
     else:
