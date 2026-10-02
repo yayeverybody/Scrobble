@@ -42,6 +42,8 @@ workflows:
           grep -q 'id="playComputerMode"' ios/App/App/public/index.html || { echo "ERROR: approved New Game computer chooser missing"; exit 1; }
           grep -q 'id="startFriendGame"' ios/App/App/public/index.html || { echo "ERROR: approved New Game friend action missing"; exit 1; }
           grep -q 'id="sharedWeirdBox"' ios/App/App/public/index.html || { echo "ERROR: Make It Weird missing"; exit 1; }
+          grep -q "startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()}" ios/App/App/public/app-v3140.js || { echo "ERROR: Share Invite does not call createGame"; exit 1; }
+          grep -q 'id="scrobble-haptics"' ios/App/App/public/index.html || { echo "ERROR: haptics bridge not copied to iOS"; exit 1; }
           ! grep -q 'OR PLAY THE COMPUTER' ios/App/App/public/index.html || { echo "ERROR: legacy giant New Game layout survived"; exit 1; }
           echo "IOS_AUTH_MARKER=AUTH_V4_PRESERVE_DOM"
           echo "IOS_NEW_GAME_MARKER=PROGRESSIVE_V2"
@@ -119,7 +121,7 @@ workflows:
 
           # App Store Connect requires the marketing version to be greater than
           # the the prior TestFlight train so this diagnostic build is unmistakable.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.18" ios/App/App/Info.plist || \
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.19" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.18" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
