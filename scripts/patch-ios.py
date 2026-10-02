@@ -200,10 +200,10 @@ new_game = f'''    <div class="modeChooser">
       <button id="playFriendMode" class="modeChoice" type="button">PLAY A FRIEND</button>
       <button id="playComputerMode" class="modeChoice" type="button">PLAY THE COMPUTER</button>
     </div>
+    {weird}
     <div id="friendModePanel" class="modePanel hidden">
       <button id="startFriendGame" class="friendStart" type="button">SHARE INVITE</button>
     </div>
-    {weird}
     <div id="computerModePanel" class="modePanel hidden">
       <div class="cpuChoices">
         <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
