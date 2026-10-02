@@ -92,7 +92,7 @@ app_text = app.read_text()
 # Reuse the exact source-level invite fix proven in Scrobble 1.0.1 (commit
 # 9455d48): do not derive invite links from Capacitor's localhost origin.
 old_invite_fn = "function inviteURL(code){return location.origin+location.pathname+'?join='+encodeURIComponent(code)}"
-new_invite_fn = "function inviteURL(code){const url='https://yayeverybody.com/?join='+encodeURIComponent(code);window.__scrobbleInvite=url;return url}"
+new_invite_fn = "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}"
 if old_invite_fn in app_text:
     app_text = app_text.replace(old_invite_fn, new_invite_fn, 1)
 elif new_invite_fn not in app_text:
@@ -241,7 +241,7 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
   gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
   playFriendMode.onclick=()=>setGameMode('friend');
   playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;window.__scrobbleInvite='';try{await createGame();await new Promise(r=>setTimeout(r,60));const url=window.__scrobbleInvite;if(!url)throw new Error('Invite link was not generated');const NativeShare=window.Capacitor?.Plugins?.Share;if(NativeShare?.share)await NativeShare.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url});else if(navigator.share)await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url});else throw new Error('Sharing is unavailable');window.ScrobbleHaptics?.startGame?.();gameModeBox.classList.add('hidden');}catch(e){if(!/cancel/i.test(String(e?.message||e)))alert('Could not open the share options. Please try again.');}finally{startFriendGame.disabled=false}};
+  startFriendGame.onclick=()=>{window.ScrobbleHaptics?.startGame?.();gameModeBox.classList.add('hidden');createGame()};
   gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
@@ -698,6 +698,7 @@ index.write_text(text)
 app_source = app.read_text()
 index_source = index.read_text()
 assert "https://yayeverybody.com/?join=" in app_source, "Public invite URL regression"
+assert "startFriendGame.onclick=()=>{window.ScrobbleHaptics?.startGame?.();gameModeBox.classList.add('hidden');createGame()}" in app_source, "Proven 1.0.1 friend-game path missing"
 assert "capacitor://localhost/?join=" not in app_source, "Native localhost invite URL regression"
 assert "location.replace(next)" in index_source, "Universal Link clean-bootstrap missing"
 assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
