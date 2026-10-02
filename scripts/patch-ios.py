@@ -145,21 +145,21 @@ app.write_text(app_text)
 haptic_helper = r'''
 <script id="scrobble-haptics">
 (()=>{
-  const plugin=()=>window.Capacitor?.Plugins?.Haptics;
-  async function impact(style='LIGHT'){
-    try{ const h=plugin(); if(h?.impact) await h.impact({style}); }catch(e){ console.warn('Scrobble haptic skipped',e); }
-  }
-  async function selection(){
-    try{ const h=plugin(); if(h?.selectionStart){await h.selectionStart();await h.selectionChanged();await h.selectionEnd();} else await impact('LIGHT'); }catch(e){}
-  }
-  window.ScrobbleHaptics={impact,selection,light:()=>impact('LIGHT'),medium:()=>impact('MEDIUM'),heavy:()=>impact('HEAVY')};
-  document.addEventListener('pointerup',e=>{
-    const el=e.target.closest?.('button,[role="button"],.tile,.rackTile,.weirdChoice');
-    if(!el || el.disabled) return;
-    const label=(el.textContent||'').trim().toUpperCase();
-    if(/^(PLAY|SHARE INVITE|SWAP|PASS)/.test(label)) impact('MEDIUM');
-    else selection();
-  },{passive:true});
+ const plugin=()=>window.Capacitor?.Plugins?.Haptics;
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+ async function impact(style='LIGHT'){try{const x=plugin();if(x?.impact)await x.impact({style})}catch(e){}}
+ async function selection(){try{const x=plugin();if(x?.selectionStart){await x.selectionStart();await x.selectionChanged();await x.selectionEnd()}else await impact('LIGHT')}catch(e){}}
+ async function pattern(steps){for(const [style,delay] of steps){await impact(style);if(delay)await sleep(delay)}}
+ const startGame=()=>pattern([['LIGHT',90],['MEDIUM',120],['HEAVY',0]]);
+ const wordPlay=()=>pattern([['LIGHT',70],['LIGHT',65],['MEDIUM',60],['MEDIUM',55],['HEAVY',0]]);
+ const scoreCrescendo=(delta=0)=>{const n=Math.max(3,Math.min(8,Math.ceil(Math.abs(delta)/8)+2));const a=[];for(let i=0;i<n;i++)a.push([i<n-2?'LIGHT':i===n-2?'MEDIUM':'HEAVY',Math.max(35,95-i*9)]);a[a.length-1][1]=0;return pattern(a)};
+ window.ScrobbleHaptics={impact,selection,pattern,startGame,wordPlay,scoreCrescendo,light:()=>impact('LIGHT'),medium:()=>impact('MEDIUM'),heavy:()=>impact('HEAVY')};
+ document.addEventListener('pointerup',e=>{const el=e.target.closest?.('button,[role="button"],.tile,.rackTile,.weirdChoice');if(!el||el.disabled)return;const label=(el.textContent||'').trim().toUpperCase();if(/^(PLAY|SWAP|PASS)/.test(label))impact('MEDIUM');else if(!/^SHARE INVITE/.test(label))selection()},{passive:true});
+ // Follow visible score roll-ups instead of guessing game timing. A numeric change
+ // in a score-labelled element produces a rising tactile cadence ending in a firm hit.
+ const last=new WeakMap();
+ const scanScores=()=>document.querySelectorAll('[id*="score" i],[class*="score" i]').forEach(el=>{const m=(el.textContent||'').match(/-?\\d+/);if(!m)return;const v=Number(m[0]),old=last.get(el);last.set(el,v);if(Number.isFinite(old)&&v>old)scoreCrescendo(v-old)});
+ new MutationObserver(scanScores).observe(document.documentElement,{subtree:true,childList:true,characterData:true});scanScores();
 })();
 </script>
 '''
@@ -168,7 +168,7 @@ if 'id="scrobble-haptics"' not in text:
     text = text.replace('</body>',haptic_helper+'</body>',1)
 index.write_text(text)
 
-# Approved New Game progressive flow. Preserve the proven createGame() and
+# Prevent the legacy combined account screen from flashing during logout.\nlogout_shield = r'''\n<style id="scrobble-logout-shield">html.scrobbleLoggingOut #accountBox{visibility:hidden!important}</style>\n<script id="scrobble-logout-transition">\n(()=>{const b=document.getElementById('logoutAccount');if(!b)return;b.addEventListener('click',()=>{document.documentElement.classList.add('scrobbleLoggingOut');setTimeout(()=>document.documentElement.classList.remove('scrobbleLoggingOut'),900)},true);new MutationObserver(()=>{if(document.querySelector('#welcomeOverlay:not(.hidden),#welcomeScreen:not(.hidden)'))document.documentElement.classList.remove('scrobbleLoggingOut')}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']})})();\n</script>\n'''\ntext=index.read_text()\nif 'id="scrobble-logout-shield"' not in text:text=text.replace('</body>',logout_shield+'</body>',1)\nindex.write_text(text)\n\n# Approved New Game progressive flow. Preserve the proven createGame() and
 # createComputerGame() functions; only change which controls reveal/call them.
 text = index.read_text()
 old_game = '''    <button id="playFriendMode" class="modePrimary" type="button">PLAY A FRIEND</button>
@@ -241,7 +241,7 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
   gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
   playFriendMode.onclick=()=>setGameMode('friend');
   playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;try{await createGame();gameModeBox.classList.add('hidden');}finally{startFriendGame.disabled=false}};
+  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;try{await createGame();await new Promise(r=>setTimeout(r,120));const candidates=[...document.querySelectorAll('a[href],input[value],textarea')].map(el=>el.href||el.value||el.textContent||'');const raw=candidates.find(v=>/yayeverybody\\.com\\/\\?join=/i.test(v));if(!raw)throw new Error('Invite link was not generated');const u=new URL(raw);const url='https://yayeverybody.com/?join='+encodeURIComponent(u.searchParams.get('join')||'');const NativeShare=window.Capacitor?.Plugins?.Share;if(NativeShare?.share)await NativeShare.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url});else if(navigator.share)await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url});else throw new Error('Sharing is unavailable');window.ScrobbleHaptics?.startGame?.();gameModeBox.classList.add('hidden');}catch(e){if(!/cancel/i.test(String(e?.message||e)))alert('Could not open the share options. Please try again.');}finally{startFriendGame.disabled=false}};
   gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
@@ -522,7 +522,7 @@ assert "setProfileChrome(!login)" in final_index, "Create photo controls wiring 
 assert "Welcome Back!" in final_index, "Login heading regression"
 assert final_index.index('id="sharedWeirdBox"') < final_index.index('id="computerModePanel"'), "Make It Weird must precede computer difficulty"
 assert "startFriendGame.onclick=async()=>{" in app.read_text(), "Friend share action wiring missing"
-assert "await createGame();gameModeBox.classList.add('hidden')" in app.read_text(), "Friend create/share flow missing"
+assert "NativeShare.share({title:'Play Scrobble with me'" in app.read_text(), "Explicit native friend share missing"
 assert "const share=[...document.querySelectorAll" not in app.read_text(), "Recursive share-button heuristic returned"
 assert 'id="scrobble-haptics"' in final_index, "Haptics bridge missing"
 
@@ -709,3 +709,5 @@ assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' not in ind
 assert 'scrobbleAuthPanel hidden' in index_source, "Auth panels must default hidden"
 assert 'scrobble-prepaint-guard' not in index_source, "Unsafe custom startup guard returned"
 assert 'scrobbleStartupSplash' not in index_source, "Unsafe custom web splash returned"
+assert 'scoreCrescendo' in index_source and 'startGame' in index_source, "Rich haptics missing"
+assert 'scrobble-logout-shield' in index_source, "Logout flash shield missing"
