@@ -144,28 +144,27 @@ app.write_text(app_text)
 # same bridge and this diagnostic can be removed.
 haptic_helper = r'''
 <script id="scrobble-haptics">
-(()=>{
- const plugin=()=>window.Capacitor?.Plugins?.Haptics;
- const sleep=ms=>new Promise(r=>setTimeout(r,ms));
- async function impact(style='LIGHT'){try{const x=plugin();if(x?.impact)await x.impact({style})}catch(e){}}
- async function selection(){try{const x=plugin();if(x?.selectionStart){await x.selectionStart();await x.selectionChanged();await x.selectionEnd()}else await impact('LIGHT')}catch(e){}}
- async function pattern(steps){for(const [style,delay] of steps){await impact(style);if(delay)await sleep(delay)}}
- const startGame=()=>pattern([['LIGHT',90],['MEDIUM',120],['HEAVY',0]]);
- const wordPlay=()=>pattern([['LIGHT',70],['LIGHT',65],['MEDIUM',60],['MEDIUM',55],['HEAVY',0]]);
- const scoreCrescendo=(delta=0)=>{const n=Math.max(3,Math.min(8,Math.ceil(Math.abs(delta)/8)+2));const a=[];for(let i=0;i<n;i++)a.push([i<n-2?'LIGHT':i===n-2?'MEDIUM':'HEAVY',Math.max(35,95-i*9)]);a[a.length-1][1]=0;return pattern(a)};
- window.ScrobbleHaptics={impact,selection,pattern,startGame,wordPlay,scoreCrescendo,light:()=>impact('LIGHT'),medium:()=>impact('MEDIUM'),heavy:()=>impact('HEAVY')};
- document.addEventListener('pointerup',e=>{const el=e.target.closest?.('button,[role="button"],.tile,.rackTile,.weirdChoice');if(!el||el.disabled)return;const label=(el.textContent||'').trim().toUpperCase();if(/^(PLAY|SWAP|PASS)/.test(label))impact('MEDIUM');else if(!/^SHARE INVITE/.test(label))selection()},{passive:true});
- // Follow visible score roll-ups instead of guessing game timing. A numeric change
- // in a score-labelled element produces a rising tactile cadence ending in a firm hit.
- const last=new WeakMap();
- const scanScores=()=>document.querySelectorAll('[id*="score" i],[class*="score" i]').forEach(el=>{const m=(el.textContent||'').match(/-?\\d+/);if(!m)return;const v=Number(m[0]),old=last.get(el);last.set(el,v);if(Number.isFinite(old)&&v>old)scoreCrescendo(v-old)});
- new MutationObserver(scanScores).observe(document.documentElement,{subtree:true,childList:true,characterData:true});scanScores();
+(function(){
+  function plugin(){ return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics; }
+  function impact(style){ try{ var h=plugin(); if(h) return h.impact({style:style}); }catch(e){} }
+  function select(){ try{ var h=plugin(); if(h) return h.selectionStart().then(function(){return h.selectionChanged()}).then(function(){return h.selectionEnd()}); }catch(e){} }
+  function wait(ms){ return new Promise(function(resolve){setTimeout(resolve,ms)}); }
+  async function pattern(steps){ for(var i=0;i<steps.length;i++){ impact(steps[i][0]); if(steps[i][1]) await wait(steps[i][1]); } }
+  window.ScrobbleHaptics={
+    light:function(){return impact('LIGHT')}, medium:function(){return impact('MEDIUM')}, heavy:function(){return impact('HEAVY')}, select:select,
+    startGame:function(){return pattern([['LIGHT',90],['MEDIUM',120],['HEAVY',0]])},
+    wordPlay:function(){return pattern([['LIGHT',70],['LIGHT',65],['MEDIUM',60],['MEDIUM',55],['HEAVY',0]])},
+    scoreCrescendo:function(delta){var n=Math.max(3,Math.min(8,Math.ceil(Math.abs(delta||0)/8)+2)),steps=[];for(var i=0;i<n;i++)steps.push([i<n-2?'LIGHT':i===n-2?'MEDIUM':'HEAVY',Math.max(35,95-i*9)]);steps[steps.length-1][1]=0;return pattern(steps)}
+  };
+  document.addEventListener('pointerdown',function(e){var tile=e.target.closest&&e.target.closest('.tile');if(tile)window.ScrobbleHaptics.light()},{passive:true});
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('button');if(!b||b.disabled)return;var t=(b.textContent||'').trim().toUpperCase();if(/^(PLAY|SWAP|PASS|SHARE|COPY)/.test(t))window.ScrobbleHaptics.medium();else window.ScrobbleHaptics.select()},{passive:true});
+  var last=new WeakMap();function scan(){document.querySelectorAll('[id*="score" i],[class*="score" i]').forEach(function(el){var m=(el.textContent||'').match(/-?\\d+/);if(!m)return;var v=Number(m[0]),old=last.get(el);last.set(el,v);if(Number.isFinite(old)&&v>old)window.ScrobbleHaptics.scoreCrescendo(v-old)})}new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true,characterData:true});scan();
 })();
 </script>
 '''
 text = index.read_text()
 if 'id="scrobble-haptics"' not in text:
-    text = text.replace('</body>',haptic_helper+'</body>',1)
+    text = text.replace('</head>',haptic_helper+'</head>',1)
 index.write_text(text)
 
 # Prevent the legacy combined account screen from flashing during logout.\nlogout_shield = r'''\n<style id="scrobble-logout-shield">html.scrobbleLoggingOut #accountBox{visibility:hidden!important}</style>\n<script id="scrobble-logout-transition">\n(()=>{const b=document.getElementById('logoutAccount');if(!b)return;b.addEventListener('click',()=>{document.documentElement.classList.add('scrobbleLoggingOut');setTimeout(()=>document.documentElement.classList.remove('scrobbleLoggingOut'),900)},true);new MutationObserver(()=>{if(document.querySelector('#welcomeOverlay:not(.hidden),#welcomeScreen:not(.hidden)'))document.documentElement.classList.remove('scrobbleLoggingOut')}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']})})();\n</script>\n'''\ntext=index.read_text()\nif 'id="scrobble-logout-shield"' not in text:text=text.replace('</body>',logout_shield+'</body>',1)\nindex.write_text(text)\n\n# Approved New Game progressive flow. Preserve the proven createGame() and
