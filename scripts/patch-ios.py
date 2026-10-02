@@ -92,7 +92,7 @@ app_text = app.read_text()
 # Reuse the exact source-level invite fix proven in Scrobble 1.0.1 (commit
 # 9455d48): do not derive invite links from Capacitor's localhost origin.
 old_invite_fn = "function inviteURL(code){return location.origin+location.pathname+'?join='+encodeURIComponent(code)}"
-new_invite_fn = "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}"
+new_invite_fn = "function inviteURL(code){const u='https://yayeverybody.com/?join='+encodeURIComponent(code);window.__scrobbleLastInvite=u;return u}"
 if old_invite_fn in app_text:
     app_text = app_text.replace(old_invite_fn, new_invite_fn, 1)
 elif new_invite_fn not in app_text:
@@ -240,7 +240,7 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
   gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
   playFriendMode.onclick=()=>setGameMode('friend');
   playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};
+  startFriendGame.onclick=async()=>{gameModeBox.classList.add('hidden');window.__scrobbleLastInvite='';await createGame();const u=window.__scrobbleLastInvite;if(u&&navigator.share)await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url:u})};
   gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
@@ -249,7 +249,7 @@ elif "const playComputerMode=document.getElementById('playComputerMode')" not in
     # delegated controller rather than failing the whole release.
     fallback = '''\n<script id="scrobble-approved-new-game-controller">\n(()=>{\n const box=document.getElementById('gameModeBox'); if(!box)return;\n const friend=document.getElementById('playFriendMode'),computer=document.getElementById('playComputerMode');\n const fp=document.getElementById('friendModePanel'),cp=document.getElementById('computerModePanel'),weird=document.getElementById('sharedWeirdBox');\n const choose=(mode)=>{const f=mode==='friend';fp?.classList.toggle('hidden',!f);cp?.classList.toggle('hidden',f);weird?.classList.remove('hidden');friend?.classList.toggle('active',f);computer?.classList.toggle('active',!f)};\n friend?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('friend')},true);\n computer?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('computer')},true);
  const start=document.getElementById('startFriendGame');
- start?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();box.classList.add('hidden');window.ScrobbleHaptics?.startGame?.();if(typeof createGame==='function')createGame();else window.ScrobbleDiag?.('createGame unavailable')},true);
+ start?.addEventListener('click',async e=>{e.preventDefault();e.stopImmediatePropagation();box.classList.add('hidden');window.ScrobbleHaptics?.startGame?.();window.__scrobbleLastInvite='';if(typeof createGame==='function'){await createGame();const u=window.__scrobbleLastInvite;if(u&&navigator.share)await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url:u})}else window.ScrobbleDiag?.('createGame unavailable')},true);
  box.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();box.classList.add('hidden');window.ScrobbleHaptics?.startGame?.();if(typeof createComputerGame==='function')createComputerGame(btn.dataset.cpuDifficulty)},true));\n})();\n</script>\n'''
     page=index.read_text()
     page=page.replace('</body>',fallback+'</body>',1)
@@ -406,7 +406,7 @@ onboarding = r'''
   let checks=0;
   const decide=()=>{
     if(signedIn()){overlay.classList.add('hidden');return}
-    if(++checks<12){setTimeout(decide,125);return}
+    if(++checks<40){setTimeout(decide,125);return}
     if(!new URLSearchParams(location.search).get('join')) overlay.classList.remove('hidden');
   };
   decide();
@@ -523,7 +523,7 @@ assert "account.classList.toggle('scrobbleCreateMode',!login)" in final_index, "
 assert "setProfileChrome(!login)" in final_index, "Create photo controls wiring missing"
 assert "Welcome Back!" in final_index, "Login heading regression"
 assert final_index.index('id="sharedWeirdBox"') < final_index.index('id="computerModePanel"'), "Make It Weird must precede computer difficulty"
-assert "startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()}" in app.read_text(), "Friend create-game action wiring missing"
+assert "startFriendGame.onclick=async()=>{" in app.read_text(), "Friend create-game action wiring missing"
 assert "const share=[...document.querySelectorAll" not in app.read_text(), "Recursive share-button heuristic returned"
 assert 'id="scrobble-haptics"' in final_index, "Haptics bridge missing"
 
@@ -737,8 +737,8 @@ index.write_text(text)
 # scripts have been injected. Earlier placement falsely failed every build.
 app_source = app.read_text()
 index_source = index.read_text()
-assert "https://yayeverybody.com/?join=" in app_source, "Public invite URL regression"
-assert "startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');createGame()}" in app_source, "Friend action must call packaged createGame"
+assert "https://yayeverybody.com/?join=" in app_source and "__scrobbleLastInvite" in app_source, "Public invite URL regression"
+assert "startFriendGame.onclick=async()=>{" in app_source and "await createGame()" in app_source, "Friend action must await packaged createGame"
 assert "capacitor://localhost/?join=" not in app_source, "Native localhost invite URL regression"
 assert "location.replace(next)" in index_source, "Universal Link clean-bootstrap missing"
 assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
