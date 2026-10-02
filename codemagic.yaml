@@ -46,7 +46,8 @@ workflows:
           # Do not reject the build based on exact bundle text: Capacitor's copied
           # asset can differ textually while the controls live in index.html.
           grep -q 'id="scrobble-haptics"' ios/App/App/public/index.html || { echo "ERROR: haptics bridge not copied to iOS"; exit 1; }
-          grep -q 'id="scrobble-runtime-diagnostic"' ios/App/App/public/index.html || { echo "ERROR: runtime diagnostic not copied to iOS"; exit 1; }
+          grep -q 'id="scrobble-runtime-diagnostic-style"' ios/App/App/public/index.html || { echo "ERROR: runtime diagnostic style not copied to iOS"; exit 1; }
+          grep -q 'id="scrobble-runtime-diagnostic"' ios/App/App/public/index.html || { echo "ERROR: runtime diagnostic script not copied to iOS"; exit 1; }
           ! grep -q 'OR PLAY THE COMPUTER' ios/App/App/public/index.html || { echo "ERROR: legacy giant New Game layout survived"; exit 1; }
           echo "IOS_AUTH_MARKER=AUTH_V4_PRESERVE_DOM"
           echo "IOS_NEW_GAME_MARKER=PROGRESSIVE_V2"
