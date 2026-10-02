@@ -722,7 +722,7 @@ runtime_diag = r'''
 </script>
 '''
 text=index.read_text()
-if 'id="scrobble-runtime-diagnostic"' not in text:
+if 'id="scrobble-runtime-diagnostic-style"' not in text:
     if '</body>' in text:
         text=text.replace('</body>',runtime_diag+'</body>',1)
     else:
@@ -748,4 +748,4 @@ assert 'scrobble-prepaint-guard' not in index_source, "Unsafe custom startup gua
 assert 'scrobbleStartupSplash' not in index_source, "Unsafe custom web splash returned"
 assert 'scoreCrescendo' in index_source and 'startGame' in index_source, "Rich haptics missing"
 assert 'scrobble-logout-shield' in index_source, "Logout flash shield missing"
-assert 'id="scrobble-runtime-diagnostic"' in index_source, "Runtime diagnostic missing"
+assert 'id="scrobble-runtime-diagnostic-style"' in index_source and 'id="scrobble-runtime-diagnostic"' in index_source, "Runtime diagnostic missing"
