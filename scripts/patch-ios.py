@@ -722,7 +722,11 @@ runtime_diag = r'''
 </script>
 '''
 text=index.read_text()
-if 'id="scrobble-runtime-diagnostic"' not in text:text=text.replace('</body>',runtime_diag+'</body>',1)
+if 'id="scrobble-runtime-diagnostic"' not in text:
+    if '</body>' in text:
+        text=text.replace('</body>',runtime_diag+'</body>',1)
+    else:
+        text += runtime_diag
 index.write_text(text)
 
 # Final regression checks must run AFTER all native invite/share/deep-link
