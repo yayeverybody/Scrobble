@@ -92,7 +92,7 @@ app_text = app.read_text()
 # Reuse the exact source-level invite fix proven in Scrobble 1.0.1 (commit
 # 9455d48): do not derive invite links from Capacitor's localhost origin.
 old_invite_fn = "function inviteURL(code){return location.origin+location.pathname+'?join='+encodeURIComponent(code)}"
-new_invite_fn = "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}"
+new_invite_fn = "function inviteURL(code){const url='https://yayeverybody.com/?join='+encodeURIComponent(code);window.__scrobbleInvite=url;return url}"
 if old_invite_fn in app_text:
     app_text = app_text.replace(old_invite_fn, new_invite_fn, 1)
 elif new_invite_fn not in app_text:
@@ -241,7 +241,7 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
   gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
   playFriendMode.onclick=()=>setGameMode('friend');
   playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;try{await createGame();await new Promise(r=>setTimeout(r,120));const candidates=[...document.querySelectorAll('a[href],input[value],textarea')].map(el=>el.href||el.value||el.textContent||'');const raw=candidates.find(v=>/yayeverybody\\.com\\/\\?join=/i.test(v));if(!raw)throw new Error('Invite link was not generated');const u=new URL(raw);const url='https://yayeverybody.com/?join='+encodeURIComponent(u.searchParams.get('join')||'');const NativeShare=window.Capacitor?.Plugins?.Share;if(NativeShare?.share)await NativeShare.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url});else if(navigator.share)await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url});else throw new Error('Sharing is unavailable');window.ScrobbleHaptics?.startGame?.();gameModeBox.classList.add('hidden');}catch(e){if(!/cancel/i.test(String(e?.message||e)))alert('Could not open the share options. Please try again.');}finally{startFriendGame.disabled=false}};
+  startFriendGame.onclick=async()=>{startFriendGame.disabled=true;window.__scrobbleInvite='';try{await createGame();await new Promise(r=>setTimeout(r,60));const url=window.__scrobbleInvite;if(!url)throw new Error('Invite link was not generated');const NativeShare=window.Capacitor?.Plugins?.Share;if(NativeShare?.share)await NativeShare.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url});else if(navigator.share)await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url});else throw new Error('Sharing is unavailable');window.ScrobbleHaptics?.startGame?.();gameModeBox.classList.add('hidden');}catch(e){if(!/cancel/i.test(String(e?.message||e)))alert('Could not open the share options. Please try again.');}finally{startFriendGame.disabled=false}};
   gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
