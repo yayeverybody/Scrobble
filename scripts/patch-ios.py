@@ -240,7 +240,7 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
   gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
   playFriendMode.onclick=()=>setGameMode('friend');
   playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=()=>{window.ScrobbleHaptics?.startGame?.();gameModeBox.classList.add('hidden');createGame()};
+  startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');playFriendMode.click()};
   gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
@@ -697,7 +697,7 @@ index.write_text(text)
 app_source = app.read_text()
 index_source = index.read_text()
 assert "https://yayeverybody.com/?join=" in app_source, "Public invite URL regression"
-assert "startFriendGame.onclick=()=>{window.ScrobbleHaptics?.startGame?.();gameModeBox.classList.add('hidden');createGame()}" in app_source, "Proven 1.0.1 friend-game path missing"
+assert "startFriendGame.onclick=()=>{gameModeBox.classList.add('hidden');playFriendMode.click()}" in app_source, "Friend action must delegate to packaged Play Friend handler"
 assert "capacitor://localhost/?join=" not in app_source, "Native localhost invite URL regression"
 assert "location.replace(next)" in index_source, "Universal Link clean-bootstrap missing"
 assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
