@@ -691,6 +691,40 @@ if 'id="scrobble-ios-universal-links"' not in text:
     text = text.replace('</body>', deep_link_script + '</body>')
 index.write_text(text)
 
+# Temporary on-device runtime diagnostics. This is intentionally visible so a single
+# TestFlight run tells us which exact boundary fails instead of requiring Safari logs.
+runtime_diag = r'''
+<style id="scrobble-runtime-diagnostic-style">
+#scrobbleRuntimeDiag{position:fixed;left:10px;right:10px;bottom:10px;z-index:2147483647;background:rgba(0,0,0,.88);color:#fff;border-radius:10px;padding:8px 10px;font:12px/1.35 monospace;white-space:pre-wrap;max-height:30vh;overflow:auto;display:none}
+#scrobbleRuntimeDiag.show{display:block}
+</style>
+<div id="scrobbleRuntimeDiag"></div>
+<script id="scrobble-runtime-diagnostic">
+(()=>{
+ const box=document.getElementById('scrobbleRuntimeDiag');
+ const log=(m)=>{if(!box)return;box.classList.add('show');box.textContent+=(box.textContent?'\\n':'')+m;console.log('[SCROBBLE DIAG]',m)};
+ window.ScrobbleDiag=log;
+ const cap=()=>window.Capacitor?.Plugins;
+ document.addEventListener('click',async e=>{
+   const b=e.target.closest?.('button');if(!b)return;
+   const t=(b.textContent||'').trim().toUpperCase();
+   if(t==='SHARE INVITE'){
+     log('1 SHARE INVITE click received');
+     log('2 createGame='+typeof window.createGame+' Share='+(!!cap()?.Share?.share)+' Haptics='+(!!cap()?.Haptics?.impact));
+     try{await cap()?.Haptics?.impact?.({style:'HEAVY'});log('3 Haptics direct call OK')}catch(err){log('3 Haptics ERROR '+String(err?.message||err))}
+     setTimeout(()=>log('4 post-click URL '+location.href),500);
+   }
+ },true);
+ const oldShare=navigator.share?.bind(navigator);
+ if(oldShare){try{Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{log('5 navigator.share called '+JSON.stringify(data||{}));try{const r=await oldShare(data);log('6 navigator.share resolved');return r}catch(err){log('6 navigator.share ERROR '+String(err?.message||err));throw err}}})}catch(err){log('navigator.share instrumentation ERROR '+String(err?.message||err))}}
+ setTimeout(()=>{if(location.search.includes('scrobbleDiag=1'))log('BOOT Share='+(!!cap()?.Share?.share)+' Haptics='+(!!cap()?.Haptics?.impact))},500);
+})();
+</script>
+'''
+text=index.read_text()
+if 'id="scrobble-runtime-diagnostic"' not in text:text=text.replace('</body>',runtime_diag+'</body>',1)
+index.write_text(text)
+
 # Final regression checks must run AFTER all native invite/share/deep-link
 # scripts have been injected. Earlier placement falsely failed every build.
 app_source = app.read_text()
@@ -710,3 +744,4 @@ assert 'scrobble-prepaint-guard' not in index_source, "Unsafe custom startup gua
 assert 'scrobbleStartupSplash' not in index_source, "Unsafe custom web splash returned"
 assert 'scoreCrescendo' in index_source and 'startGame' in index_source, "Rich haptics missing"
 assert 'scrobble-logout-shield' in index_source, "Logout flash shield missing"
+assert 'id="scrobble-runtime-diagnostic"' in index_source, "Runtime diagnostic missing"
