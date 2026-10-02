@@ -24,6 +24,16 @@ workflows:
           python3 -m py_compile ../scripts/patch-ios.py
           python3 ../scripts/patch-ios.py
 
+          # Diagnostic build: write the runtime probe directly into the web asset
+          # AFTER patch-ios.py. This bypasses patch-script injection entirely.
+          cat >> www/index.html <<'SCROBBLE_DIAG'
+          <style id="scrobble-runtime-direct-style">#scrobbleRuntimeDirect{position:fixed;left:10px;right:10px;bottom:10px;z-index:2147483647;background:rgba(0,0,0,.88);color:#fff;border-radius:10px;padding:8px 10px;font:12px/1.35 monospace;white-space:pre-wrap;max-height:30vh;overflow:auto;display:none}#scrobbleRuntimeDirect.show{display:block}</style>
+          <div id="scrobbleRuntimeDirect"></div>
+          <script id="scrobble-runtime-direct">
+          (()=>{const box=document.getElementById('scrobbleRuntimeDirect');const log=m=>{box.classList.add('show');box.textContent+=(box.textContent?'\\n':'')+m};const cap=()=>window.Capacitor&&window.Capacitor.Plugins;document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('button');if(!b||!/^SHARE INVITE$/i.test((b.textContent||'').trim()))return;log('1 SHARE INVITE tap');log('2 Share='+(!!(cap()&&cap().Share&&cap().Share.share))+' Haptics='+(!!(cap()&&cap().Haptics&&cap().Haptics.impact)));try{await cap().Haptics.impact({style:'HEAVY'});log('3 direct haptic OK')}catch(err){log('3 haptic ERROR '+String(err&&err.message||err))}setTimeout(()=>log('4 URL '+location.href),500)},true);const ns=navigator.share&&navigator.share.bind(navigator);if(ns)try{Object.defineProperty(navigator,'share',{configurable:true,value:async d=>{log('5 navigator.share called');try{const r=await ns(d);log('6 share resolved');return r}catch(err){log('6 share ERROR '+String(err&&err.message||err));throw err}}})}catch(err){log('share instrumentation ERROR '+String(err&&err.message||err))}})();
+          </script>
+          SCROBBLE_DIAG
+
           # Prove the patched web bundle is the one Capacitor is about to package.
           echo "=== Scrobble patched-auth verification ==="
           grep -q 'id="scrobbleOnboardingV2"' www/index.html || { echo "ERROR: new onboarding missing"; exit 1; }
@@ -46,8 +56,7 @@ workflows:
           # Do not reject the build based on exact bundle text: Capacitor's copied
           # asset can differ textually while the controls live in index.html.
           grep -q 'id="scrobble-haptics"' ios/App/App/public/index.html || { echo "ERROR: haptics bridge not copied to iOS"; exit 1; }
-          grep -q 'id="scrobble-runtime-diagnostic-style"' ios/App/App/public/index.html || { echo "ERROR: runtime diagnostic style not copied to iOS"; exit 1; }
-          grep -q 'id="scrobble-runtime-diagnostic"' ios/App/App/public/index.html || { echo "ERROR: runtime diagnostic script not copied to iOS"; exit 1; }
+          grep -q 'id="scrobble-runtime-direct-style"' ios/App/App/public/index.html || { echo "ERROR: direct runtime diagnostic not copied to iOS"; exit 1; }
           ! grep -q 'OR PLAY THE COMPUTER' ios/App/App/public/index.html || { echo "ERROR: legacy giant New Game layout survived"; exit 1; }
           echo "IOS_AUTH_MARKER=AUTH_V4_PRESERVE_DOM"
           echo "IOS_NEW_GAME_MARKER=PROGRESSIVE_V2"
