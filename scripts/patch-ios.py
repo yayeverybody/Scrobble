@@ -267,27 +267,14 @@ index.write_text(text)
 # Startup masking intentionally removed after 1.0.11-1.0.13 WKWebView regressions.
 # Native iOS launch-screen work will address the cosmetic pre-splash flash separately.
 
-# Replace the packaged unauthenticated account form itself. This runs before the
-# onboarding overlay is injected, so Login/Create no longer fight the legacy
-# combined form or its profile-photo controls.
+# Preserve the packaged authentication DOM and JavaScript exactly. Splitting the
+# original form into new Login/Create panels broke the live handler bootstrap on iOS.
 text = index.read_text()
 old_account = '<div id="accountState" class="accountState"></div><div id="passwordAccountForm" class="passwordAccountForm"><label class="accountLabel" for="accountUsername">USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span></label><input id="accountUsername" class="accountInput" type="text" autocomplete="nickname" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="Choose your player name"><div class="usernameHint">3–20 letters, numbers, or underscores. This is what other players will see.</div><label class="accountLabel" for="accountEmail">EMAIL</label><input id="accountEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountPassword">PASSWORD</label><input id="accountPassword" class="accountInput" type="password" autocomplete="current-password" placeholder="At least 6 characters"><button id="signInAccount" class="accountPrimary" type="button">SIGN IN</button><button id="createAccount" class="accountSecondary" type="button">CREATE ACCOUNT</button><button id="forgotPassword" class="accountLink" type="button">Forgot password?</button></div>'
-new_account = '<div id="accountState" class="accountState"></div><div id="passwordAccountForm" class="passwordAccountForm"><div id="loginAccountPanel" class="scrobbleAuthPanel hidden"><label class="accountLabel" for="accountEmail">EMAIL</label><input id="accountEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountPassword">PASSWORD</label><input id="accountPassword" class="accountInput" type="password" autocomplete="current-password" placeholder="At least 6 characters"><button id="signInAccount" class="accountPrimary" type="button">SIGN IN</button><button id="forgotPassword" class="accountLink" type="button">Forgot password?</button></div><div id="createAccountPanel" class="scrobbleAuthPanel hidden"><label class="accountLabel" for="accountUsername">USERNAME</label><input id="accountUsername" class="accountInput" type="text" autocomplete="nickname" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="Choose your player name"><div class="usernameHint">3–20 letters, numbers, or underscores. This is what other players will see.</div><label class="accountLabel" for="accountCreateEmail">EMAIL</label><input id="accountCreateEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountCreatePassword">PASSWORD</label><input id="accountCreatePassword" class="accountInput" type="password" autocomplete="new-password" placeholder="At least 6 characters"><button id="createAccount" class="accountPrimary" type="button">CREATE ACCOUNT</button></div></div>'
 if old_account not in text:
-    raise SystemExit('Exact packaged account form not found; refusing partial onboarding patch')
-text = text.replace(old_account,new_account,1)
-index.write_text(text)
-
+    raise SystemExit('Original packaged authentication form missing; refusing release')
 app = Path('www/app-v3140.js')
 js = app.read_text()
-needle = "const accountBox=document.getElementById('accountBox'),accountDash=document.getElementById('accountDash'),closeAccount=document.getElementById('closeAccount'),accountIdentity=document.getElementById('accountIdentity'),accountState=document.getElementById('accountState'),passwordAccountForm=document.getElementById('passwordAccountForm'),accountUsername=document.getElementById('accountUsername'),accountEmail=document.getElementById('accountEmail'),accountPassword=document.getElementById('accountPassword'),signInAccount=document.getElementById('signInAccount'),createAccount=document.getElementById('createAccount'),forgotPassword=document.getElementById('forgotPassword'),"
-if needle not in js:
-    raise SystemExit('Exact packaged account JS controls not found')
-js = js.replace(needle,needle+"loginAccountPanel=document.getElementById('loginAccountPanel'),createAccountPanel=document.getElementById('createAccountPanel'),accountCreateEmail=document.getElementById('accountCreateEmail'),accountCreatePassword=document.getElementById('accountCreatePassword'),",1)
-js = js.replace("function authCredentials(){\\n    const email=accountEmail.value.trim().toLowerCase();\\n    const password=accountPassword.value;","function authCredentials(create=false){\\n    const email=(create?accountCreateEmail:accountEmail).value.trim().toLowerCase();\\n    const password=(create?accountCreatePassword:accountPassword).value;",1)
-js = js.replace("createAccount.onclick=async()=>{\\n    const username=newAccountUsername();if(!username)return;\\n    const credentials=authCredentials();if(!credentials)return;","createAccount.onclick=async()=>{\\n    const username=newAccountUsername();if(!username)return;\\n    const credentials=authCredentials(true);if(!credentials)return;",1)
-app.write_text(js)
-
 # Refuse to package an auth UI unless the original application handlers survived.
 auth_js=app.read_text()
 for token,label in [("signInAccount.onclick","Sign In"),("createAccount.onclick","Create Account"),("forgotPassword.onclick","Forgot Password")]:
@@ -377,11 +364,7 @@ onboarding = r'''
     account.classList.toggle('scrobbleLoginMode',login);
     account.classList.toggle('scrobbleCreateMode',!login);
     setProfileChrome(!login);
-    const loginPanel=document.getElementById('loginAccountPanel');
-    const createPanel=document.getElementById('createAccountPanel');
     const enforce=()=>{
-      loginPanel?.classList.toggle('hidden',!login);
-      createPanel?.classList.toggle('hidden',login);
       account.classList.toggle('scrobbleLoginMode',login);
       account.classList.toggle('scrobbleCreateMode',!login);
       setProfileChrome(!login);
@@ -448,8 +431,6 @@ final_auth_css = '''
 <style id="scrobble-final-auth-layout">
 #accountBox{background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%)!important}
 #accountBox .accountCard,#accountBox .modalCard,#accountBox>div{background:#0b75b6!important;color:#fff!important}
-#accountBox .scrobbleAuthPanel{display:block!important}
-#accountBox .scrobbleAuthPanel.hidden{display:none!important}
 #accountBox .accountState:empty{display:none!important}
 #accountBox .accountLabel,#accountBox .usernameHint{color:#fff!important}
 #accountBox .accountInput{background:#fff!important;color:#173044!important}
@@ -528,9 +509,9 @@ assert 'OR PLAY THE COMPUTER' not in final_index, "Legacy giant New Game layout 
 assert ("playFriendMode.onclick=()=>setGameMode('friend')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Friend chooser handler regression"
 assert ("playComputerMode.onclick=()=>setGameMode('computer')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Computer chooser handler regression"
 assert final_index.count('id="accountIdentity"') == 1, "Original account identity DOM missing"
+assert old_account in final_index, "Original packaged auth form was modified"
+assert 'accountCreateEmail' not in final_index and 'loginAccountPanel' not in final_index, "Split auth DOM returned"
 assert '#accountBox #accountIdentity{display:block!important}' in final_index, "Signed-in profile photo UI hidden"
-assert final_index.count('id="loginAccountPanel"') == 1, "Login panel missing or duplicated"
-assert final_index.count('id="createAccountPanel"') == 1, "Create panel missing or duplicated"
 assert 'PATCH_20260930_FINAL' in final_index, "Final patch marker missing"
 assert "account.classList.toggle('scrobbleCreateMode',!login)" in final_index, "Create mode class wiring missing"
 assert "setProfileChrome(!login)" in final_index, "Create photo controls wiring missing"
@@ -760,9 +741,6 @@ assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live
 assert "appUrlOpen" in index_source, "Warm-app Universal Link listener missing"
 assert "getLaunchUrl" in index_source, "Cold-launch Universal Link handling missing"
 assert 'id="scrobble-ios-native-share"' in index_source, "Native share bridge missing"
-assert 'id="loginAccountPanel"' in index_source and 'id="createAccountPanel"' in index_source, "Separate auth panels missing"
-assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' not in index_source, "Legacy combined auth form survived"
-assert 'scrobbleAuthPanel hidden' in index_source, "Auth panels must default hidden"
 assert 'scrobble-prepaint-guard' not in index_source, "Unsafe custom startup guard returned"
 assert 'scrobbleStartupSplash' not in index_source, "Unsafe custom web splash returned"
 assert 'scoreCrescendo' in index_source and 'startGame' in index_source, "Rich haptics missing"
