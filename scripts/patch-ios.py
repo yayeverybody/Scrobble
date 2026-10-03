@@ -231,7 +231,7 @@ index.write_text(text)
 
 app = Path('www/app-v3140.js')
 js = app.read_text()
-old_handlers = "  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
+old_handlers = "  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=async()=>{await createComputerGame(btn.dataset.cpuDifficulty)});"
 new_handlers = '''  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');
   function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}
   function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}
@@ -240,18 +240,15 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
   gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
   playFriendMode.onclick=()=>setGameMode('friend');
   playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=async()=>{gameModeBox.classList.add('hidden');window.__scrobbleLastInvite='';await createGame();window.ScrobbleInvite?.show?.()};
+  startFriendGame.onclick=async()=>{window.__scrobbleLastInvite='';await createGame();window.ScrobbleInvite?.show?.()};
   gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
 elif "const playComputerMode=document.getElementById('playComputerMode')" not in js:
     # Some packaged bundles are minified differently. Inject an equivalent
     # delegated controller rather than failing the whole release.
-    fallback = '''\n<script id="scrobble-approved-new-game-controller">\n(()=>{\n const box=document.getElementById('gameModeBox'); if(!box)return;\n const friend=document.getElementById('playFriendMode'),computer=document.getElementById('playComputerMode');
- const originalCpu=new Map([...box.querySelectorAll('[data-cpu-difficulty]')].map(btn=>[btn,btn.onclick]));\n const fp=document.getElementById('friendModePanel'),cp=document.getElementById('computerModePanel'),weird=document.getElementById('sharedWeirdBox');\n const choose=(mode)=>{const f=mode==='friend';fp?.classList.toggle('hidden',!f);cp?.classList.toggle('hidden',f);weird?.classList.remove('hidden');friend?.classList.toggle('active',f);computer?.classList.toggle('active',!f)};\n friend?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('friend')},true);\n computer?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('computer')},true);
- const start=document.getElementById('startFriendGame');
- start?.addEventListener('click',async e=>{e.preventDefault();e.stopImmediatePropagation();box.classList.add('hidden');window.ScrobbleHaptics?.startGame?.();window.__scrobbleLastInvite='';if(typeof createGame==='function'){await createGame();window.ScrobbleInvite?.show?.()}else window.ScrobbleDiag?.('createGame unavailable')},true);
- box.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();box.classList.add('hidden');window.ScrobbleHaptics?.startGame?.();const original=originalCpu.get(btn);if(typeof original==='function')original.call(btn,e);else if(typeof createComputerGame==='function')createComputerGame(btn.dataset.cpuDifficulty)},true));\n})();\n</script>\n'''
+    fallback = '''\n<script id="scrobble-approved-new-game-controller">\n(()=>{\n const box=document.getElementById('gameModeBox'); if(!box)return;\n const friend=document.getElementById('playFriendMode'),computer=document.getElementById('playComputerMode');\n const fp=document.getElementById('friendModePanel'),cp=document.getElementById('computerModePanel'),weird=document.getElementById('sharedWeirdBox');\n const choose=(mode)=>{const f=mode==='friend';fp?.classList.toggle('hidden',!f);cp?.classList.toggle('hidden',f);weird?.classList.remove('hidden');friend?.classList.toggle('active',f);computer?.classList.toggle('active',!f)};\n friend?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('friend')},true);\n computer?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('computer')},true);
+\n})();\n</script>\n'''
     page=index.read_text()
     page=page.replace('</body>',fallback+'</body>',1)
     index.write_text(page)
