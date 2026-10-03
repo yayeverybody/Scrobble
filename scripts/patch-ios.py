@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 index = Path('www/index.html')
 text = index.read_text()
@@ -91,7 +92,7 @@ app_text = app.read_text()
 # Reuse the exact source-level invite fix proven in Scrobble 1.0.1 (commit
 # 9455d48): do not derive invite links from Capacitor's localhost origin.
 old_invite_fn = "function inviteURL(code){return location.origin+location.pathname+'?join='+encodeURIComponent(code)}"
-new_invite_fn = "function inviteURL(code){return 'https://yayeverybody.com/?join='+encodeURIComponent(code)}"
+new_invite_fn = "function inviteURL(code){const u='https://yayeverybody.com/?join='+encodeURIComponent(code);window.__scrobbleLastInvite=u;return u}"
 if old_invite_fn in app_text:
     app_text = app_text.replace(old_invite_fn, new_invite_fn, 1)
 elif new_invite_fn not in app_text:
@@ -132,6 +133,395 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
 '''
     app_text = app_text.replace(auth_marker, handler + auth_marker, 1)
 app.write_text(app_text)
+
+
+
+
+
+# Haptics bridge + diagnostic. Keep this observable during TestFlight validation:
+# a long press on the SCROBBLE wordmark fires a native MEDIUM impact and briefly
+# shows HAPTIC TEST. Once device validation passes, gameplay hooks can use the
+# same bridge and this diagnostic can be removed.
+haptic_helper = r'''
+<script id="scrobble-haptics">
+(function(){
+  function plugin(){ return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics; }
+  function impact(style){ try{ var h=plugin(); if(h) return h.impact({style:style}); }catch(e){} }
+  function select(){ try{ var h=plugin(); if(h) return h.selectionStart().then(function(){return h.selectionChanged()}).then(function(){return h.selectionEnd()}); }catch(e){} }
+  function wait(ms){ return new Promise(function(resolve){setTimeout(resolve,ms)}); }
+  async function pattern(steps){ for(var i=0;i<steps.length;i++){ impact(steps[i][0]); if(steps[i][1]) await wait(steps[i][1]); } }
+  window.ScrobbleHaptics={
+    light:function(){return impact('LIGHT')}, medium:function(){return impact('MEDIUM')}, heavy:function(){return impact('HEAVY')}, select:select,
+    startGame:function(){return pattern([['LIGHT',90],['MEDIUM',120],['HEAVY',0]])},
+    wordPlay:function(){return pattern([['LIGHT',70],['LIGHT',65],['MEDIUM',60],['MEDIUM',55],['HEAVY',0]])},
+    scoreCrescendo:function(delta){var n=Math.max(3,Math.min(8,Math.ceil(Math.abs(delta||0)/8)+2)),steps=[];for(var i=0;i<n;i++)steps.push([i<n-2?'LIGHT':i===n-2?'MEDIUM':'HEAVY',Math.max(35,95-i*9)]);steps[steps.length-1][1]=0;return pattern(steps)}
+  };
+  document.addEventListener('pointerdown',function(e){var tile=e.target.closest&&e.target.closest('.tile');if(tile)window.ScrobbleHaptics.light()},{passive:true});
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('button');if(!b||b.disabled)return;var t=(b.textContent||'').trim().toUpperCase();if(/^PLAY\\b/.test(t)){window.ScrobbleHaptics.wordPlay();return}if(/^(SWAP|PASS|SHARE|COPY)/.test(t)){window.ScrobbleHaptics.medium();return}window.ScrobbleHaptics.select()},true);
+  var last=new WeakMap();function scan(){document.querySelectorAll('[id*="score" i],[class*="score" i]').forEach(function(el){var m=(el.textContent||'').match(/-?\\d+/);if(!m)return;var v=Number(m[0]),old=last.get(el);last.set(el,v);if(Number.isFinite(old)&&v>old)window.ScrobbleHaptics.scoreCrescendo(v-old)})}new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true,characterData:true});scan();
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-haptics"' not in text:
+    text = text.replace('</head>',haptic_helper+'</head>',1)
+index.write_text(text)
+
+# Prevent the legacy combined account screen from flashing during logout.\nlogout_shield = r'''\n<style id="scrobble-logout-shield">html.scrobbleLoggingOut #accountBox{visibility:hidden!important}</style>\n<script id="scrobble-logout-transition">\n(()=>{const b=document.getElementById('logoutAccount');if(!b)return;b.addEventListener('click',()=>{document.documentElement.classList.add('scrobbleLoggingOut');setTimeout(()=>document.documentElement.classList.remove('scrobbleLoggingOut'),900)},true);new MutationObserver(()=>{if(document.querySelector('#welcomeOverlay:not(.hidden),#welcomeScreen:not(.hidden)'))document.documentElement.classList.remove('scrobbleLoggingOut')}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']})})();\n</script>\n'''\ntext=index.read_text()\nif 'id="scrobble-logout-shield"' not in text:text=text.replace('</body>',logout_shield+'</body>',1)\nindex.write_text(text)\n\n# Approved New Game progressive flow. Preserve the proven createGame() and
+# createComputerGame() functions; only change which controls reveal/call them.
+text = index.read_text()
+old_game = '''    <button id="playFriendMode" class="modePrimary" type="button">PLAY A FRIEND</button>
+    <div class="weirdBox">
+      <div class="weirdTitle">MAKE IT WEIRD</div>
+      <div class="weirdSub">Optional. Choose one.</div>
+      <label class="weirdChoice"><input type="checkbox" value="all_or_none"><span><strong>All or None</strong><small>Only A, L, O, R, N and E tiles.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="vowel_movement"><span><strong>Vowel Movement</strong><small>Other letters are traded for extra vowels.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="high_roller"><span><strong>High Roller</strong><small>J, Q, X and Z are worth triple.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="too_many_tiles"><span><strong>Too Many Tiles</strong><small>Play with 9 tiles instead of 7.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="oops_all_ys"><span><strong>Oops! All Y’s</strong><small>Replace 20 other tiles with Y’s.</small></span></label>
+    </div>
+    <div class="modeDivider"><span>OR PLAY THE COMPUTER</span></div>
+    <div class="cpuChoices">
+      <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
+      <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
+      <button type="button" data-cpu-difficulty="hard"><strong>HARD</strong><span>Best move it can find</span></button>
+    </div>'''
+weird = '''<div id="sharedWeirdBox" class="weirdBox hidden">
+      <div class="weirdTitle">MAKE IT WEIRD</div>
+      <div class="weirdSub">Optional. Choose one.</div>
+      <label class="weirdChoice"><input type="checkbox" value="all_or_none"><span><strong>All or None</strong><small>Only A, L, O, R, N and E tiles.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="vowel_movement"><span><strong>Vowel Movement</strong><small>Other letters are traded for extra vowels.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="high_roller"><span><strong>High Roller</strong><small>J, Q, X and Z are worth triple.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="too_many_tiles"><span><strong>Too Many Tiles</strong><small>Play with 9 tiles instead of 7.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="oops_all_ys"><span><strong>Oops! All Y’s</strong><small>Replace 20 other tiles with Y’s.</small></span></label>
+    </div>'''
+new_game = f'''    <div class="modeChooser">
+      <button id="playFriendMode" class="modeChoice" type="button">PLAY A FRIEND</button>
+      <button id="playComputerMode" class="modeChoice" type="button">PLAY THE COMPUTER</button>
+    </div>
+    {weird}
+    <div id="friendModePanel" class="modePanel hidden">
+      <button id="startFriendGame" class="friendStart" type="button">CREATE GAME</button>
+    </div>
+    <div id="computerModePanel" class="modePanel hidden">
+      <div class="cpuChoices">
+        <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
+        <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
+        <button type="button" data-cpu-difficulty="hard"><strong>HARD</strong><span>Best move it can find</span></button>
+      </div>
+    </div>'''
+if old_game in text:
+    text = text.replace(old_game,new_game,1)
+elif 'id="playComputerMode"' not in text:
+    raise SystemExit('Approved New Game source block not found')
+
+flow_style = '''
+<style id="scrobble-game-flow-approved">
+#gameModeBox .modeChooser{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+#gameModeBox .modeChoice{min-height:58px;border:2px solid #f2bd45;border-radius:14px;background:#0b4c7c;color:#fff;font-weight:900;padding:9px}
+#gameModeBox .modeChoice.active{background:#f2bd45;color:#173044}
+#gameModeBox .modePanel.hidden,#gameModeBox #sharedWeirdBox.hidden{display:none!important}
+#gameModeBox .friendStart{width:100%;min-height:54px;margin:4px 0 12px;border:0;border-radius:14px;background:#f2bd45;color:#173044;font-weight:900}
+#gameModeBox .cpuChoices{margin:4px 0 12px}
+</style>
+'''
+if 'id="scrobble-game-flow-approved"' not in text:
+    text = text.replace('</head>',flow_style+'</head>',1)
+index.write_text(text)
+
+app = Path('www/app-v3140.js')
+js = app.read_text()
+# Patch the packaged handlers by stable individual statements. The CPU handler
+# was changed by an earlier patch, so requiring one exact multi-line block was brittle.
+replacements = [
+    ("  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');", "  document.getElementById('newGameDash').onclick=openGameMode;"),
+    ("  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};", "  playFriendMode.onclick=()=>setGameMode('friend');"),
+]
+preamble = "  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');\\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\\n"
+if "const playComputerMode=document.getElementById('playComputerMode')" not in js:
+    marker = "  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');"
+    if marker not in js: raise SystemExit('New Game dashboard handler target not found')
+    js = js.replace(marker, preamble + marker, 1)
+for old,new in replacements:
+    if old in js: js=js.replace(old,new,1)
+if "playComputerMode.onclick=()=>setGameMode('computer');" not in js:
+    marker="  playFriendMode.onclick=()=>setGameMode('friend');"
+    if marker not in js: raise SystemExit('Friend mode handler target not found')
+    js=js.replace(marker, marker+"\\n  playComputerMode.onclick=()=>setGameMode('computer');\\n  startFriendGame.onclick=async()=>{window.__scrobbleLastInvite='';await createGame();window.ScrobbleInvite?.show?.()};",1)
+if "createComputerGame(btn.dataset.cpuDifficulty)" not in js:
+    raise SystemExit('Packaged CPU game handler missing; refusing release')
+app.write_text(js)
+
+# Friend-game invite is a second explicit action after game creation.
+invite_action = r'''
+<style id="scrobble-invite-action-style">#scrobbleInviteFriend{position:fixed;right:16px;top:calc(env(safe-area-inset-top) + 74px);z-index:2147482000;border:0;border-radius:14px;padding:12px 16px;background:#f2bd45;color:#173044;font-weight:900;box-shadow:0 4px 14px rgba(0,0,0,.22)}#scrobbleInviteFriend.hidden,#scrobbleInviteSheet.hidden{display:none!important}#scrobbleInviteSheet{position:fixed;inset:0;z-index:2147482500;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:24px}#scrobbleInviteSheet>div{width:min(100%,390px);background:#0877bb;border-radius:22px;padding:24px;color:#fff;text-align:center}#scrobbleInviteSheet button{width:100%;min-height:52px;margin-top:10px;border:0;border-radius:13px;font-weight:900}#scrobbleInviteShare{background:#f2bd45;color:#173044}#scrobbleInviteCopy,#scrobbleInviteClose{background:#fff;color:#173044}</style>
+<button id="scrobbleInviteFriend" class="hidden" type="button">INVITE FRIEND</button><div id="scrobbleInviteSheet" class="hidden"><div><h2>Invite a Friend</h2><p>Share your game invite or copy the link.</p><button id="scrobbleInviteShare">SHARE</button><button id="scrobbleInviteCopy">COPY LINK</button><button id="scrobbleInviteClose">CANCEL</button></div></div>
+<script id="scrobble-invite-action">
+(()=>{const b=document.getElementById('scrobbleInviteFriend'),sheet=document.getElementById('scrobbleInviteSheet');if(!b||!sheet)return;const show=()=>{if(window.__scrobbleLastInvite)b.classList.remove('hidden')};window.ScrobbleInvite={show,hide:()=>b.classList.add('hidden')};b.onclick=()=>sheet.classList.remove('hidden');document.getElementById('scrobbleInviteClose').onclick=()=>sheet.classList.add('hidden');const copy=async()=>{const u=window.__scrobbleLastInvite;if(!u)return;try{await navigator.clipboard.writeText(u)}catch(e){const t=document.createElement('textarea');t.value=u;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}document.getElementById('scrobbleInviteCopy').textContent='LINK COPIED'};document.getElementById('scrobbleInviteCopy').onclick=copy;document.getElementById('scrobbleInviteShare').onclick=async()=>{const u=window.__scrobbleLastInvite;if(!u)return;window.ScrobbleHaptics?.medium?.();try{const S=window.Capacitor?.Plugins?.Share;if(S?.share){await S.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url:u,dialogTitle:'Invite a Friend'});return}if(navigator.share){await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url:u});return}await copy()}catch(e){if(!/cancel/i.test(String(e?.message||e)))await copy()}};setInterval(show,500)})();
+</script>
+'''
+text=index.read_text()
+if 'id="scrobble-invite-action-style"' not in text:text=text.replace('</body>',invite_action+'</body>',1)
+index.write_text(text)
+
+# Startup masking intentionally removed after 1.0.11-1.0.13 WKWebView regressions.
+# Native iOS launch-screen work will address the cosmetic pre-splash flash separately.
+
+# Preserve the packaged authentication DOM and JavaScript exactly. Splitting the
+# original form into new Login/Create panels broke the live handler bootstrap on iOS.
+text = index.read_text()
+old_account = '<div id="accountState" class="accountState"></div><div id="passwordAccountForm" class="passwordAccountForm"><label class="accountLabel" for="accountUsername">USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span></label><input id="accountUsername" class="accountInput" type="text" autocomplete="nickname" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="Choose your player name"><div class="usernameHint">3–20 letters, numbers, or underscores. This is what other players will see.</div><label class="accountLabel" for="accountEmail">EMAIL</label><input id="accountEmail" class="accountInput" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com"><label class="accountLabel" for="accountPassword">PASSWORD</label><input id="accountPassword" class="accountInput" type="password" autocomplete="current-password" placeholder="At least 6 characters"><button id="signInAccount" class="accountPrimary" type="button">SIGN IN</button><button id="createAccount" class="accountSecondary" type="button">CREATE ACCOUNT</button><button id="forgotPassword" class="accountLink" type="button">Forgot password?</button></div>'
+if old_account not in text:
+    raise SystemExit('Original packaged authentication form missing; refusing release')
+app = Path('www/app-v3140.js')
+js = app.read_text()
+# Refuse to package an auth UI unless the original application handlers survived.
+auth_js=app.read_text()
+for token,label in [("signInAccount.onclick","Sign In"),("createAccount.onclick","Create Account"),("forgotPassword.onclick","Forgot Password")]:
+    if token not in auth_js: raise SystemExit(f'{label} packaged handler missing')
+
+# Next-release onboarding. Use the game's blue visual language and drive the
+# existing account form explicitly instead of relying on its previous mode.
+onboarding = r'''
+<style id="scrobble-onboarding-v3-style">
+#scrobbleOnboardingV2{position:fixed;inset:0;z-index:2147483000;background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%);display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 22px) 22px calc(env(safe-area-inset-bottom) + 22px);font-family:Arial,Helvetica,sans-serif}
+#scrobbleOnboardingV2.hidden{display:none!important}
+#scrobbleOnboardingV2 .obCard{width:min(100%,430px);background:linear-gradient(180deg,#0e83c7,#0867a5);border:2px solid rgba(255,255,255,.22);border-radius:28px;padding:34px 26px 28px;box-shadow:0 24px 70px rgba(0,0,0,.25);text-align:center}
+#scrobbleOnboardingV2 h1{margin:0 0 10px;color:#fff;font-size:36px;line-height:1.04}
+#scrobbleOnboardingV2 p{margin:0 0 28px;color:#d9f1ff;font-size:18px;line-height:1.35}
+#scrobbleOnboardingV2 .obActions{display:flex;gap:12px}
+#scrobbleOnboardingV2 button{flex:1;min-height:58px;border-radius:14px;border:2px solid #fff;background:transparent;color:#fff;font-size:16px;font-weight:900;padding:10px}
+#scrobbleOnboardingV2 button.primary{background:#f2bd45;border-color:#f2bd45;color:#173044}
+@media(max-width:360px){#scrobbleOnboardingV2 .obActions{flex-direction:column}}
+
+/* Account sheet: same family as Welcome, with no mystery profile/photo blocks. */
+#accountBox{background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%)!important}
+#accountBox>div{background:linear-gradient(180deg,#0e83c7,#0867a5)!important;border:2px solid rgba(255,255,255,.22)!important;color:#fff!important}
+#accountBox h1,#accountBox h2,#accountBox h3,#accountBox .accountLabel,#accountBox label,#accountBox .usernameHint{color:#fff!important}\n#accountBox .accountState:empty{display:none!important}\n#accountBox .passwordAccountForm{background:transparent!important}
+#accountBox input{background:#fff!important;color:#173044!important}
+#accountBox .scrobbleAuthHide,#accountBox .scrobbleAuthPanel.hidden{display:none!important}\n#accountBox .accountIdentity:has(+ .accountState){display:none!important}
+</style>
+<div id="scrobbleOnboardingV2" class="hidden" role="dialog" aria-modal="true" aria-labelledby="scrobbleWelcomeTitle">
+  <div class="obCard">
+    <h1 id="scrobbleWelcomeTitle">Welcome to Scrobble</h1>
+    <p>Play words with friends and family. Your games stay with you.</p>
+    <div class="obActions">
+      <button id="scrobbleCreateChoice" class="primary" type="button">CREATE ACCOUNT</button>
+      <button id="scrobbleLoginChoice" type="button">LOG IN</button>
+    </div>
+  </div>
+</div>
+<script id="scrobble-onboarding-v3-script">
+(()=>{
+  const overlay=document.getElementById('scrobbleOnboardingV2');
+  const account=document.getElementById('accountBox');
+  if(!overlay||!account) return;
+  const createBtn=document.getElementById('scrobbleCreateChoice');
+  const loginBtn=document.getElementById('scrobbleLoginChoice');
+  const signIn=document.getElementById('signInAccount');
+  const create=document.getElementById('createAccount');
+  const username=document.getElementById('accountUsername');
+  const forgot=document.getElementById('forgotPassword');
+
+  const signedIn=()=>{
+    const logout=document.getElementById('logoutAccount');
+    return !!logout && !logout.classList.contains('hidden');
+  };
+  const setHeading=(mode)=>{
+    const heading=[...account.querySelectorAll('h1,h2,h3')].find(el=>/SCROBBLE|ACCOUNT|SIGN/i.test(el.textContent||''));
+    if(heading) heading.textContent=mode==='login'?'Welcome Back!':'Create Your Scrobble Account';
+  };
+  const hideCreateExtras=(hide)=>{
+    if(username){
+      const wrap=username.closest('label')||username.parentElement;
+      if(wrap) wrap.classList.toggle('scrobbleAuthHide',hide);
+      const hint=[...account.querySelectorAll('*')].find(el=>/3.?20 letters/i.test(el.textContent||''));
+      if(hint) hint.classList.toggle('scrobbleAuthHide',hide);
+    }
+  };
+  const setProfileChrome=(show)=>{
+    const identity=document.getElementById('accountIdentity');
+    if(identity){
+      identity.classList.toggle('scrobbleAuthHide',!show);
+      identity.style.removeProperty('display');
+    }
+    account.querySelectorAll('input[type="file"],img').forEach(el=>{
+      const wrap=el.closest('button,label,div')||el;
+      wrap.classList.toggle('scrobbleAuthHide',!show);
+    });
+    [...account.querySelectorAll('button,div')].forEach(el=>{
+      const t=(el.textContent||'').trim();
+      if(/^(UPLOAD PHOTO|ADD PHOTO|EDIT PHOTO|CHANGE PHOTO|REMOVE|REMOVE PHOTO|TAKE PHOTO|CHOOSE PHOTO|PROFILE PHOTO)$/i.test(t)){
+        el.classList.toggle('scrobbleAuthHide',!show);
+      }
+    });
+  };
+  const showAccount=(mode)=>{
+    overlay.classList.add('hidden');
+    account.classList.remove('hidden');
+    setHeading(mode);
+    const login=mode==='login';
+    account.classList.toggle('scrobbleLoginMode',login);
+    account.classList.toggle('scrobbleCreateMode',!login);
+    setProfileChrome(!login);
+    const enforce=()=>{
+      account.classList.toggle('scrobbleLoginMode',login);
+      account.classList.toggle('scrobbleCreateMode',!login);
+      setProfileChrome(!login);
+    };
+    enforce();
+    // The packaged renderAccount routine can run asynchronously after this click.
+    // Reassert the selected auth panel for a short window so it cannot reveal both.
+    [0,50,150,350,750].forEach(ms=>setTimeout(enforce,ms));
+    // Clear stale values so one auth path never inherits the other path's state.
+    account.querySelectorAll('input[type="email"],input[type="password"]').forEach(el=>el.value='');
+  };
+  createBtn.onclick=()=>showAccount('create');
+  loginBtn.onclick=()=>showAccount('login');
+
+  // On first-run authentication, X means Back to Welcome, not dismiss the
+  // required login gate and reveal an unusable unauthenticated Games screen.
+  const close=document.getElementById('closeAccount');
+  if(close){
+    close.addEventListener('click',e=>{
+      if(signedIn()) return; // Preserve the normal Account-sheet close behavior.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      account.classList.add('hidden');
+      overlay.classList.remove('hidden');
+    },true);
+  }
+  // The packaged account description has its own legacy gray color rule.
+  // Style the exact explanatory line, not just generic paragraph selectors.
+  [...account.querySelectorAll('p,div,span')].forEach(el=>{
+    if(el.children.length===0 && /Create an account or sign in to keep your games/i.test(el.textContent||'')){
+      el.style.setProperty('color','#e9f7ff','important');
+    }
+  });
+
+  let checks=0;
+  const decide=()=>{
+    if(signedIn()){overlay.classList.add('hidden');return}
+    if(++checks<40){setTimeout(decide,125);return}
+    if(!new URLSearchParams(location.search).get('join')) overlay.classList.remove('hidden');
+  };
+  decide();
+})();
+</script>
+'''
+text = index.read_text()
+# Remove prior onboarding if present, then insert v3 once.
+text = re.sub(r'<style id="scrobble-onboarding-v2-style">.*?</script>\s*', '', text, flags=re.S)
+if 'id="scrobbleOnboardingV2"' not in text:
+    text = text.replace('</body>', onboarding + '</body>')
+index.write_text(text)
+
+
+# FINAL auth DOM pass. Legacy profile controls are siblings in accountBox rather
+# than a reliably shaped accountIdentity wrapper. Remove them by their actual IDs
+# and controls, without assuming one HTML nesting pattern.
+text = index.read_text()
+# Preserve the original profile DOM and all its IDs: app-v3140.js binds photo
+# handlers during bootstrap even when onboarding hides the profile UI. Removing
+# the children (or replacing them with an empty node) crashes initialization,
+# leaving both Sign In and Forgot Password inert. Hide it with CSS only.
+# The current packaged app can expose profile controls independently. Hide/remove
+# them at runtime by stable control IDs/classes instead of brittle markup matching.
+final_auth_css = '''
+<style id="scrobble-final-auth-layout">
+#accountBox{background:linear-gradient(180deg,#1699dc 0%,#0877bb 58%,#064b82 100%)!important}
+#accountBox .accountCard,#accountBox .modalCard,#accountBox>div{background:#0b75b6!important;color:#fff!important}
+#accountBox .accountState:empty{display:none!important}
+#accountBox .accountLabel,#accountBox .usernameHint{color:#fff!important}
+#accountBox .accountInput{background:#fff!important;color:#173044!important}
+#accountBox .accountSub,#accountBox .accountSubtitle,#accountBox p{color:#e9f7ff!important}
+#accountBox .accountPrimary{background:#f2bd45!important;color:#173044!important;border-color:#f2bd45!important}
+#accountBox .accountLink{color:#fff!important}
+#accountBox #accountIdentity{display:block!important}\n#accountBox.scrobbleLoginMode #accountIdentity{display:none!important}\n#accountBox.scrobbleCreateMode #accountIdentity{display:block!important}\n#accountBox #closeAccount{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+</style>
+<script id="scrobble-final-auth-cleanup">
+(()=>{
+ const box=document.getElementById('accountBox'); if(!box)return;
+ const clean=()=>{
+   const hideProfile=box.classList.contains('scrobbleLoginMode');
+   box.querySelectorAll('input[type="file"]').forEach(el=>{
+     const wrap=el.closest('div')||el;
+     if(hideProfile) wrap.style.setProperty('display','none','important');
+     else wrap.style.removeProperty('display');
+   });
+   box.querySelectorAll('button').forEach(el=>{
+     if(/UPLOAD PHOTO|ADD PHOTO|EDIT PHOTO|CHANGE PHOTO|REMOVE PHOTO|TAKE PHOTO|CHOOSE PHOTO/i.test(el.textContent||'')){
+       const wrap=el.closest('div')||el;
+       if(hideProfile) wrap.style.setProperty('display','none','important');
+       else wrap.style.removeProperty('display');
+     }
+   });
+ };
+ clean(); new MutationObserver(clean).observe(box,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+})();
+</script>
+'''
+if 'id="scrobble-final-auth-layout"' not in text:
+    text = text.replace('</head>', final_auth_css + '</head>', 1)
+index.write_text(text)
+
+# New-game activity isolation. The activity banner is transient game state; a fresh
+# game must never inherit the previous game's last-move message.
+activity_fix = r'''
+<script id="scrobble-new-game-activity-reset">
+(()=>{
+  let armedUntil=0;
+  const isNewGameAction=(el)=>{
+    const t=(el?.textContent||'').trim();
+    return /PLAY (THE )?COMPUTER|PLAY (A )?FRIEND|NEW GAME|REMATCH/i.test(t);
+  };
+  const clearStale=()=>{
+    if(Date.now()>armedUntil) return;
+    document.querySelectorAll('div,span,p').forEach(el=>{
+      if(el.children.length) return;
+      const t=(el.textContent||'').trim();
+      if(/^[^\\n]{1,40} played .+ for \\d+$/i.test(t)) el.textContent='';
+    });
+  };
+  document.addEventListener('click',e=>{
+    const control=e.target.closest?.('button,a,[role="button"]');
+    if(!isNewGameAction(control)) return;
+    armedUntil=Date.now()+1500;
+    clearStale();
+    setTimeout(clearStale,50);
+    setTimeout(clearStale,250);
+    setTimeout(clearStale,700);
+    setTimeout(clearStale,1400);
+  },true);
+})();
+</script>
+'''
+text = index.read_text()
+if 'id="scrobble-new-game-activity-reset"' not in text:
+    text = text.replace('</body>', activity_fix + '</body>', 1)
+index.write_text(text)
+
+final_index = index.read_text()
+assert final_index.count('id="playComputerMode"') == 1, "Approved Play Computer chooser missing"
+assert final_index.count('id="startFriendGame"') == 1, "Approved Share Invite action missing"
+assert final_index.count('id="sharedWeirdBox"') == 1, "Make It Weird missing or duplicated"
+assert 'OR PLAY THE COMPUTER' not in final_index, "Legacy giant New Game layout survived"
+assert ("playFriendMode.onclick=()=>setGameMode('friend')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Friend chooser handler regression"
+assert ("playComputerMode.onclick=()=>setGameMode('computer')" in app.read_text() or 'id="scrobble-approved-new-game-controller"' in final_index), "Computer chooser handler regression"
+assert final_index.count('id="accountIdentity"') == 1, "Original account identity DOM missing"
+assert old_account in final_index, "Original packaged auth form was modified"
+assert 'id="signInAccount"' in final_index and 'id="forgotPassword"' in final_index, "Original auth controls missing"
+assert 'accountCreateEmail' not in final_index and 'loginAccountPanel' not in final_index, "Split auth DOM returned"
+assert '#accountBox #accountIdentity{display:block!important}' in final_index, "Signed-in profile photo UI hidden"
+assert "account.classList.toggle('scrobbleCreateMode',!login)" in final_index, "Create mode class wiring missing"
+assert "setProfileChrome(!login)" in final_index, "Create photo controls wiring missing"
+assert "Welcome Back!" in final_index, "Login heading regression"
+assert final_index.index('id="sharedWeirdBox"') < final_index.index('id="computerModePanel"'), "Make It Weird must precede computer difficulty"
+assert "startFriendGame.onclick=async()=>{" in app.read_text(), "Friend create-game action wiring missing"
+assert 'id="scrobble-approved-new-game-controller"' not in final_index, "Unsafe fallback controller regression"
+assert "const share=[...document.querySelectorAll" not in app.read_text(), "Recursive share-button heuristic returned"
+assert 'id="scrobble-haptics"' in final_index, "Haptics bridge missing"
+
 
 # iOS invite URL normalization: the web app builds invites from location.href.
 # Inside Capacitor that produces capacitor://localhost/?join=..., which is not
@@ -193,7 +583,6 @@ text = index.read_text()
 if 'id="scrobble-ios-public-invite-origin"' not in text:
     text = text.replace('</body>', url_origin_script + '</body>')
 index.write_text(text)
-
 
 # iOS native share hotfix: Web Share can throw a TypeError inside Capacitor's
 # WKWebView. Use Capacitor Share when available, while preserving the existing
@@ -264,30 +653,25 @@ deep_link_script = '''
         // Allow a different invite while the app is already running. The old
         // boolean latch incorrectly ignored every invite after the first one.
         if(routing && join===lastJoin) return;
+        // Ignore an exact duplicate callback only while it is being routed.
+        // Once the destination document has loaded, the same invite must remain
+        // usable later (for example after the player visits Games and taps the
+        // invite again).
         routing=true;
         lastJoin=join;
         // Do not reload the Capacitor WebView. Reloading caused the launch URL
         // to be returned again on startup, creating an infinite splash/white-screen loop.
         const next='/?join='+encodeURIComponent(join);
         history.replaceState({},'',next);
-        // Scrobble reads ?join= during normal startup. We cannot reload the
-        // native shell (that loops), so restart only the web app bootstrap:
-        // persist the invite once, then re-run the existing app script.
+        // Scrobble's bootstrap owns the actual invite acceptance/join flow.
+        // Re-running app-v3140.js on a live page duplicates module state and can
+        // leave the board showing the new invite while the join/save handlers
+        // still belong to the previous game (especially with crossed invites).
+        // Give the existing app a clean web-document bootstrap instead. This is
+        // a WebView navigation, not a native-app relaunch, so App.getLaunchUrl()
+        // is not re-consumed and the old splash/white-screen loop is avoided.
         sessionStorage.setItem('scrobbleNativeJoin',join);
-        const existing=document.querySelector('script[src*="app-v3140.js"]');
-        if(existing){
-          existing.remove();
-          const script=document.createElement('script');
-          script.src='app-v3140.js?nativejoin='+Date.now();
-          script.onload=()=>{
-            sessionStorage.removeItem('scrobbleNativeJoin');
-            routing=false;
-          };
-          script.onerror=()=>{ routing=false; };
-          document.body.appendChild(script);
-        }else{
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        }
+        location.replace(next);
       }catch(e){
         routing=false;
         console.error('Scrobble invite URL error',e);
@@ -304,3 +688,61 @@ text = index.read_text()
 if 'id="scrobble-ios-universal-links"' not in text:
     text = text.replace('</body>', deep_link_script + '</body>')
 index.write_text(text)
+
+# Temporary on-device runtime diagnostics. This is intentionally visible so a single
+# TestFlight run tells us which exact boundary fails instead of requiring Safari logs.
+runtime_diag = r'''
+<style id="scrobble-runtime-diagnostic-style">
+#scrobbleRuntimeDiag{position:fixed;left:10px;right:10px;bottom:10px;z-index:2147483647;background:rgba(0,0,0,.88);color:#fff;border-radius:10px;padding:8px 10px;font:12px/1.35 monospace;white-space:pre-wrap;max-height:30vh;overflow:auto;display:none}
+#scrobbleRuntimeDiag.show{display:block}
+</style>
+<div id="scrobbleRuntimeDiag"></div>
+<script id="scrobble-runtime-diagnostic">
+(()=>{
+ const box=document.getElementById('scrobbleRuntimeDiag');
+ const log=(m)=>{if(!box)return;box.classList.add('show');box.textContent+=(box.textContent?'\\n':'')+m;console.log('[SCROBBLE DIAG]',m)};
+ window.ScrobbleDiag=log;
+ const cap=()=>window.Capacitor?.Plugins;
+ document.addEventListener('click',async e=>{
+   const b=e.target.closest?.('button');if(!b)return;
+   const t=(b.textContent||'').trim().toUpperCase();
+   if(t==='SHARE INVITE'){
+     log('1 SHARE INVITE click received');
+     log('2 createGame='+typeof window.createGame+' Share='+(!!cap()?.Share?.share)+' Haptics='+(!!cap()?.Haptics?.impact));
+     try{await cap()?.Haptics?.impact?.({style:'HEAVY'});log('3 Haptics direct call OK')}catch(err){log('3 Haptics ERROR '+String(err?.message||err))}
+     setTimeout(()=>log('4 post-click URL '+location.href),500);
+   }
+ },true);
+ const oldShare=navigator.share?.bind(navigator);
+ if(oldShare){try{Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{log('5 navigator.share called '+JSON.stringify(data||{}));try{const r=await oldShare(data);log('6 navigator.share resolved');return r}catch(err){log('6 navigator.share ERROR '+String(err?.message||err));throw err}}})}catch(err){log('navigator.share instrumentation ERROR '+String(err?.message||err))}}
+ setTimeout(()=>{if(location.search.includes('scrobbleDiag=1'))log('BOOT Share='+(!!cap()?.Share?.share)+' Haptics='+(!!cap()?.Haptics?.impact))},500);
+})();
+</script>
+'''
+text=index.read_text()
+# This diagnostic build is ephemeral: inject unconditionally so source-code
+# sentinel strings can never suppress the actual rendered diagnostic.
+if '</body>' in text:
+    text=text.replace('</body>',runtime_diag+'</body>',1)
+else:
+    text += runtime_diag
+index.write_text(text)
+
+# Final regression checks must run AFTER all native invite/share/deep-link
+# scripts have been injected. Earlier placement falsely failed every build.
+app_source = app.read_text()
+index_source = index.read_text()
+assert "https://yayeverybody.com/?join=" in app_source and "__scrobbleLastInvite" in app_source, "Public invite URL regression"
+assert "startFriendGame.onclick=async()=>{" in app_source and "await createGame()" in app_source, "Friend action must await packaged createGame"
+assert 'id="scrobble-approved-new-game-controller"' not in final_index, "Unsafe fallback New Game controller present"
+assert "capacitor://localhost/?join=" not in app_source, "Native localhost invite URL regression"
+assert "location.replace(next)" in index_source, "Universal Link clean-bootstrap missing"
+assert "script.src='app-v3140.js?nativejoin='" not in index_source, "Unsafe live script re-bootstrap returned"
+assert "appUrlOpen" in index_source, "Warm-app Universal Link listener missing"
+assert "getLaunchUrl" in index_source, "Cold-launch Universal Link handling missing"
+assert 'id="scrobble-ios-native-share"' in index_source, "Native share bridge missing"
+assert 'scrobble-prepaint-guard' not in index_source, "Unsafe custom startup guard returned"
+assert 'scrobbleStartupSplash' not in index_source, "Unsafe custom web splash returned"
+assert 'scoreCrescendo' in index_source and 'startGame' in index_source, "Rich haptics missing"
+assert 'scrobble-logout-shield' in index_source, "Logout flash shield missing"
+assert 'id="scrobble-runtime-diagnostic-style"' in index_source and 'id="scrobble-runtime-diagnostic"' in index_source, "Runtime diagnostic missing"

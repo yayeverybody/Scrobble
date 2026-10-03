@@ -20,10 +20,40 @@ workflows:
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
           cd scrobble-mobile
           npm install
-          npm install @capacitor/app @capacitor/share
+          npm install @capacitor/app @capacitor/share @capacitor/haptics
+          python3 -m py_compile ../scripts/patch-ios.py
           python3 ../scripts/patch-ios.py
+
+
+          # Prove the patched web bundle is the one Capacitor is about to package.
+          echo "=== Scrobble patched-auth verification ==="
+          grep -q 'id="scrobbleOnboardingV2"' www/index.html || { echo "ERROR: new onboarding missing"; exit 1; }
+          grep -q 'id="accountIdentity"' www/index.html || { echo "ERROR: original auth profile DOM missing"; exit 1; }
+          echo "PATCHED_AUTH_MARKER=AUTH_V4_PRESERVE_DOM"
+
           npx cap add ios
           npx cap sync ios
+
+          # Prove Capacitor copied that exact patched bundle into the native app.
+          grep -q 'id="scrobbleOnboardingV2"' ios/App/App/public/index.html || { echo "ERROR: onboarding not copied to iOS public"; exit 1; }
+          grep -q 'id="accountIdentity"' ios/App/App/public/index.html || { echo "ERROR: original auth profile DOM not copied to iOS"; exit 1; }
+          grep -q 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' ios/App/App/public/index.html || { echo "ERROR: original packaged auth form was modified"; exit 1; }
+          ! grep -q 'id="loginAccountPanel"' ios/App/App/public/index.html || { echo "ERROR: split auth DOM returned"; exit 1; }
+          grep -q 'signInAccount.onclick' ios/App/App/public/app-v3140.js || { echo "ERROR: packaged Sign In handler missing"; exit 1; }
+          grep -q 'createAccount.onclick' ios/App/App/public/app-v3140.js || { echo "ERROR: packaged Create Account handler missing"; exit 1; }
+          grep -q 'forgotPassword.onclick' ios/App/App/public/app-v3140.js || { echo "ERROR: packaged Forgot Password handler missing"; exit 1; }
+          grep -q 'id="playComputerMode"' ios/App/App/public/index.html || { echo "ERROR: approved New Game computer chooser missing"; exit 1; }
+          grep -q 'id="startFriendGame"' ios/App/App/public/index.html || { echo "ERROR: approved New Game friend action missing"; exit 1; }
+          ! grep -q 'id="scrobble-approved-new-game-controller"' ios/App/App/public/index.html || { echo "ERROR: unsafe fallback New Game controller copied to iOS"; exit 1; }
+          grep -q 'id="scrobble-invite-action"' ios/App/App/public/index.html || { echo "ERROR: Invite Friend action missing"; exit 1; }
+          grep -q 'id="sharedWeirdBox"' ios/App/App/public/index.html || { echo "ERROR: Make It Weird missing"; exit 1; }
+          # Runtime behavior is verified on-device by the diagnostic panel below.
+          # Do not reject the build based on exact bundle text: Capacitor's copied
+          # asset can differ textually while the controls live in index.html.
+          grep -q 'id="scrobble-haptics"' ios/App/App/public/index.html || { echo "ERROR: haptics bridge not copied to iOS"; exit 1; }
+          ! grep -q 'OR PLAY THE COMPUTER' ios/App/App/public/index.html || { echo "ERROR: legacy giant New Game layout survived"; exit 1; }
+          echo "IOS_AUTH_MARKER=AUTH_V4_PRESERVE_DOM"
+          echo "IOS_NEW_GAME_MARKER=PROGRESSIVE_V2"
 
           # Universal Links: the App Store build must be signed with Associated
           # Domains enabled for this bundle ID. The matching AASA file must be
@@ -97,9 +127,9 @@ workflows:
           JSON
 
           # App Store Connect requires the marketing version to be greater than
-          # the currently approved 1.0.1 release.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.2" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.2" ios/App/App/Info.plist
+          # the the prior TestFlight train so this diagnostic build is unmistakable.
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.24" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.18" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 
