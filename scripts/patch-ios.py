@@ -316,3 +316,58 @@ assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' in final_i
 assert 'signInAccount.onclick' in final_app and 'createAccount.onclick' in final_app and 'forgotPassword.onclick' in final_app, 'Original auth handlers changed'
 assert 'loginAccountPanel' not in final_index and 'accountCreateEmail' not in final_index, 'Split auth DOM must not exist'
 assert 'scrobble-approved-new-game-controller' not in final_index, 'Fallback game controller must not exist'
+
+# Progressive New Game presentation. Preserve createGame/createComputerGame;
+# this patch only changes the modal DOM and delegates back to those functions.
+text=index.read_text()
+old_game='''    <button id="playFriendMode" class="modePrimary" type="button">PLAY A FRIEND</button>
+    <div class="weirdBox">
+      <div class="weirdTitle">MAKE IT WEIRD</div>
+      <div class="weirdSub">Optional. Choose one.</div>
+      <label class="weirdChoice"><input type="checkbox" value="all_or_none"><span><strong>All or None</strong><small>Only A, L, O, R, N and E tiles.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="vowel_movement"><span><strong>Vowel Movement</strong><small>Other letters are traded for extra vowels.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="high_roller"><span><strong>High Roller</strong><small>J, Q, X and Z are worth triple.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="too_many_tiles"><span><strong>Too Many Tiles</strong><small>Play with 9 tiles instead of 7.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="oops_all_ys"><span><strong>Oops! All Y’s</strong><small>Replace 20 other tiles with Y’s.</small></span></label>
+    </div>
+    <div class="modeDivider"><span>OR PLAY THE COMPUTER</span></div>
+    <div class="cpuChoices">
+      <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
+      <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
+      <button type="button" data-cpu-difficulty="hard"><strong>HARD</strong><span>Best move it can find</span></button>
+    </div>'''
+new_game='''    <div class="modeChooser">
+      <button id="playFriendMode" class="modeChoice" type="button">PLAY A FRIEND</button>
+      <button id="playComputerMode" class="modeChoice" type="button">PLAY THE COMPUTER</button>
+    </div>
+    <div id="sharedWeirdBox" class="weirdBox hidden">
+      <div class="weirdTitle">MAKE IT WEIRD</div><div class="weirdSub">Optional. Choose one.</div>
+      <label class="weirdChoice"><input type="checkbox" value="all_or_none"><span><strong>All or None</strong><small>Only A, L, O, R, N and E tiles.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="vowel_movement"><span><strong>Vowel Movement</strong><small>Other letters are traded for extra vowels.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="high_roller"><span><strong>High Roller</strong><small>J, Q, X and Z are worth triple.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="too_many_tiles"><span><strong>Too Many Tiles</strong><small>Play with 9 tiles instead of 7.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="oops_all_ys"><span><strong>Oops! All Y’s</strong><small>Replace 20 other tiles with Y’s.</small></span></label>
+    </div>
+    <div id="friendModePanel" class="modePanel hidden"><button id="startFriendGame" class="friendStart" type="button">CREATE GAME</button></div>
+    <div id="computerModePanel" class="modePanel hidden"><div class="cpuChoices">
+      <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
+      <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
+      <button type="button" data-cpu-difficulty="hard"><strong>HARD</strong><span>Best move it can find</span></button>
+    </div></div>'''
+if old_game not in text: raise SystemExit('Stable New Game source block not found')
+text=text.replace(old_game,new_game,1)
+flow_style='''<style id="scrobble-clean-game-flow">#gameModeBox .modeChooser{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}#gameModeBox .modeChoice{min-height:58px;border:2px solid #f2bd45;border-radius:14px;background:#0b4c7c;color:#fff;font-weight:900;padding:9px}#gameModeBox .modeChoice.active{background:#f2bd45;color:#173044}#gameModeBox .modePanel.hidden,#gameModeBox #sharedWeirdBox.hidden{display:none!important}#gameModeBox .friendStart{width:100%;min-height:54px;margin:8px 0 12px;border:0;border-radius:14px;background:#f2bd45;color:#173044;font-weight:900}</style>'''
+text=text.replace('</head>',flow_style+'</head>',1); index.write_text(text)
+
+app=Path('www/app-v3140.js'); js=app.read_text()
+old_handlers="  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
+new_handlers="  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\n  document.getElementById('newGameDash').onclick=openGameMode;\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\n  playFriendMode.onclick=()=>setGameMode('friend');\n  playComputerMode.onclick=()=>setGameMode('computer');\n  startFriendGame.onclick=()=>createGame();\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
+if old_handlers not in js: raise SystemExit('Stable packaged New Game handlers not found; refusing fallback')
+js=js.replace(old_handlers,new_handlers,1); app.write_text(js)
+
+final_index=index.read_text(); final_app=app.read_text()
+assert 'id="playComputerMode"' in final_index and 'id="startFriendGame"' in final_index
+assert 'OR PLAY THE COMPUTER' not in final_index
+assert "startFriendGame.onclick=()=>createGame()" in final_app
+assert "btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty)" in final_app
+assert 'scrobble-approved-new-game-controller' not in final_index
