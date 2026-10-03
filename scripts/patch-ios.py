@@ -201,7 +201,7 @@ new_game = f'''    <div class="modeChooser">
     </div>
     {weird}
     <div id="friendModePanel" class="modePanel hidden">
-      <button id="startFriendGame" class="friendStart" type="button">SHARE INVITE</button>
+      <button id="startFriendGame" class="friendStart" type="button">CREATE GAME</button>
     </div>
     <div id="computerModePanel" class="modePanel hidden">
       <div class="cpuChoices">
@@ -240,7 +240,7 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
   gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
   playFriendMode.onclick=()=>setGameMode('friend');
   playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=async()=>{gameModeBox.classList.add('hidden');window.__scrobbleLastInvite='';await createGame();const u=window.__scrobbleLastInvite;if(u&&navigator.share)await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url:u})};
+  startFriendGame.onclick=async()=>{gameModeBox.classList.add('hidden');window.__scrobbleLastInvite='';await createGame();window.ScrobbleInvite?.show?.()};
   gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
@@ -249,12 +249,24 @@ elif "const playComputerMode=document.getElementById('playComputerMode')" not in
     # delegated controller rather than failing the whole release.
     fallback = '''\n<script id="scrobble-approved-new-game-controller">\n(()=>{\n const box=document.getElementById('gameModeBox'); if(!box)return;\n const friend=document.getElementById('playFriendMode'),computer=document.getElementById('playComputerMode');\n const fp=document.getElementById('friendModePanel'),cp=document.getElementById('computerModePanel'),weird=document.getElementById('sharedWeirdBox');\n const choose=(mode)=>{const f=mode==='friend';fp?.classList.toggle('hidden',!f);cp?.classList.toggle('hidden',f);weird?.classList.remove('hidden');friend?.classList.toggle('active',f);computer?.classList.toggle('active',!f)};\n friend?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('friend')},true);\n computer?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('computer')},true);
  const start=document.getElementById('startFriendGame');
- start?.addEventListener('click',async e=>{e.preventDefault();e.stopImmediatePropagation();box.classList.add('hidden');window.ScrobbleHaptics?.startGame?.();window.__scrobbleLastInvite='';if(typeof createGame==='function'){await createGame();const u=window.__scrobbleLastInvite;if(u&&navigator.share)await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url:u})}else window.ScrobbleDiag?.('createGame unavailable')},true);
+ start?.addEventListener('click',async e=>{e.preventDefault();e.stopImmediatePropagation();box.classList.add('hidden');window.ScrobbleHaptics?.startGame?.();window.__scrobbleLastInvite='';if(typeof createGame==='function'){await createGame();window.ScrobbleInvite?.show?.()}else window.ScrobbleDiag?.('createGame unavailable')},true);
  box.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();box.classList.add('hidden');window.ScrobbleHaptics?.startGame?.();if(typeof createComputerGame==='function')createComputerGame(btn.dataset.cpuDifficulty)},true));\n})();\n</script>\n'''
     page=index.read_text()
     page=page.replace('</body>',fallback+'</body>',1)
     index.write_text(page)
 app.write_text(js)
+
+# Friend-game invite is a second explicit action after game creation.
+invite_action = r'''
+<style id="scrobble-invite-action-style">#scrobbleInviteFriend{position:fixed;right:16px;top:calc(env(safe-area-inset-top) + 74px);z-index:2147482000;border:0;border-radius:14px;padding:12px 16px;background:#f2bd45;color:#173044;font-weight:900;box-shadow:0 4px 14px rgba(0,0,0,.22)}#scrobbleInviteFriend.hidden{display:none!important}</style>
+<button id="scrobbleInviteFriend" class="hidden" type="button">INVITE FRIEND</button>
+<script id="scrobble-invite-action">
+(()=>{const b=document.getElementById('scrobbleInviteFriend');if(!b)return;const show=()=>{if(window.__scrobbleLastInvite)b.classList.remove('hidden')};const hide=()=>b.classList.add('hidden');window.ScrobbleInvite={show,hide};b.addEventListener('click',async()=>{const url=window.__scrobbleLastInvite;if(!url)return;window.ScrobbleHaptics?.medium?.();try{const S=window.Capacitor?.Plugins?.Share;if(S?.share)await S.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url});else if(navigator.share)await navigator.share({title:'Play Scrobble with me',text:'Join my Scrobble game',url})}catch(e){if(!/cancel/i.test(String(e?.message||e)))alert('Could not open the share options. Please try again.')}});setInterval(show,500)})();
+</script>
+'''
+text=index.read_text()
+if 'id="scrobble-invite-action-style"' not in text:text=text.replace('</body>',invite_action+'</body>',1)
+index.write_text(text)
 
 # Startup masking intentionally removed after 1.0.11-1.0.13 WKWebView regressions.
 # Native iOS launch-screen work will address the cosmetic pre-splash flash separately.
