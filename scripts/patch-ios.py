@@ -295,3 +295,24 @@ text = index.read_text()
 if 'id="scrobble-ios-universal-links"' not in text:
     text = text.replace('</body>', deep_link_script + '</body>')
 index.write_text(text)
+
+# Clean app-flow controller: keep the original auth DOM/handlers intact and only
+# present modes by CSS. No replacement auth fields, capture interception, or polling.
+text=index.read_text()
+account_css='''
+<style id="scrobble-clean-auth-ui">
+#accountBox.scrobbleLoginMode label[for="accountUsername"],#accountBox.scrobbleLoginMode #accountUsername,#accountBox.scrobbleLoginMode .usernameHint,#accountBox.scrobbleLoginMode #createAccount,#accountBox.scrobbleLoginMode #accountIdentity{display:none!important}
+#accountBox.scrobbleCreateMode #signInAccount,#accountBox.scrobbleCreateMode #forgotPassword{display:none!important}
+#scrobbleWelcome{position:fixed;inset:0;z-index:2147483000;background:linear-gradient(180deg,#1699dc,#0877bb 58%,#064b82);display:flex;align-items:center;justify-content:center;padding:24px}#scrobbleWelcome.hidden{display:none!important}#scrobbleWelcome>div{width:min(100%,430px);text-align:center;color:#fff}#scrobbleWelcome h1{font-size:36px;margin:0 0 12px}#scrobbleWelcome p{font-size:18px;margin:0 0 28px}#scrobbleWelcome button{width:100%;min-height:58px;margin:7px 0;border-radius:14px;border:2px solid #fff;font-weight:900;font-size:16px}#scrobbleWelcomeCreate{background:#f2bd45;border-color:#f2bd45!important;color:#173044}#scrobbleWelcomeLogin{background:transparent;color:#fff}
+</style>'''
+welcome='''<div id="scrobbleWelcome" class="hidden"><div><h1>Welcome to Scrobble</h1><p>Play words with friends and family. Your games stay with you.</p><button id="scrobbleWelcomeCreate" type="button">CREATE ACCOUNT</button><button id="scrobbleWelcomeLogin" type="button">LOG IN</button></div></div><script id="scrobble-clean-auth-controller">(()=>{const w=document.getElementById('scrobbleWelcome'),a=document.getElementById('accountBox'),logout=document.getElementById('logoutAccount');if(!w||!a)return;const open=mode=>{w.classList.add('hidden');a.classList.remove('hidden');a.classList.toggle('scrobbleLoginMode',mode==='login');a.classList.toggle('scrobbleCreateMode',mode==='create');const h=[...a.querySelectorAll('h1,h2,h3')].find(x=>/account/i.test(x.textContent||''));if(h)h.textContent=mode==='login'?'Welcome Back!':'Create Your Scrobble Account'};document.getElementById('scrobbleWelcomeLogin').onclick=()=>open('login');document.getElementById('scrobbleWelcomeCreate').onclick=()=>open('create');let n=0;const decide=()=>{if(logout&&!logout.classList.contains('hidden')){w.classList.add('hidden');return}if(++n<40){setTimeout(decide,125);return}if(!new URLSearchParams(location.search).get('join'))w.classList.remove('hidden')};decide()})();</script>'''
+if 'id="scrobble-clean-auth-ui"' not in text:text=text.replace('</head>',account_css+'</head>',1)
+if 'id="scrobbleWelcome"' not in text:text=text.replace('</body>',welcome+'</body>',1)
+index.write_text(text)
+
+# Build-time invariants: the original auth form and handlers are the source of truth.
+final_index=index.read_text(); final_app=Path('www/app-v3140.js').read_text()
+assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' in final_index, 'Original auth DOM changed'
+assert 'signInAccount.onclick' in final_app and 'createAccount.onclick' in final_app and 'forgotPassword.onclick' in final_app, 'Original auth handlers changed'
+assert 'loginAccountPanel' not in final_index and 'accountCreateEmail' not in final_index, 'Split auth DOM must not exist'
+assert 'scrobble-approved-new-game-controller' not in final_index, 'Fallback game controller must not exist'
