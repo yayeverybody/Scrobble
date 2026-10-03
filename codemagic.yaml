@@ -38,6 +38,11 @@ workflows:
           grep -q 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' ios/App/App/public/index.html || { echo "ERROR: original auth form not copied"; exit 1; }
           ! grep -q 'id="loginAccountPanel"' ios/App/App/public/index.html || { echo "ERROR: split auth DOM copied"; exit 1; }
           grep -q 'signInAccount.onclick' ios/App/App/public/app-v3140.js || { echo "ERROR: sign-in handler not copied"; exit 1; }
+          grep -q 'id="playComputerMode"' ios/App/App/public/index.html || { echo "ERROR: progressive computer chooser missing"; exit 1; }
+          grep -q 'id="startFriendGame"' ios/App/App/public/index.html || { echo "ERROR: Create Game action missing"; exit 1; }
+          ! grep -q 'OR PLAY THE COMPUTER' ios/App/App/public/index.html || { echo "ERROR: legacy New Game layout survived"; exit 1; }
+          grep -q "startFriendGame.onclick=()=>createGame()" ios/App/App/public/app-v3140.js || { echo "ERROR: friend creation handler changed"; exit 1; }
+          grep -q "btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty)" ios/App/App/public/app-v3140.js || { echo "ERROR: CPU creation handler changed"; exit 1; }
           echo "CLEAN_FLOW_MARKER=SOURCE_OF_TRUTH_V1"
 
           # Universal Links: the App Store build must be signed with Associated
