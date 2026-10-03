@@ -28,8 +28,6 @@ workflows:
           # Prove the patched web bundle is the one Capacitor is about to package.
           echo "=== Scrobble patched-auth verification ==="
           grep -q 'id="scrobbleOnboardingV2"' www/index.html || { echo "ERROR: new onboarding missing"; exit 1; }
-          grep -q 'id="loginAccountPanel"' www/index.html || { echo "ERROR: login panel missing"; exit 1; }
-          grep -q 'id="createAccountPanel"' www/index.html || { echo "ERROR: create panel missing"; exit 1; }
           grep -q 'id="accountIdentity"' www/index.html || { echo "ERROR: original auth profile DOM missing"; exit 1; }
           echo "PATCHED_AUTH_MARKER=AUTH_V4_PRESERVE_DOM"
 
@@ -38,7 +36,6 @@ workflows:
 
           # Prove Capacitor copied that exact patched bundle into the native app.
           grep -q 'id="scrobbleOnboardingV2"' ios/App/App/public/index.html || { echo "ERROR: onboarding not copied to iOS public"; exit 1; }
-          grep -q 'id="loginAccountPanel"' ios/App/App/public/index.html || { echo "ERROR: login panel not copied to iOS public"; exit 1; }
           grep -q 'id="accountIdentity"' ios/App/App/public/index.html || { echo "ERROR: original auth profile DOM not copied to iOS"; exit 1; }
           grep -q 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' ios/App/App/public/index.html || { echo "ERROR: original packaged auth form was modified"; exit 1; }
           ! grep -q 'id="loginAccountPanel"' ios/App/App/public/index.html || { echo "ERROR: split auth DOM returned"; exit 1; }
