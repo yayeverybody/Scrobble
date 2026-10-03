@@ -40,6 +40,9 @@ workflows:
           grep -q 'id="scrobbleOnboardingV2"' ios/App/App/public/index.html || { echo "ERROR: onboarding not copied to iOS public"; exit 1; }
           grep -q 'id="loginAccountPanel"' ios/App/App/public/index.html || { echo "ERROR: login panel not copied to iOS public"; exit 1; }
           grep -q 'id="accountIdentity"' ios/App/App/public/index.html || { echo "ERROR: original auth profile DOM not copied to iOS"; exit 1; }
+          grep -q 'signInAccount.onclick' ios/App/App/public/app-v3140.js || { echo "ERROR: packaged Sign In handler missing"; exit 1; }
+          grep -q 'createAccount.onclick' ios/App/App/public/app-v3140.js || { echo "ERROR: packaged Create Account handler missing"; exit 1; }
+          grep -q 'forgotPassword.onclick' ios/App/App/public/app-v3140.js || { echo "ERROR: packaged Forgot Password handler missing"; exit 1; }
           grep -q 'id="playComputerMode"' ios/App/App/public/index.html || { echo "ERROR: approved New Game computer chooser missing"; exit 1; }
           grep -q 'id="startFriendGame"' ios/App/App/public/index.html || { echo "ERROR: approved New Game friend action missing"; exit 1; }
           ! grep -q 'id="scrobble-approved-new-game-controller"' ios/App/App/public/index.html || { echo "ERROR: unsafe fallback New Game controller copied to iOS"; exit 1; }
