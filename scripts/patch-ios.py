@@ -429,6 +429,17 @@ if 'id="scrobbleOnboardingV2"' not in text:
 index.write_text(text)
 
 
+# Auth action repair. The visual onboarding can outlive/re-render account state; preserve
+# the packaged SIGN IN / CREATE / FORGOT handlers and invoke them from stable listeners.
+auth_action_repair = r'''
+<script id="scrobble-auth-action-repair">
+(()=>{const ids=['signInAccount','createAccount','forgotPassword'];let saved={};let tries=0;const capture=()=>{ids.forEach(id=>{const el=document.getElementById(id);if(el?.onclick&&!saved[id])saved[id]=el.onclick});if(Object.keys(saved).length<3&&++tries<40)setTimeout(capture,100)};setTimeout(capture,0);ids.forEach(id=>{document.addEventListener('click',e=>{const el=e.target.closest?.('#'+id);if(!el)return;const fn=saved[id];if(typeof fn==='function'&&el.onclick!==fn){e.preventDefault();e.stopImmediatePropagation();fn.call(el,e)}},true)})})();
+</script>
+'''
+text=index.read_text()
+if 'id="scrobble-auth-action-repair"' not in text:text=text.replace('</body>',auth_action_repair+'</body>',1)
+index.write_text(text)
+
 # FINAL auth DOM pass. Legacy profile controls are siblings in accountBox rather
 # than a reliably shaped accountIdentity wrapper. Remove them by their actual IDs
 # and controls, without assuming one HTML nesting pattern.
@@ -756,6 +767,7 @@ assert "appUrlOpen" in index_source, "Warm-app Universal Link listener missing"
 assert "getLaunchUrl" in index_source, "Cold-launch Universal Link handling missing"
 assert 'id="scrobble-ios-native-share"' in index_source, "Native share bridge missing"
 assert 'id="loginAccountPanel"' in index_source and 'id="createAccountPanel"' in index_source, "Separate auth panels missing"
+assert 'id="scrobble-auth-action-repair"' in index_source, "Auth action repair missing"
 assert 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' not in index_source, "Legacy combined auth form survived"
 assert 'scrobbleAuthPanel hidden' in index_source, "Auth panels must default hidden"
 assert 'scrobble-prepaint-guard' not in index_source, "Unsafe custom startup guard returned"
