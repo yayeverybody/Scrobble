@@ -245,13 +245,7 @@ new_handlers = '''  const playComputerMode=document.getElementById('playComputer
 if old_handlers in js:
     js = js.replace(old_handlers,new_handlers,1)
 elif "const playComputerMode=document.getElementById('playComputerMode')" not in js:
-    # Some packaged bundles are minified differently. Inject an equivalent
-    # delegated controller rather than failing the whole release.
-    fallback = '''\n<script id="scrobble-approved-new-game-controller">\n(()=>{\n const box=document.getElementById('gameModeBox'); if(!box)return;\n const friend=document.getElementById('playFriendMode'),computer=document.getElementById('playComputerMode');\n const fp=document.getElementById('friendModePanel'),cp=document.getElementById('computerModePanel'),weird=document.getElementById('sharedWeirdBox');\n const choose=(mode)=>{const f=mode==='friend';fp?.classList.toggle('hidden',!f);cp?.classList.toggle('hidden',f);weird?.classList.remove('hidden');friend?.classList.toggle('active',f);computer?.classList.toggle('active',!f)};\n friend?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('friend')},true);\n computer?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();choose('computer')},true);
-\n})();\n</script>\n'''
-    page=index.read_text()
-    page=page.replace('</body>',fallback+'</body>',1)
-    index.write_text(page)
+    raise SystemExit('Approved New Game handler target not found; refusing unsafe fallback')
 app.write_text(js)
 
 # Friend-game invite is a second explicit action after game creation.
