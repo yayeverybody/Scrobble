@@ -231,21 +231,25 @@ index.write_text(text)
 
 app = Path('www/app-v3140.js')
 js = app.read_text()
-old_handlers = "  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
-new_handlers = '''  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');
-  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}
-  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}
-  document.getElementById('newGameDash').onclick=openGameMode;
-  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');
-  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});
-  playFriendMode.onclick=()=>setGameMode('friend');
-  playComputerMode.onclick=()=>setGameMode('computer');
-  startFriendGame.onclick=async()=>{window.__scrobbleLastInvite='';await createGame();window.ScrobbleInvite?.show?.()};
-  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));'''
-if old_handlers in js:
-    js = js.replace(old_handlers,new_handlers,1)
-elif "const playComputerMode=document.getElementById('playComputerMode')" not in js:
-    raise SystemExit('Approved New Game handler target not found; refusing unsafe fallback')
+# Patch the packaged handlers by stable individual statements. The CPU handler
+# was changed by an earlier patch, so requiring one exact multi-line block was brittle.
+replacements = [
+    ("  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');", "  document.getElementById('newGameDash').onclick=openGameMode;"),
+    ("  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};", "  playFriendMode.onclick=()=>setGameMode('friend');"),
+]
+preamble = "  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');\\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\\n"
+if "const playComputerMode=document.getElementById('playComputerMode')" not in js:
+    marker = "  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');"
+    if marker not in js: raise SystemExit('New Game dashboard handler target not found')
+    js = js.replace(marker, preamble + marker, 1)
+for old,new in replacements:
+    if old in js: js=js.replace(old,new,1)
+if "playComputerMode.onclick=()=>setGameMode('computer');" not in js:
+    marker="  playFriendMode.onclick=()=>setGameMode('friend');"
+    if marker not in js: raise SystemExit('Friend mode handler target not found')
+    js=js.replace(marker, marker+"\\n  playComputerMode.onclick=()=>setGameMode('computer');\\n  startFriendGame.onclick=async()=>{window.__scrobbleLastInvite='';await createGame();window.ScrobbleInvite?.show?.()};",1)
+if "createComputerGame(btn.dataset.cpuDifficulty)" not in js:
+    raise SystemExit('Packaged CPU game handler missing; refusing release')
 app.write_text(js)
 
 # Friend-game invite is a second explicit action after game creation.
