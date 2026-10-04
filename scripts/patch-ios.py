@@ -55,11 +55,20 @@ if old_hit in game:
 elif new_hit not in game:
     raise SystemExit('Rack hit-zone patch target not found')
 
-# The larger rack return zone fixed dragging pending tiles back to the rack, but it
-# overlaps the board's bottom row on iPhone. Give the board first refusal near its
-# edge; the rack still wins everywhere below the board snap tolerance.
+# Detect actual overlap with the blue rack strip before board snap tolerance.
+# The fallback tolerance still gives the bottom board row first refusal when
+# neither the dragged tile nor the finger has entered the rack strip.
 old_target = "const q=rackEl.getBoundingClientRect(),hit={left:q.left-18,right:q.right+18,top:q.top-55,bottom:q.bottom+55};if(pointInRect(x,y,hit)){rackEl.classList.add('dropTarget');return{type:'rack'}}const target=boardTargetAt(x,y);if(target){const cell=boardEl.querySelector(`.cell[data-r=\"${target.r}\"][data-c=\"${target.c}\"]`);cell?.classList.add('dropTarget');return target}return null"
-new_target = "const target=boardTargetAt(x,y);if(target){const cell=boardEl.querySelector(`.cell[data-r=\"${target.r}\"][data-c=\"${target.c}\"]`);cell?.classList.add('dropTarget');return target}const q=rackEl.getBoundingClientRect(),hit={left:q.left-18,right:q.right+18,top:q.top-55,bottom:q.bottom+55};if(pointInRect(x,y,hit)){rackEl.classList.add('dropTarget');return{type:'rack'}}return null"
+new_target = """const q=rackEl.getBoundingClientRect();
+const area=rackEl.closest('.rackarea')||rackEl,ar=area.getBoundingClientRect();
+const actions=area.querySelector('.actions')?.getBoundingClientRect();
+const row={left:ar.left,right:ar.right,top:ar.top,bottom:actions?.top??q.bottom};
+const tile=drag?.ghost?.querySelector('.rackTile')||drag?.ghost;
+const tr=tile?.getBoundingClientRect();
+const rackOverlap=tr&&tr.width>0&&tr.height>0&&tr.right>row.left&&tr.left<row.right&&tr.bottom>row.top&&tr.top<row.bottom;
+if(pointInRect(x,y,row)||rackOverlap){rackEl.classList.add('dropTarget');return{type:'rack'}}
+const target=boardTargetAt(x,y);if(target){const cell=boardEl.querySelector(`.cell[data-r="${target.r}"][data-c="${target.c}"]`);cell?.classList.add('dropTarget');return target}
+const hit={left:q.left-18,right:q.right+18,top:q.top-55,bottom:q.bottom+55};if(pointInRect(x,y,hit)){rackEl.classList.add('dropTarget');return{type:'rack'}}return null"""
 if old_target in game:
     game = game.replace(old_target, new_target, 1)
 elif new_target not in game:
