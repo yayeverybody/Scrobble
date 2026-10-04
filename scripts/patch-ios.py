@@ -37,6 +37,7 @@ if 'id="scrobble-delete-account-style"' not in text:
     text = text.replace('</head>', delete_style + '</head>')
 index.write_text(text)
 
+
 fit = Path('www/viewport-fit-v2670.js')
 js = fit.read_text()
 old = 'const available=Math.max(1,viewportHeight());'
@@ -446,3 +447,22 @@ Path('www/scrobble-haptics.js').write_text(haptics_source.read_text())
 text=index.read_text()
 text=text.replace('</body>', '<script src="scrobble-haptics.js"></script></body>', 1)
 index.write_text(text)
+
+# Drive feedback from the actual score animation, including cancellation.
+engine=Path('www/game-engine-v3140.js')
+game=engine.read_text()
+start=game.index('function animateScoreValue(')
+end=game.index('\nfunction render()', start)
+score=game[start:end]
+score_hooks={
+    "  target=Number(target)||0;": "  target=Number(target)||0;\n  window.ScrobbleHaptics?.scoreCancel?.(slot);",
+    "  const started=performance.now();": "  const started=performance.now();\n  window.ScrobbleHaptics?.scoreStart?.(slot,target-current);",
+    "    const p=Math.min(1,(now-started)/duration);": "    const p=Math.min(1,(now-started)/duration);\n    window.ScrobbleHaptics?.scoreProgress?.(slot,p,now);",
+    "      displayedScores[slot]=target;": "      displayedScores[slot]=target;\n      window.ScrobbleHaptics?.scoreEnd?.(slot);",
+}
+for old,new in score_hooks.items():
+    if score.count(old)!=1:
+        raise SystemExit('Expected original score animation hook: '+old)
+    score=score.replace(old,new,1)
+game=game[:start]+score+game[end:]
+engine.write_text(game)

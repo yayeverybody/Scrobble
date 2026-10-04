@@ -38,6 +38,7 @@ workflows:
 
           grep -q 'scrobble-haptics.js' ios/App/App/public/index.html || { echo "ERROR: haptics adapter not loaded"; exit 1; }
           node ../scripts/verify-haptics.cjs ios/App/App/public/scrobble-haptics.js
+          grep -q 'ScrobbleHaptics?.scoreProgress' ios/App/App/public/game-engine-v3140.js || { echo "ERROR: score haptics hooks not copied"; exit 1; }
           grep -q 'HapticsPlugin' ios/App/App/capacitor.config.json || { echo "ERROR: native Haptics plugin not registered"; exit 1; }
 
           grep -q 'id="scrobbleWelcome"' ios/App/App/public/index.html || { echo "ERROR: clean welcome not copied"; exit 1; }
@@ -131,8 +132,8 @@ workflows:
 
           # App Store Connect requires the marketing version to be greater than
           # the the prior TestFlight train so this diagnostic build is unmistakable.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.30" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.30" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.31" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.31" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 

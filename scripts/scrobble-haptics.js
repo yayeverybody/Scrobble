@@ -3,6 +3,7 @@
   'use strict';
   if (window.ScrobbleHaptics) return;
   let plugin;
+  const scorePulses = new Map();
   function nativeHaptics() {
     const cap = window.Capacitor;
     if (!cap?.isNativePlatform?.()) return null;
@@ -18,7 +19,23 @@
   const feedback = {
     tap: () => send('impact', { style: 'LIGHT' }),
     create: () => send('impact', { style: 'MEDIUM' }),
-    success: () => send('notification', { type: 'SUCCESS' })
+    success: () => send('notification', { type: 'SUCCESS' }),
+    scoreCancel: slot => scorePulses.delete(slot),
+    scoreStart(slot, gain) {
+      scorePulses.delete(slot);
+      if (gain > 0) scorePulses.set(slot, { last: -Infinity });
+    },
+    scoreProgress(slot, progress, now) {
+      const pulse = scorePulses.get(slot);
+      if (!pulse || now - pulse.last < 220 - 140 * progress) return;
+      pulse.last = now;
+      send('impact', { style: progress < 0.33 ? 'LIGHT' : progress < 0.66 ? 'MEDIUM' : 'HEAVY' });
+    },
+    scoreEnd(slot) {
+      if (!scorePulses.has(slot)) return;
+      scorePulses.delete(slot);
+      feedback.success();
+    }
   };
   window.ScrobbleHaptics = feedback;
   document.addEventListener('click', event => {
@@ -32,7 +49,6 @@
     if (event.isTrusted && event.target?.matches?.('#gameModeBox .weirdChoice input') && !event.target.disabled) feedback.tap();
   }, true);
   window.addEventListener('scrobble:turn-ended', event => {
-    if (event.detail?.move_type === 'play') feedback.success();
-    else if (['pass', 'swap'].includes(event.detail?.move_type)) feedback.create();
+    if (['pass', 'swap'].includes(event.detail?.move_type)) feedback.create();
   });
 })();
