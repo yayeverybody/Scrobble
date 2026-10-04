@@ -1,47 +1,87 @@
-/* Native feedback is independent of action handlers and must never block them. */
+/* Feedback follows accepted actions and score animation; it never blocks gameplay. */
 (() => {
   'use strict';
   if (window.ScrobbleHaptics) return;
-  let plugin;
   const scorePulses = new Map();
-  function nativeHaptics() {
-    const cap = window.Capacitor;
-    if (!cap?.isNativePlatform?.()) return null;
-    if (!plugin) plugin = cap.Plugins?.Haptics || cap.registerPlugin?.('Haptics');
-    return plugin;
+  let basic, custom;
+  const settings = { sound: true, haptics: true };
+  for (const key of Object.keys(settings)) {
+    try { settings[key] = localStorage.getItem('scrobble-feedback-' + key) !== 'off'; } catch (_) {}
+    const input = document.getElementById('feedback-' + key);
+    if (input) {
+      input.checked = settings[key];
+      input.addEventListener('change', () => {
+        settings[key] = input.checked;
+        try { localStorage.setItem('scrobble-feedback-' + key, input.checked ? 'on' : 'off'); } catch (_) {}
+        if (!input.checked) cancelAll();
+      });
+    }
   }
-  function send(method, options) {
+  function plugins() {
+    const cap = window.Capacitor;
+    if (!cap?.isNativePlatform?.()) return false;
+    if (!basic) basic = cap.Plugins?.Haptics || cap.registerPlugin?.('Haptics');
+    if (!custom && cap.isPluginAvailable?.('ScrobbleFeedback')) custom = cap.Plugins?.ScrobbleFeedback || cap.registerPlugin?.('ScrobbleFeedback');
+    return true;
+  }
+  function fallback(kind, progress) {
+    if (!settings.haptics) return;
     try {
-      const native = nativeHaptics();
-      if (native?.[method]) Promise.resolve(native[method](options)).catch(() => {});
-    } catch (_) { /* An unavailable plugin must not interrupt gameplay. */ }
+      const method = kind === 'finish' ? 'notification' : 'impact';
+      const options = kind === 'finish' ? { type: 'SUCCESS' } : { style: kind === 'tap' || kind === 'return' || progress < .33 ? 'LIGHT' : progress > .66 ? 'HEAVY' : 'MEDIUM' };
+      Promise.resolve(basic?.[method]?.(options)).catch(() => {});
+    } catch (_) {}
+  }
+  function play(kind, options = {}) {
+    if (document.hidden || !plugins()) return;
+    const payload = { kind, ...options, haptics: settings.haptics, sound: settings.sound && ['score', 'finish'].includes(kind) };
+    try {
+      if (custom) Promise.resolve(custom.play(payload)).catch(() => fallback(kind, options.progress));
+      else fallback(kind, options.progress);
+    } catch (_) { fallback(kind, options.progress); }
+  }
+  function cancel(slot) {
+    if (!scorePulses.delete(slot)) return;
+    try { if (custom) Promise.resolve(custom.cancel({ key: 'score-' + slot })).catch(() => {}); } catch (_) {}
+  }
+  function cancelAll() {
+    for (const slot of [...scorePulses.keys()]) cancel(slot);
+    try { if (custom) Promise.resolve(custom.cancel({ key: '*' })).catch(() => {}); } catch (_) {}
   }
   const feedback = {
-    tap: () => send('impact', { style: 'LIGHT' }),
-    create: () => send('impact', { style: 'MEDIUM' }),
-    success: () => send('notification', { type: 'SUCCESS' }),
-    scoreCancel: slot => scorePulses.delete(slot),
+    tap: () => play('tap'),
+    create: () => play('create'),
+    success: () => play('finish'),
+    tile: () => play('tile'),
+    tileReturn: () => play('return'),
+    error: () => play('error'),
+    scoreCancel: cancel,
     scoreStart(slot, gain) {
-      scorePulses.delete(slot);
-      if (gain > 0) scorePulses.set(slot, { last: -Infinity });
+      cancel(slot);
+      if (gain > 0 && !document.hidden) scorePulses.set(slot, { last: -Infinity, gain });
     },
     scoreProgress(slot, progress, now) {
       const pulse = scorePulses.get(slot);
-      if (!pulse || now - pulse.last < 220 - 140 * progress) return;
+      if (!pulse || progress >= 1 || now - pulse.last < 260 - 165 * progress) return;
       pulse.last = now;
-      send('impact', { style: progress < 0.33 ? 'LIGHT' : progress < 0.66 ? 'MEDIUM' : 'HEAVY' });
+      play('score', { key: 'score-' + slot, progress, gain: pulse.gain });
     },
     scoreEnd(slot) {
-      if (!scorePulses.has(slot)) return;
+      const pulse = scorePulses.get(slot);
+      if (!pulse) return;
       scorePulses.delete(slot);
-      feedback.success();
+      play('finish', { key: 'score-' + slot, gain: pulse.gain });
     }
   };
   window.ScrobbleHaptics = feedback;
+  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAll(); });
+  window.addEventListener('scrobble:home', cancelAll);
   document.addEventListener('click', event => {
     if (!event.isTrusted) return;
     const button = event.target?.closest?.('button');
     if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return;
+    // Successful tile placement provides its own precise feedback.
+    if (button.closest?.('.cell') || button.closest?.('.rackbtn')) return;
     if (button.id === 'startFriendGame' || button.hasAttribute('data-cpu-difficulty')) feedback.create();
     else feedback.tap();
   }, true);

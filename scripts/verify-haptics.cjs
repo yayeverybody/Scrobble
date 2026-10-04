@@ -2,14 +2,15 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync(process.argv[2] || 'scripts/scrobble-haptics.js', 'utf8');
-function setup({ native = true, fail = false, register = false } = {}) {
+function setup({ native = true, fail = false, register = false, custom = false, stored = {} } = {}) {
   const calls = [], listeners = {};
   const plugin = {
     impact(options) { calls.push({ method: 'impact', ...options }); return fail ? Promise.reject(Error('unavailable')) : Promise.resolve(); },
     notification(options) { calls.push({ method: 'notification', ...options }); return Promise.resolve(); }
   };
-  const cap = { isNativePlatform: () => native, Plugins: register ? {} : { Haptics: plugin }, registerPlugin(name) { assert.equal(name, 'Haptics'); return plugin; } };
-  const ctx = { window: { Capacitor: cap, addEventListener: (type, fn) => { listeners[type] = fn; } }, document: { addEventListener: (type, fn) => { listeners[type] = fn; } } };
+  const rich = { play(options) { calls.push({ method: "play", ...options }); return Promise.resolve(); }, cancel(options) { calls.push({ method: "cancel", ...options }); return Promise.resolve(); } };
+  const cap = { isPluginAvailable: () => custom, isNativePlatform: () => native, Plugins: register ? {} : { Haptics: plugin }, registerPlugin(name) { if(name === "ScrobbleFeedback") return rich; assert.equal(name, 'Haptics'); return plugin; } };
+  const ctx = { localStorage: { getItem: key => stored[key] || null }, window: { Capacitor: cap, addEventListener: (type, fn) => { listeners[type] = fn; } }, document: { getElementById: () => null, addEventListener: (type, fn) => { listeners[type] = fn; } } };
   vm.createContext(ctx); vm.runInContext(source, ctx);
   const button = (id, disabled = false, cpu = false) => ({ id, disabled, getAttribute: () => null, hasAttribute: () => cpu });
   const click = (id, { trusted = true, disabled = false, cpu = false } = {}) => listeners.click({ isTrusted: trusted, target: { closest: () => button(id, disabled, cpu) } });
@@ -58,5 +59,25 @@ function setup({ native = true, fail = false, register = false } = {}) {
   await new Promise(resolve => setImmediate(resolve));
   vm.runInContext(source, s.ctx);
   const before = s.calls.length; s.click('copyInvite'); assert.equal(s.calls.length, before + 1);
-  console.log('PASS: native light/medium/success feedback; disabled and synthetic clicks ignored; web fallback, rejected plugin calls, and duplicate initialization remain safe.');
+  const rich = setup({ custom: true });
+  const feedback = rich.ctx.window.ScrobbleHaptics;
+  feedback.scoreStart(0, 80);
+  feedback.scoreProgress(0, .1, 100);
+  feedback.scoreProgress(0, .11, 110);
+  assert.equal(rich.calls.length, 1);
+  feedback.scoreProgress(0, .8, 500);
+  feedback.scoreEnd(0);
+  assert.deepEqual(rich.calls.map(x => x.kind), ['score', 'score', 'finish']);
+  assert.equal(rich.calls[2].gain, 80);
+  assert(rich.calls.every(x => x.sound && x.haptics));
+  feedback.scoreStart(1, 20); feedback.scoreProgress(1, .2, 600);
+  rich.ctx.document.hidden = true; rich.listeners.visibilitychange();
+  assert.equal(rich.calls.at(-1).method, 'cancel');
+  const afterCancel = rich.calls.length; feedback.scoreEnd(1);
+  assert.equal(rich.calls.length, afterCancel);
+  const muted = setup({ custom: true, stored: { 'scrobble-feedback-sound': 'off', 'scrobble-feedback-haptics': 'off' } });
+  muted.ctx.window.ScrobbleHaptics.scoreStart(0, 30);
+  muted.ctx.window.ScrobbleHaptics.scoreProgress(0, .5, 500);
+  assert.equal(muted.calls.at(-1).sound, false); assert.equal(muted.calls.at(-1).haptics, false);
+  console.log('PASS: native patterns, score crescendo and payoff, frame throttling, background cancellation, mute settings, preset fallback, and safe plugin failure.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

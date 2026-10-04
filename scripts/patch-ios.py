@@ -533,3 +533,27 @@ for old,new in score_hooks.items():
     score=score.replace(old,new,1)
 game=game[:start]+score+game[end:]
 engine.write_text(game)
+
+# Precise tile feedback occurs only after a valid drop/placement changes the board.
+game=engine.read_text()
+old="selected=null;render();pinch=null;panGesture=null;setTimeout(()=>focusCell(r,c),50)"
+assert game.count(old)==1, 'Tap-placement feedback anchor missing'
+game=game.replace(old,"selected=null;render();window.ScrobbleHaptics?.tile?.();pinch=null;panGesture=null;setTimeout(()=>focusCell(r,c),50)",1)
+old="racks[current].push(old.letter)}}selected=null;render();if(placed){"
+assert game.count(old)==1, 'Rack-return feedback anchor missing'
+game=game.replace(old,"racks[current].push(old.letter);window.ScrobbleHaptics?.tileReturn?.()}}selected=null;render();if(placed){window.ScrobbleHaptics?.tile?.();",1)
+for old,new in {
+    "if(err){status.textContent=err;return}": "if(err){window.ScrobbleHaptics?.error?.();status.textContent=err;return}",
+    "if(!words?.length){status.textContent='That does not make a word.';return}": "if(!words?.length){window.ScrobbleHaptics?.error?.();status.textContent='That does not make a word.';return}",
+    "showComputerRejection(attemptedWords,badWord.word);": "window.ScrobbleHaptics?.error?.();showComputerRejection(attemptedWords,badWord.word);",
+}.items():
+    assert game.count(old)==1, 'Rejected-move feedback anchor missing'
+    game=game.replace(old,new,1)
+engine.write_text(game)
+
+# Independent, persistent sound and haptic preferences in the existing account panel.
+text=index.read_text()
+anchor='<button id="logoutAccount"'
+assert text.count(anchor)==1, 'Feedback settings account anchor missing'
+controls='<div id="feedbackSettings" style="margin:16px 0;padding:14px;border:1px solid #72c3f5;border-radius:12px;color:#fff;background:#0b477a"><div style="font-weight:900;margin-bottom:8px">GAME FEEDBACK</div><label style="display:flex;align-items:center;gap:10px;min-height:44px;color:#fff"><input id="feedback-sound" type="checkbox" style="width:22px;height:22px">Scoring sounds</label><label style="display:flex;align-items:center;gap:10px;min-height:44px;color:#fff"><input id="feedback-haptics" type="checkbox" style="width:22px;height:22px">Haptic feedback</label></div>'
+index.write_text(text.replace(anchor,controls+anchor,1))

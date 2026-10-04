@@ -24,6 +24,7 @@ workflows:
           npm install @capacitor/push-notifications@8.0.0
           python3 -m py_compile ../scripts/patch-ios.py
           python3 ../scripts/patch-ios.py
+          python3 ../scripts/generate-feedback-audio.py
           (cd .. && node scripts/verify-notifications.cjs)
           node ../scripts/verify-friend-invite.cjs www
           node ../scripts/verify-haptics.cjs www/scrobble-haptics.js
@@ -39,6 +40,10 @@ workflows:
           npx cap add ios
           npx cap sync ios
           python3 ../scripts/patch-native-push.py
+          python3 ../scripts/patch-native-feedback.py
+          grep -q 'registerPluginInstance(ScrobbleFeedbackPlugin())' ios/App/App/AppDelegate.swift || { echo 'ERROR: custom feedback plugin missing'; exit 1; }
+          grep -q 'customClass="ScrobbleViewController"' ios/App/App/Base.lproj/Main.storyboard || { echo 'ERROR: custom bridge missing'; exit 1; }
+          test -f ios/App/App/public/feedback/finish.wav || { echo 'ERROR: scoring sounds missing'; exit 1; }
           grep -q 'PushNotificationsPlugin' ios/App/App/capacitor.config.json || { echo "ERROR: native push plugin missing"; exit 1; }
 
           grep -q 'scrobble-haptics.js' ios/App/App/public/index.html || { echo "ERROR: haptics adapter not loaded"; exit 1; }
@@ -140,8 +145,8 @@ workflows:
 
           # App Store Connect requires the marketing version to be greater than
           # the the prior TestFlight train so this diagnostic build is unmistakable.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.34" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.34" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.35" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.35" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 

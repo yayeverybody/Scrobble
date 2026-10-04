@@ -16,7 +16,8 @@ function setup(tileRect) {
   const board = Array.from({ length: 15 }, () => Array(15).fill(null));
   board[14][5] = { letter: 'A', pending: true, owner: 0 };
   let renders = 0, reordered = null;
-  const ctx = {
+  const feedback = [];
+  const ctx = { window: { ScrobbleHaptics: { tile: () => feedback.push("tile"), tileReturn: () => feedback.push("return") } },
     root: { querySelectorAll: () => [] }, rackEl: rack, swapMode: false,
     swapTrayTiles: { getBoundingClientRect: () => rect(0, 500, 400, 560), classList },
     pointInRect: (x,y,r) => x>=r.left && x<=r.right && y>=r.top && y<=r.bottom,
@@ -30,7 +31,7 @@ function setup(tileRect) {
     setTimeout: noop, focusCell: noop, pinch: null, panGesture: null
   };
   vm.createContext(ctx); vm.runInContext(targetSource + '\n' + endSource, ctx);
-  return { ctx, renders: () => renders, reordered: () => reordered };
+  return { ctx, feedback, renders: () => renders, reordered: () => reordered };
 }
 // Subpixel overlaps on every edge beat the board's forgiving snap zone.
 for (const r of [rect(100, 560, 140, 600.1), rect(-39.9, 620, 0.1, 660), rect(399.9, 620, 439.9, 660), rect(100, 679.9, 140, 719.9)]) {
@@ -46,6 +47,10 @@ assert.equal(returned.ctx.board[14][5], null);
 assert.deepEqual(returned.ctx.racks[0], ['A']);
 assert.equal(returned.ctx.pending.length, 0);
 assert.equal(returned.renders(), 1);
+assert.deepEqual(returned.feedback, ["return"]);
+const placed = setup(rect(100, 550, 140, 599.9));
+placed.ctx.endDrag({ clientX:200, clientY:590 });
+assert.deepEqual(placed.feedback, ["tile"]);
 const reorder = setup(rect(100, 610, 140, 650));
 reorder.ctx.drag.origin = { type:'rack', index:0 };
 reorder.ctx.endDrag({ clientX:200, clientY:640 });
