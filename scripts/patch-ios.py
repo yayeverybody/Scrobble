@@ -363,11 +363,22 @@ app=Path('www/app-v3140.js'); js=app.read_text()
 old_handlers="  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
 new_handlers="  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\n  document.getElementById('newGameDash').onclick=openGameMode;\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\n  playFriendMode.onclick=()=>setGameMode('friend');\n  playComputerMode.onclick=()=>setGameMode('computer');\n  startFriendGame.onclick=()=>createGame();\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
 if old_handlers not in js: raise SystemExit('Stable packaged New Game handlers not found; refusing fallback')
-js=js.replace(old_handlers,new_handlers,1); app.write_text(js)
+js=js.replace(old_handlers,new_handlers,1)
+
+# Hand off only once the invite is ready. Leaving the chooser visible puts its
+# z-index 31000 backdrop above the invite at 9999 and blocks every invite action.
+# Keep rule collection and error handling in the original creation function.
+old_invite_show = "    inviteBox.classList.remove('hidden')"
+new_invite_show = "    gameModeBox.classList.add('hidden');\n    inviteBox.classList.remove('hidden')"
+if js.count(old_invite_show) != 1:
+    raise SystemExit('Expected exactly one invite presentation target')
+js=js.replace(old_invite_show,new_invite_show,1)
+app.write_text(js)
 
 final_index=index.read_text(); final_app=app.read_text()
 assert 'id="playComputerMode"' in final_index and 'id="startFriendGame"' in final_index
 assert 'OR PLAY THE COMPUTER' not in final_index
 assert "startFriendGame.onclick=()=>createGame()" in final_app
 assert "btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty)" in final_app
+assert new_invite_show in final_app
 assert 'scrobble-approved-new-game-controller' not in final_index

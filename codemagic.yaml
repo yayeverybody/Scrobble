@@ -42,6 +42,12 @@ workflows:
           grep -q 'id="startFriendGame"' ios/App/App/public/index.html || { echo "ERROR: Create Game action missing"; exit 1; }
           ! grep -q 'OR PLAY THE COMPUTER' ios/App/App/public/index.html || { echo "ERROR: legacy New Game layout survived"; exit 1; }
           grep -q "startFriendGame.onclick=()=>createGame()" ios/App/App/public/app-v3140.js || { echo "ERROR: friend creation handler changed"; exit 1; }
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path('ios/App/App/public/app-v3140.js').read_text()
+          handoff = "    gameModeBox.classList.add('hidden');\n    inviteBox.classList.remove('hidden')"
+          assert handoff in app, 'ERROR: invite modal handoff not copied'
+          PY
           grep -q "btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty)" ios/App/App/public/app-v3140.js || { echo "ERROR: CPU creation handler changed"; exit 1; }
           echo "CLEAN_FLOW_MARKER=SOURCE_OF_TRUTH_V1"
 
@@ -118,8 +124,8 @@ workflows:
 
           # App Store Connect requires the marketing version to be greater than
           # the the prior TestFlight train so this diagnostic build is unmistakable.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.25" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.25" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.26" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.26" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 
