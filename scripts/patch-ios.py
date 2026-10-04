@@ -98,18 +98,44 @@ js=js.replace('    if(isIOS()&&!isStandalone()){', '    if(!nativePush()&&isIOS(
 js=js.replace('  logoutAccount.onclick=async()=>{', '  logoutAccount.onclick=async()=>{\n    try{await stopNativeTurnNotifications()}catch(e){console.warn(\'Could not unregister notifications\',e)}',1)
 card_marker="        end.onclick=e=>{e.stopPropagation();askEndGame(g.id)};\n        wrap.append(card,end);active.appendChild(wrap)"
 card_new="""        end.onclick=e=>{e.stopPropagation();askEndGame(g.id)};
-        wrap.append(card,end);
+        wrap.classList.add('friendGameCard');
+        card.querySelector('.gameChevron')?.remove();
+        const actions=document.createElement('div');actions.className='gameCardActions';
+        const open=document.createElement('button');open.type='button';open.className='openGameBtn';
+        open.textContent=waiting?'SHARE INVITE':review?'REVIEW WORD':'OPEN GAME';
+        open.setAttribute('aria-label',waiting?'Share game invite':'Open game with '+names.opponent);
+        open.onclick=e=>{e.stopPropagation();card.onclick()};actions.appendChild(open);
+        wrap.append(card,end,actions);
         if(!waiting&&!mine){
           const nudge=document.createElement('button');nudge.type='button';nudge.className='nudgeGameBtn';nudge.textContent='NUDGE';
           nudge.setAttribute('aria-label','Nudge '+names.opponent);
           nudge.onclick=e=>{e.stopPropagation();void nudgeGame(g.id,nudge)};
-          wrap.appendChild(nudge);
+          actions.appendChild(nudge);
         }
         active.appendChild(wrap)"""
 if js.count(card_marker)!=1: raise SystemExit('Opponent game card insertion target not found')
 js=js.replace(card_marker,card_new,1);app.write_text(js)
 text=index.read_text()
-text=text.replace('</head>', '<style id="scrobble-nudge-style">#scrobble-dashboard .nudgeGameBtn{display:block;margin:7px 0 0 auto;min-height:40px;padding:8px 18px;border:0;border-radius:12px;background:#f2bd45;color:#173044;font-weight:900}#scrobble-dashboard .nudgeGameBtn:disabled{opacity:.65}</style></head>',1)
+card_style='''
+<style id="scrobble-nudge-style">
+#scrobble-dashboard .friendGameCard{border:1px solid rgba(97,183,235,.55);border-radius:22px;overflow:hidden;background:linear-gradient(120deg,#0d5896,#073769);box-shadow:0 8px 20px rgba(0,0,0,.14)}
+#scrobble-dashboard .friendGameCard .gameCard{border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:16px 42px 14px 14px!important;min-height:96px!important;gap:10px!important}
+#scrobble-dashboard .friendGameCard .gameIdentity{gap:10px!important}
+#scrobble-dashboard .friendGameCard .oppAvatar{width:48px!important;height:48px!important;min-width:48px!important;flex:0 0 48px!important}
+#scrobble-dashboard .friendGameCard .opponent{font-size:17px!important;white-space:normal!important;overflow-wrap:anywhere;text-overflow:clip!important}
+#scrobble-dashboard .friendGameCard .gameMeta{font-size:12px!important;line-height:1.4!important}
+#scrobble-dashboard .friendGameCard .gameScores{min-width:76px!important;gap:6px!important}
+#scrobble-dashboard .friendGameCard .scoreSide strong{font-size:25px!important}
+#scrobble-dashboard .friendGameCard .endGameBtn{top:10px!important;right:10px!important;transform:none!important}
+#scrobble-dashboard .gameCardActions{display:flex;gap:10px;padding:12px 14px;border-top:1px solid rgba(154,211,247,.2);background:rgba(0,22,49,.18)}
+#scrobble-dashboard .gameCardActions button{flex:1;min-width:0;min-height:44px;padding:9px 10px;border-radius:12px;font-size:13px;font-weight:900;letter-spacing:.3px;cursor:pointer}
+#scrobble-dashboard .openGameBtn{border:1px solid #72c3f5;background:#1269a7;color:#fff}
+#scrobble-dashboard .nudgeGameBtn{border:0;background:#f2bd45;color:#173044}
+#scrobble-dashboard .nudgeGameBtn:disabled{opacity:.65}
+#scrobble-dashboard .gameCardActions button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+</style>
+'''
+text=text.replace('</head>',card_style+'</head>',1)
 index.write_text(text)
 
 import json
