@@ -64,9 +64,9 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
             let gain = max(0, min(200, call.getDouble("gain") ?? 0))
             var events: [CHHapticEvent]
             switch kind {
-            case "score": events = [self.event(0, 0.16 + p * 0.55, 0.2 + p * 0.65)]
+            case "score": events = [self.event(0, (0.16 + p * 0.55) * 0.7, 0.2 + p * 0.65)]
             case "finish":
-                let strength = Float(0.45 + min(gain / 100, 1) * 0.4)
+                let strength = Float(0.45 + min(gain / 100, 1) * 0.4) * 0.7
                 events = [self.event(0, strength * 0.65, 0.45), self.event(0.075, strength * 0.8, 0.65), self.event(0.18, strength, 0.85)]
             case "return": events = [self.event(0, 0.22, 0.12)]
             case "tile": events = [self.event(0, 0.32, 0.8)]

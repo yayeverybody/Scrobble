@@ -1,4 +1,4 @@
-# Scrobble feedback — 1.0.37
+# Scrobble feedback — 1.0.38
 
 The custom Capacitor plugin uses Core Haptics transients with distinct intensity,
 sharpness and spacing. Tile placement gets a crisp click, rack return a soft tap,
@@ -35,3 +35,8 @@ category (ambient already mixes by default), activates the audio session and
 checks whether playback actually starts. Asset/setup failures now produce native
 logs and a result instead of disappearing silently. Account includes a Test sound
 button with playback/error status; it uses the same finish chime path as scoring.
+
+1.0.38 shortens the score animation from 3 seconds to 2 seconds, so pulses and
+tones finish one second sooner together. Core Haptics intensity for score pulses
+and the score payoff is multiplied by 0.7; sharpness and other interactions retain
+their existing values. The 30% faster pulse cadence remains in place.

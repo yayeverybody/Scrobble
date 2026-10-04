@@ -522,6 +522,7 @@ start=game.index('function animateScoreValue(')
 end=game.index('\nfunction render()', start)
 score=game[start:end]
 score_hooks={
+    "  const duration=3000;": "  const duration=2000;",
     "  target=Number(target)||0;": "  target=Number(target)||0;\n  window.ScrobbleHaptics?.scoreCancel?.(slot);",
     "  const started=performance.now();": "  const started=performance.now();\n  window.ScrobbleHaptics?.scoreStart?.(slot,target-current);",
     "    const p=Math.min(1,(now-started)/duration);": "    const p=Math.min(1,(now-started)/duration);\n    window.ScrobbleHaptics?.scoreProgress?.(slot,p,now);",
