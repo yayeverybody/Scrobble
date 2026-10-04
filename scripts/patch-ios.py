@@ -85,6 +85,38 @@ elif play_handler_fixed not in game:
     raise SystemExit('PLAY responsiveness patch target not found')
 engine.write_text(game)
 
+# Extend the existing notification UI with native registration and nudges.
+app=Path('www/app-v3140.js');js=app.read_text()
+marker='  function notificationSetupCopy(){'
+if js.count(marker)!=1: raise SystemExit('Notification setup function not found')
+native_source=Path(__file__).with_name('native-notifications.js').read_text()
+js=js.replace(marker,native_source+'\n'+marker,1)
+js=js.replace('  async function ensurePushSubscription(requestPermission=false){', '  async function ensurePushSubscription(requestPermission=false){\n    if(nativePush())return registerNativeTurnNotifications(requestPermission);',1)
+js=js.replace(marker,marker+"\n    if(nativePush())return{copy:'Get a notification when it’s your turn or a friend nudges you.',help:'',action:'TURN ON NOTIFICATIONS'};",1)
+js=js.replace('  async function maybeShowPushPrompt(){', "  async function maybeShowPushPrompt(){\n    if(nativePush()&&user){\n      try{if(await registerNativeTurnNotifications(false))return}catch(e){console.warn('Native notification registration failed',e)}\n      openNotificationSetup(false);return;\n    }",1)
+js=js.replace('    if(isIOS()&&!isStandalone()){', '    if(!nativePush()&&isIOS()&&!isStandalone()){',1)
+js=js.replace('  logoutAccount.onclick=async()=>{', '  logoutAccount.onclick=async()=>{\n    try{await stopNativeTurnNotifications()}catch(e){console.warn(\'Could not unregister notifications\',e)}',1)
+card_marker="        end.onclick=e=>{e.stopPropagation();askEndGame(g.id)};\n        wrap.append(card,end);active.appendChild(wrap)"
+card_new="""        end.onclick=e=>{e.stopPropagation();askEndGame(g.id)};
+        wrap.append(card,end);
+        if(!waiting&&!mine){
+          const nudge=document.createElement('button');nudge.type='button';nudge.className='nudgeGameBtn';nudge.textContent='NUDGE';
+          nudge.setAttribute('aria-label','Nudge '+names.opponent);
+          nudge.onclick=e=>{e.stopPropagation();void nudgeGame(g.id,nudge)};
+          wrap.appendChild(nudge);
+        }
+        active.appendChild(wrap)"""
+if js.count(card_marker)!=1: raise SystemExit('Opponent game card insertion target not found')
+js=js.replace(card_marker,card_new,1);app.write_text(js)
+text=index.read_text()
+text=text.replace('</head>', '<style id="scrobble-nudge-style">#scrobble-dashboard .nudgeGameBtn{display:block;margin:7px 0 0 auto;min-height:40px;padding:8px 18px;border:0;border-radius:12px;background:#f2bd45;color:#173044;font-weight:900}#scrobble-dashboard .nudgeGameBtn:disabled{opacity:.65}</style></head>',1)
+index.write_text(text)
+
+import json
+config=Path('capacitor.config.json');settings=json.loads(config.read_text())
+settings.setdefault('plugins',{})['PushNotifications']={'presentationOptions':['badge','sound','banner','list']}
+config.write_text(json.dumps(settings,indent=2)+'\n')
+
 # Clarify the first interaction for reviewers and first-time players.
 text = index.read_text()
 rules_marker = '<div class="rulesWelcomeItems">'
