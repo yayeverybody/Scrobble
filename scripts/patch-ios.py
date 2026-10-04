@@ -356,23 +356,80 @@ new_game='''    <div class="modeChooser">
     </div></div>'''
 if old_game not in text: raise SystemExit('Stable New Game source block not found')
 text=text.replace(old_game,new_game,1)
-flow_style='''<style id="scrobble-clean-game-flow">#gameModeBox .modeChooser{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}#gameModeBox .modeChoice{min-height:58px;border:2px solid #f2bd45;border-radius:14px;background:#0b4c7c;color:#fff;font-weight:900;padding:9px}#gameModeBox .modeChoice.active{background:#f2bd45;color:#173044}#gameModeBox .modePanel.hidden,#gameModeBox #sharedWeirdBox.hidden{display:none!important}#gameModeBox .friendStart{width:100%;min-height:54px;margin:8px 0 12px;border:0;border-radius:14px;background:#f2bd45;color:#173044;font-weight:900}</style>'''
+text=text.replace('<h2>Invite a player</h2>', '<h2>Invite a friend</h2>', 1)
+flow_style='''<style id="scrobble-clean-game-flow">#gameModeBox .modeChooser{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}#gameModeBox .modeChoice{min-height:58px;border:2px solid #f2bd45;border-radius:14px;background:#0b4c7c;color:#fff;font-weight:900;padding:9px}#gameModeBox .modeChoice.active{background:#f2bd45;color:#173044}#gameModeBox .modePanel.hidden,#gameModeBox #sharedWeirdBox.hidden{display:none!important}#gameModeBox .friendStart{width:100%;min-height:54px;margin:8px 0 12px;border:0;border-radius:14px;background:#f2bd45;color:#173044;font-weight:900}#gameModeBox .gameModeCard{max-height:calc(100dvh - 36px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto}#gameModeBox #startFriendGame.hidden{display:none!important}#friendModePanel #inviteBox{position:static;inset:auto;z-index:auto;background:transparent;display:block;padding:0}#friendModePanel #inviteBox.hidden{display:none!important}#friendModePanel #inviteBox .inviteCard{width:100%;box-sizing:border-box;background:transparent;border-radius:0;padding:12px 0 0}#friendModePanel #inviteBox h2{font-size:22px}#friendModePanel #inviteBox p{font-size:14px;line-height:1.45}#friendModePanel #inviteLink{font-size:12px;overflow-wrap:anywhere}#friendModePanel #inviteBox button{min-height:48px}</style>'''
 text=text.replace('</head>',flow_style+'</head>',1); index.write_text(text)
 
 app=Path('www/app-v3140.js'); js=app.read_text()
 old_handlers="  document.getElementById('newGameDash').onclick=()=>gameModeBox.classList.remove('hidden');\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\n  playFriendMode.onclick=()=>{gameModeBox.classList.add('hidden');createGame()};\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
-new_handlers="  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');\n  function setGameMode(mode){const friend=mode==='friend';friendModePanel.classList.toggle('hidden',!friend);computerModePanel.classList.toggle('hidden',friend);sharedWeirdBox.classList.remove('hidden');playFriendMode.classList.toggle('active',friend);playComputerMode.classList.toggle('active',!friend)}\n  function openGameMode(){friendModePanel.classList.add('hidden');computerModePanel.classList.add('hidden');sharedWeirdBox.classList.add('hidden');sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);playFriendMode.classList.remove('active');playComputerMode.classList.remove('active');gameModeBox.classList.remove('hidden')}\n  document.getElementById('newGameDash').onclick=openGameMode;\n  closeGameMode.onclick=()=>gameModeBox.classList.add('hidden');\n  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)gameModeBox.classList.add('hidden')});\n  playFriendMode.onclick=()=>setGameMode('friend');\n  playComputerMode.onclick=()=>setGameMode('computer');\n  startFriendGame.onclick=()=>createGame();\n  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"
+new_handlers="""  const playComputerMode=document.getElementById('playComputerMode'),friendModePanel=document.getElementById('friendModePanel'),computerModePanel=document.getElementById('computerModePanel'),startFriendGame=document.getElementById('startFriendGame'),sharedWeirdBox=document.getElementById('sharedWeirdBox');
+  const inviteHome=inviteBox.parentNode;
+  function resetFriendInvite(){
+    inviteBox.classList.add('hidden');
+    inviteHome.appendChild(inviteBox);
+    startFriendGame.classList.remove('hidden');
+    pendingNewGame=null;
+  }
+  function setGameMode(mode){
+    const friend=mode==='friend';
+    if(!friend && friendModePanel.contains(inviteBox))resetFriendInvite();
+    const inviting=friend && friendModePanel.contains(inviteBox);
+    friendModePanel.classList.toggle('hidden',!friend);
+    computerModePanel.classList.toggle('hidden',friend);
+    sharedWeirdBox.classList.toggle('hidden',inviting);
+    playFriendMode.classList.toggle('active',friend);
+    playComputerMode.classList.toggle('active',!friend);
+    document.getElementById('gameModeTitle').textContent=friend?'Play a Friend':'Play the Computer';
+  }
+  function openGameMode(){
+    resetFriendInvite();
+    friendModePanel.classList.add('hidden');
+    computerModePanel.classList.add('hidden');
+    sharedWeirdBox.classList.add('hidden');
+    sharedWeirdBox.querySelectorAll('input').forEach(x=>x.checked=false);
+    playFriendMode.classList.remove('active');
+    playComputerMode.classList.remove('active');
+    document.getElementById('gameModeTitle').textContent='New Game';
+    gameModeBox.classList.remove('hidden');
+  }
+  function closeGameModeScreen(){
+    gameModeBox.classList.add('hidden');
+    if(friendModePanel.contains(inviteBox))resetFriendInvite();
+  }
+  document.getElementById('newGameDash').onclick=openGameMode;
+  closeGameMode.onclick=closeGameModeScreen;
+  gameModeBox.addEventListener('click',e=>{if(e.target===gameModeBox)closeGameModeScreen()});
+  playFriendMode.onclick=()=>setGameMode('friend');
+  playComputerMode.onclick=()=>setGameMode('computer');
+  startFriendGame.onclick=()=>createGame();
+  gameModeBox.querySelectorAll('[data-cpu-difficulty]').forEach(btn=>btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty));"""
 if old_handlers not in js: raise SystemExit('Stable packaged New Game handlers not found; refusing fallback')
 js=js.replace(old_handlers,new_handlers,1)
 
-# Hand off only once the invite is ready. Leaving the chooser visible puts its
-# z-index 31000 backdrop above the invite at 9999 and blocks every invite action.
-# Keep rule collection and error handling in the original creation function.
+# Reuse the same invite element and its original copy/share handlers inline.
+# Existing waiting-game invites still use the standalone presentation.
 old_invite_show = "    inviteBox.classList.remove('hidden')"
-new_invite_show = "    gameModeBox.classList.add('hidden');\n    inviteBox.classList.remove('hidden')"
+new_invite_show = """    if(newGameState && !gameModeBox.classList.contains('hidden')){
+      friendModePanel.appendChild(inviteBox);
+      sharedWeirdBox.classList.add('hidden');
+      startFriendGame.classList.add('hidden');
+    }else{
+      inviteHome.appendChild(inviteBox);
+      gameModeBox.classList.add('hidden');
+    }
+    inviteBox.classList.remove('hidden')"""
 if js.count(old_invite_show) != 1:
     raise SystemExit('Expected exactly one invite presentation target')
 js=js.replace(old_invite_show,new_invite_show,1)
+old_invite_close = "  function closeInviteBox(){inviteBox.classList.add('hidden');pendingNewGame=null}"
+new_invite_close = """  function closeInviteBox(){
+    const inline=friendModePanel.contains(inviteBox);
+    resetFriendInvite();
+    if(inline)gameModeBox.classList.add('hidden');
+  }"""
+if old_invite_close not in js:
+    raise SystemExit('Expected original invite close handler')
+js=js.replace(old_invite_close,new_invite_close,1)
 app.write_text(js)
 
 final_index=index.read_text(); final_app=app.read_text()
