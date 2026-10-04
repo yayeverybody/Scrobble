@@ -1,9 +1,9 @@
-# Scrobble feedback — 1.0.35
+# Scrobble feedback — 1.0.36
 
 The custom Capacitor plugin uses Core Haptics transients with distinct intensity,
 sharpness and spacing. Tile placement gets a crisp click, rack return a soft tap,
 and rejected moves a gentle double pulse. The score animation drives pulses from
-260 ms down toward 95 ms apart, with increasing intensity/sharpness; completion
+200 ms down toward 73 ms apart (30% faster pulse cadence), with increasing intensity/sharpness; completion
 gets a three-pulse payoff whose strength scales with the points gained.
 
 Twelve original pentatonic bell tones rise with the animation and end with a short
