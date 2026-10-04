@@ -219,4 +219,5 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Upload builds for internal testing; submit external beta reviews manually.
+        submit_to_testflight: false
