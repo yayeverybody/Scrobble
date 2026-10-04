@@ -439,3 +439,10 @@ assert "startFriendGame.onclick=()=>createGame()" in final_app
 assert "btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty)" in final_app
 assert new_invite_show in final_app
 assert 'scrobble-approved-new-game-controller' not in final_index
+
+# Load the native feedback adapter without replacing any game/UI handlers.
+haptics_source=Path(__file__).with_name('scrobble-haptics.js')
+Path('www/scrobble-haptics.js').write_text(haptics_source.read_text())
+text=index.read_text()
+text=text.replace('</body>', '<script src="scrobble-haptics.js"></script></body>', 1)
+index.write_text(text)
