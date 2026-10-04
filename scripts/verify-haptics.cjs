@@ -2,15 +2,15 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync(process.argv[2] || 'scripts/scrobble-haptics.js', 'utf8');
-function setup({ native = true, fail = false, register = false, custom = false, stored = {} } = {}) {
+function setup({ native = true, fail = false, register = false, custom = false, stored = {}, elements = {}, audioResult } = {}) {
   const calls = [], listeners = {};
   const plugin = {
     impact(options) { calls.push({ method: 'impact', ...options }); return fail ? Promise.reject(Error('unavailable')) : Promise.resolve(); },
     notification(options) { calls.push({ method: 'notification', ...options }); return Promise.resolve(); }
   };
-  const rich = { play(options) { calls.push({ method: "play", ...options }); return Promise.resolve(); }, cancel(options) { calls.push({ method: "cancel", ...options }); return Promise.resolve(); } };
+  const rich = { play(options) { calls.push({ method: "play", ...options }); return Promise.resolve(audioResult); }, cancel(options) { calls.push({ method: "cancel", ...options }); return Promise.resolve(); } };
   const cap = { isPluginAvailable: () => custom, isNativePlatform: () => native, Plugins: register ? {} : { Haptics: plugin }, registerPlugin(name) { if(name === "ScrobbleFeedback") return rich; assert.equal(name, 'Haptics'); return plugin; } };
-  const ctx = { localStorage: { getItem: key => stored[key] || null }, window: { Capacitor: cap, addEventListener: (type, fn) => { listeners[type] = fn; } }, document: { getElementById: () => null, addEventListener: (type, fn) => { listeners[type] = fn; } } };
+  const ctx = { console: { warn() {} }, localStorage: { getItem: key => stored[key] || null }, window: { Capacitor: cap, addEventListener: (type, fn) => { listeners[type] = fn; } }, document: { getElementById: id => elements[id] || null, addEventListener: (type, fn) => { listeners[type] = fn; } } };
   vm.createContext(ctx); vm.runInContext(source, ctx);
   const button = (id, disabled = false, cpu = false) => ({ id, disabled, getAttribute: () => null, hasAttribute: () => cpu });
   const click = (id, { trusted = true, disabled = false, cpu = false } = {}) => listeners.click({ isTrusted: trusted, target: { closest: () => button(id, disabled, cpu) } });
@@ -86,5 +86,16 @@ function setup({ native = true, fail = false, register = false, custom = false, 
   muted.ctx.window.ScrobbleHaptics.scoreStart(0, 30);
   muted.ctx.window.ScrobbleHaptics.scoreProgress(0, .5, 500);
   assert.equal(muted.calls.at(-1).sound, false); assert.equal(muted.calls.at(-1).haptics, false);
+  for (const result of [{ audioPlayed: true }, { audioPlayed: false, audioError: 'Missing asset' }]) {
+    let handler;
+    const test = { disabled: false, addEventListener: (_, fn) => { handler = fn; } };
+    const status = { textContent: '' };
+    const tested = setup({ custom: true, audioResult: result, elements: { 'feedback-test': test, 'feedback-test-status': status } });
+    await handler();
+    assert.equal(test.disabled, false);
+    assert.equal(tested.calls.at(-1).sound, true);
+    assert.equal(tested.calls.at(-1).haptics, false);
+    assert(status.textContent.includes(result.audioPlayed ? 'Test chime played' : 'Missing asset'));
+  }
   console.log('PASS: native patterns, score crescendo and payoff, frame throttling, background cancellation, mute settings, preset fallback, and safe plugin failure.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,4 +1,4 @@
-# Scrobble feedback — 1.0.36
+# Scrobble feedback — 1.0.37
 
 The custom Capacitor plugin uses Core Haptics transients with distinct intensity,
 sharpness and spacing. Tile placement gets a crisp click, rack return a soft tap,
@@ -29,3 +29,9 @@ Physical iPhone validation still required: feel, volume, silent switch, music
 mixing, background interruptions and both settings across a relaunch.
 
 The accepted 1.0.34 (174) baseline remains on baseline/1.0.34-build-174.
+
+1.0.37 corrects an unsupported explicit mixWithOthers option on the ambient
+category (ambient already mixes by default), activates the audio session and
+checks whether playback actually starts. Asset/setup failures now produce native
+logs and a result instead of disappearing silently. Account includes a Test sound
+button with playback/error status; it uses the same finish chime path as scoring.

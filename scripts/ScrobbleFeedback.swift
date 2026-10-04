@@ -85,12 +85,15 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
                     }
                 } catch { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
             }
+            var audioPlayed = false
+            var audioError: String?
             if (call.getBool("sound") ?? false) && (kind == "score" || kind == "finish") {
                 // Ambient audio respects silent mode, mixes with music, and never claims playback priority.
                 do {
                     if AVAudioSession.sharedInstance().category != .ambient {
-                        try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+                        try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
                     }
+                    try AVAudioSession.sharedInstance().setActive(true)
                     let note = kind == "finish" ? "finish" : "note-\(max(0, min(11, Int(p * 11))))"
                     if let url = Bundle.main.url(forResource: note, withExtension: "wav", subdirectory: "public/feedback") {
                         let player = try AVAudioPlayer(contentsOf: url)
@@ -98,11 +101,16 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
                         var live = (self.audio[key] ?? []).filter { $0.isPlaying }
                         live.append(player)
                         self.audio[key] = Array(live.suffix(4))
-                        player.play()
-                    }
-                } catch { /* Audio failure must never affect a move. */ }
+                        player.prepareToPlay()
+                        audioPlayed = player.play()
+                        if !audioPlayed { audioError = "Audio player could not start." }
+                    } else { audioError = "Scoring sound asset missing: " + note }
+                } catch { audioError = error.localizedDescription }
+                if let error = audioError { NSLog("Scrobble scoring audio: %@", error) }
             }
-            call.resolve()
+            var result: [String: Any] = ["audioPlayed": audioPlayed]
+            if let error = audioError { result["audioError"] = error }
+            call.resolve(result)
         }
     }
     @objc func cancel(_ call: CAPPluginCall) {

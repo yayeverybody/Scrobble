@@ -36,10 +36,24 @@
     if (document.hidden || !plugins()) return;
     const payload = { kind, ...options, haptics: settings.haptics, sound: settings.sound && ['score', 'finish'].includes(kind) };
     try {
-      if (custom) Promise.resolve(custom.play(payload)).catch(() => fallback(kind, options.progress));
+      if (custom) Promise.resolve(custom.play(payload)).then(result => { if (result?.audioError) console.warn('Scrobble scoring audio:', result.audioError); }).catch(() => fallback(kind, options.progress));
       else fallback(kind, options.progress);
     } catch (_) { fallback(kind, options.progress); }
   }
+  const testSound = document.getElementById('feedback-test');
+  if (testSound) testSound.addEventListener('click', async () => {
+    const status = document.getElementById('feedback-test-status');
+    if (!status) return;
+    if (!settings.sound) { status.textContent = 'Enable Scoring sounds first.'; return; }
+    if (!plugins() || !custom) { status.textContent = 'Sound test requires the updated iPhone app.'; return; }
+    testSound.disabled = true;
+    status.textContent = 'Testing sound…';
+    try {
+      const result = await custom.play({ kind: 'finish', key: 'test', gain: 30, sound: true, haptics: false });
+      status.textContent = result?.audioPlayed ? 'Test chime played. Silent Mode must be off to hear it.' : 'Sound could not play: ' + (result?.audioError || 'Audio player unavailable.');
+    } catch (_) { status.textContent = 'Sound test unavailable. Please reopen the app.'; }
+    finally { testSound.disabled = false; }
+  });
   function cancel(slot) {
     if (!scorePulses.delete(slot)) return;
     try { if (custom) Promise.resolve(custom.cancel({ key: 'score-' + slot })).catch(() => {}); } catch (_) {}
