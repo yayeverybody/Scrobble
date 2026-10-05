@@ -106,8 +106,8 @@
           if ((!tile && !studio) || fired.has(animation) || animation.currentTime == null) continue;
           const timing = animation.effect?.getComputedTiming();
           if (!timing || !Number.isFinite(timing.duration)) continue;
-          // Tile lands at its 68% keyframe; studio reaches its pop at 45%.
-          const beat = timing.delay + timing.duration * (tile ? .68 : .45);
+          // Pulse at motion onset, not at the later landing/peak keyframe.
+          const beat = timing.delay;
           const now = Number(animation.currentTime);
           if (now < beat) continue;
           fired.add(animation);
@@ -119,7 +119,19 @@
       } catch (_) { return; }
       requestAnimationFrame(tickSplash);
     };
-    requestAnimationFrame(tickSplash);
+    const releaseSplash = () => {
+      document.documentElement?.classList.remove('scrobbleSplashFeedbackPending');
+      requestAnimationFrame(tickSplash);
+    };
+    if (document.documentElement?.classList.contains('scrobbleSplashFeedbackPending')) {
+      let timeout;
+      try {
+        plugins();
+        const warm = custom?.prepare ? custom.prepare() : Promise.resolve();
+        Promise.race([warm, new Promise(resolve => { timeout = setTimeout(resolve, 500); })])
+          .catch(() => {}).finally(() => { clearTimeout(timeout); releaseSplash(); });
+      } catch (_) { releaseSplash(); }
+    } else releaseSplash();
   }
 
   document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAll(); });

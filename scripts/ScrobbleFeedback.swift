@@ -16,6 +16,7 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "ScrobbleFeedbackPlugin"
     public let jsName = "ScrobbleFeedback"
     public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "prepare", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "play", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cancel", returnType: CAPPluginReturnPromise)
     ]
@@ -48,6 +49,15 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         try engine?.start()
         return engine
+    }
+    @objc func prepare(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            do {
+                let ready = try self.readyEngine() != nil
+                call.resolve(["ready": ready])
+            }
+            catch { call.resolve(["ready": false]) }
+        }
     }
     private func event(_ time: Double, _ intensity: Float, _ sharpness: Float) -> CHHapticEvent {
         CHHapticEvent(eventType: .hapticTransient, parameters: [

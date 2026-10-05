@@ -559,3 +559,8 @@ anchor='<button id="logoutAccount"'
 assert text.count(anchor)==1, 'Feedback settings account anchor missing'
 controls='<div id="feedbackSettings" style="margin:16px 0;padding:14px;border:1px solid #72c3f5;border-radius:12px;color:#fff;background:#0b477a"><div style="font-weight:900;margin-bottom:8px">GAME FEEDBACK</div><label style="display:flex;align-items:center;gap:10px;min-height:44px;color:#fff"><input id="feedback-sound" type="checkbox" style="width:22px;height:22px">Scoring sounds</label><label style="display:flex;align-items:center;gap:10px;min-height:44px;color:#fff"><input id="feedback-haptics" type="checkbox" style="width:22px;height:22px">Haptic feedback</label><button id="feedback-test" type="button" style="margin-top:8px;min-height:44px;background:#f2bd45;color:#173044;border:0;border-radius:10px;font-weight:900">TEST SOUND</button><div id="feedback-test-status" role="status" style="color:#fff;margin-top:8px;font-size:13px"></div></div>'
 index.write_text(text.replace(anchor,controls+anchor,1))
+
+# Pause splash CSS before first paint until the native feedback engine is prepared.
+text=index.read_text()
+splash_gate = """<style id="scrobble-splash-feedback-gate">html.scrobbleSplashFeedbackPending #scrobbleSplash .splashTileLogo span,html.scrobbleSplashFeedbackPending #scrobbleSplash .splashStudio{animation-play-state:paused!important}</style><script>(()=>{if(location.protocol==='capacitor:'||window.Capacitor?.isNativePlatform?.()){document.documentElement.classList.add('scrobbleSplashFeedbackPending');setTimeout(()=>document.documentElement.classList.remove('scrobbleSplashFeedbackPending'),2000)}})();</script>"""
+index.write_text(text.replace('<head>', '<head>'+splash_gate, 1))

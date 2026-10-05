@@ -1,4 +1,4 @@
-# Scrobble feedback — 1.0.40
+# Scrobble feedback — 1.0.41
 
 The custom Capacitor plugin uses Core Haptics transients with distinct intensity,
 sharpness and spacing. Tile placement gets a crisp click, rack return a soft tap,
@@ -55,3 +55,9 @@ CSS animations' clocks, delays and durations, with a one-shot guard per animatio
 Missed beats on slow launches are skipped. Reduced motion, disabled haptics,
 backgrounding and splash dismissal suppress or stop splash feedback. No splash
 sounds or looping mascot-wave haptics are added.
+
+1.0.41 moves splash pulses to animation onset. Native launches pause the logo/studio
+CSS before first paint, prepare the Core Haptics engine, then release the visual
+animation and watcher together. Preparation has a 500 ms timeout; a head-level
+2-second failsafe prevents a stuck pause if initialization fails. Website animation
+is not gated. This replaces the previous landing/peak timing that felt late.
