@@ -92,17 +92,18 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             var audioPlayed = false
             var audioError: String?
-            if (call.getBool("sound") ?? false) && (kind == "score" || kind == "finish") {
+            if (call.getBool("sound") ?? false) && ["score", "finish", "splashTile", "splashStudio"].contains(kind) {
                 // Ambient audio respects silent mode, mixes with music, and never claims playback priority.
                 do {
                     if AVAudioSession.sharedInstance().category != .ambient {
                         try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
                     }
                     try AVAudioSession.sharedInstance().setActive(true)
-                    let note = kind == "finish" ? "finish" : "note-\(max(0, min(11, Int(p * 11))))"
+                    let chime = kind == "finish" || kind == "splashStudio"
+                    let note = chime ? "finish" : "note-\(max(0, min(11, Int(p * 11))))"
                     if let url = Bundle.main.url(forResource: note, withExtension: "wav", subdirectory: "public/feedback") {
                         let player = try AVAudioPlayer(contentsOf: url)
-                        player.volume = kind == "finish" ? 0.55 : 0.25 + p * 0.2
+                        player.volume = kind == "splashTile" ? 0.2 + p * 0.08 : kind == "splashStudio" ? 0.35 : kind == "finish" ? 0.55 : 0.25 + p * 0.2
                         var live = (self.audio[key] ?? []).filter { $0.isPlaying }
                         live.append(player)
                         self.audio[key] = Array(live.suffix(4))

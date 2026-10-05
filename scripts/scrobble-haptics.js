@@ -34,7 +34,7 @@
   }
   function play(kind, options = {}) {
     if (document.hidden || !plugins()) return;
-    const payload = { kind, ...options, haptics: settings.haptics, sound: settings.sound && ['score', 'finish'].includes(kind) };
+    const payload = { kind, ...options, haptics: settings.haptics, sound: settings.sound && ['score', 'finish', 'splashTile', 'splashStudio'].includes(kind) };
     try {
       if (custom) Promise.resolve(custom.play(payload)).then(result => { if (result?.audioError) console.warn('Scrobble scoring audio:', result.audioError); }).catch(() => fallback(kind, options.progress));
       else fallback(kind, options.progress);
@@ -44,7 +44,7 @@
   if (testSound) testSound.addEventListener('click', async () => {
     const status = document.getElementById('feedback-test-status');
     if (!status) return;
-    if (!settings.sound) { status.textContent = 'Enable Scoring sounds first.'; return; }
+    if (!settings.sound) { status.textContent = 'Enable Game sounds first.'; return; }
     if (!plugins()) { status.textContent = 'Sound test is available in the iPhone app.'; return; }
     if (!custom) { status.textContent = 'Custom feedback plugin is unavailable in this build.'; return; }
     testSound.disabled = true;
@@ -101,7 +101,9 @@
         return;
       }
       try {
-        for (const animation of splash.getAnimations({ subtree: true })) {
+        const animations = splash.getAnimations({ subtree: true });
+        const tiles = animations.filter(a => a.animationName === 'scrobbleSplashWave');
+        for (const animation of animations) {
           const tile = animation.animationName === 'scrobbleSplashWave';
           const studio = animation.animationName === 'scrobbleStudioPop';
           if ((!tile && !studio) || fired.has(animation) || animation.currentTime == null) continue;
@@ -114,7 +116,7 @@
           fired.add(animation);
           // Skip missed beats on a slow launch rather than delivering a late burst.
           if (animation.playState === 'running' && now - beat < 50) {
-            play(tile ? 'splashTile' : 'splashStudio', { key: 'splash' });
+            play(tile ? 'splashTile' : 'splashStudio', { key: 'splash', progress: tile ? tiles.indexOf(animation) / Math.max(1, tiles.length - 1) : 1 });
           }
         }
       } catch (_) { return; }

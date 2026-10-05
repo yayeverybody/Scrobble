@@ -1,4 +1,4 @@
-# Scrobble feedback — 1.0.42
+# Scrobble feedback — 1.0.43
 
 The custom Capacitor plugin uses Core Haptics transients with distinct intensity,
 sharpness and spacing. Tile placement gets a crisp click, rack return a soft tap,
@@ -69,3 +69,8 @@ registration path is removed. JS prefers the exported Capacitor.Plugins instance
 and no longer requires the availability helper to recognize that instance.
 Packaging checks now cover the actual registration manifest, Swift class identity,
 exported methods, standard controller and audio resources together.
+
+1.0.43 adds quiet rising notes to the splash tile onsets and a finishing chime to
+the studio pop, on the same native play calls as their haptics. Score tones remain
+linked to visible score changes. The sound preference is now labeled Game sounds;
+existing saved sound and haptic preferences are retained. Silent mode is respected.
