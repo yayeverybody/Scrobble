@@ -28,7 +28,7 @@
     if (!settings.haptics) return;
     try {
       const method = kind === 'finish' ? 'notification' : 'impact';
-      const options = kind === 'finish' ? { type: 'SUCCESS' } : { style: kind === 'tap' || kind === 'return' || progress < .33 ? 'LIGHT' : progress > .66 ? 'HEAVY' : 'MEDIUM' };
+      const options = kind === 'finish' ? { type: 'SUCCESS' } : { style: kind === 'tap' || kind === 'return' || kind.startsWith('splash') || progress < .33 ? 'LIGHT' : progress > .66 ? 'HEAVY' : 'MEDIUM' };
       Promise.resolve(basic?.[method]?.(options)).catch(() => {});
     } catch (_) {}
   }
@@ -88,6 +88,40 @@
     }
   };
   window.ScrobbleHaptics = feedback;
+  // Follow CSS animation clocks instead of guessing startup delays.
+  const splash = document.getElementById('scrobbleSplash');
+  if (splash?.getAnimations) {
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const fired = new WeakSet();
+    const started = performance.now();
+    const tickSplash = () => {
+      if (document.hidden || splash.classList.contains('hide') || reduced?.matches || performance.now() - started > 6000) {
+        try { if (custom) Promise.resolve(custom.cancel({ key: 'splash' })).catch(() => {}); } catch (_) {}
+        return;
+      }
+      try {
+        for (const animation of splash.getAnimations({ subtree: true })) {
+          const tile = animation.animationName === 'scrobbleSplashWave';
+          const studio = animation.animationName === 'scrobbleStudioPop';
+          if ((!tile && !studio) || fired.has(animation) || animation.currentTime == null) continue;
+          const timing = animation.effect?.getComputedTiming();
+          if (!timing || !Number.isFinite(timing.duration)) continue;
+          // Tile lands at its 68% keyframe; studio reaches its pop at 45%.
+          const beat = timing.delay + timing.duration * (tile ? .68 : .45);
+          const now = Number(animation.currentTime);
+          if (now < beat) continue;
+          fired.add(animation);
+          // Skip missed beats on a slow launch rather than delivering a late burst.
+          if (animation.playState === 'running' && now - beat < 50) {
+            play(tile ? 'splashTile' : 'splashStudio', { key: 'splash' });
+          }
+        }
+      } catch (_) { return; }
+      requestAnimationFrame(tickSplash);
+    };
+    requestAnimationFrame(tickSplash);
+  }
+
   document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAll(); });
   window.addEventListener('scrobble:home', cancelAll);
   document.addEventListener('click', event => {

@@ -28,6 +28,7 @@ workflows:
           (cd .. && node scripts/verify-notifications.cjs)
           node ../scripts/verify-friend-invite.cjs www
           node ../scripts/verify-haptics.cjs www/scrobble-haptics.js
+          node ../scripts/verify-splash-feedback.cjs www/scrobble-haptics.js www/styles-v2930.css
           node ../scripts/verify-score-feedback.cjs www/game-engine-v3140.js
           node ../scripts/verify-rack-drop.cjs www/game-engine-v3140.js
 
@@ -146,8 +147,8 @@ workflows:
 
           # App Store Connect requires the marketing version to be greater than
           # the the prior TestFlight train so this diagnostic build is unmistakable.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.39" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.39" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.40" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.40" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 

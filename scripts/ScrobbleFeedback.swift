@@ -68,6 +68,8 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
             case "finish":
                 let strength = Float(0.45 + min(gain / 100, 1) * 0.4) * 0.7
                 events = [self.event(0, strength * 0.65, 0.45), self.event(0.075, strength * 0.8, 0.65), self.event(0.18, strength, 0.85)]
+            case "splashTile": events = [self.event(0, 0.17, 0.55)]
+            case "splashStudio": events = [self.event(0, 0.22, 0.35), self.event(0.09, 0.14, 0.5)]
             case "return": events = [self.event(0, 0.22, 0.12)]
             case "tile": events = [self.event(0, 0.32, 0.8)]
             case "error": events = [self.event(0, 0.4, 0.15), self.event(0.12, 0.3, 0.15)]

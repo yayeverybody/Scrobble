@@ -1,4 +1,4 @@
-# Scrobble feedback — 1.0.39
+# Scrobble feedback — 1.0.40
 
 The custom Capacitor plugin uses Core Haptics transients with distinct intensity,
 sharpness and spacing. Tile placement gets a crisp click, rack return a soft tap,
@@ -48,3 +48,10 @@ keeps very large scores comfortable. When the rounded score first reaches its
 final total, the animation and feedback end together immediately; there is no
 silent visual pause followed by a delayed payoff. The cubic easing, two-second
 maximum duration and 30% softer score intensity remain.
+
+1.0.40 adds quiet splash haptics: one light transient at each logo tile landing,
+then a soft double pulse at the studio-name pop. The adapter reads the running
+CSS animations' clocks, delays and durations, with a one-shot guard per animation.
+Missed beats on slow launches are skipped. Reduced motion, disabled haptics,
+backgrounding and splash dismissal suppress or stop splash feedback. No splash
+sounds or looping mascot-wave haptics are added.
