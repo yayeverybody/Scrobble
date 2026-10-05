@@ -21,7 +21,7 @@
     const cap = window.Capacitor;
     if (!cap?.isNativePlatform?.()) return false;
     if (!basic) basic = cap.Plugins?.Haptics || cap.registerPlugin?.('Haptics');
-    if (!custom && cap.isPluginAvailable?.('ScrobbleFeedback')) custom = cap.Plugins?.ScrobbleFeedback || cap.registerPlugin?.('ScrobbleFeedback');
+    if (!custom) custom = cap.Plugins?.ScrobbleFeedback || (cap.isPluginAvailable?.('ScrobbleFeedback') ? cap.registerPlugin?.('ScrobbleFeedback') : null);
     return true;
   }
   function fallback(kind, progress) {
@@ -45,7 +45,8 @@
     const status = document.getElementById('feedback-test-status');
     if (!status) return;
     if (!settings.sound) { status.textContent = 'Enable Scoring sounds first.'; return; }
-    if (!plugins() || !custom) { status.textContent = 'Sound test requires the updated iPhone app.'; return; }
+    if (!plugins()) { status.textContent = 'Sound test is available in the iPhone app.'; return; }
+    if (!custom) { status.textContent = 'Custom feedback plugin is unavailable in this build.'; return; }
     testSound.disabled = true;
     status.textContent = 'Testing sound…';
     try {

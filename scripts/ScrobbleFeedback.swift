@@ -3,14 +3,7 @@ import CoreHaptics
 import AVFoundation
 import UIKit
 
-// Kept in AppDelegate's compiled source so generated Xcode projects cannot omit it.
-@objc(ScrobbleViewController)
-class ScrobbleViewController: CAPBridgeViewController {
-    override func capacitorDidLoad() {
-        bridge?.registerPluginInstance(ScrobbleFeedbackPlugin())
-    }
-}
-
+// Compiled with AppDelegate; auto-registered from capacitor.config packageClassList.
 @objc(ScrobbleFeedbackPlugin)
 public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "ScrobbleFeedbackPlugin"

@@ -43,8 +43,8 @@ workflows:
           npx cap sync ios
           python3 ../scripts/patch-native-push.py
           python3 ../scripts/patch-native-feedback.py
-          grep -q 'registerPluginInstance(ScrobbleFeedbackPlugin())' ios/App/App/AppDelegate.swift || { echo 'ERROR: custom feedback plugin missing'; exit 1; }
-          grep -q 'customClass="ScrobbleViewController"' ios/App/App/Base.lproj/Main.storyboard || { echo 'ERROR: custom bridge missing'; exit 1; }
+          node ../scripts/verify-native-feedback.cjs ios/App/App
+          grep -q 'customClass="CAPBridgeViewController"' ios/App/App/Base.lproj/Main.storyboard || { echo 'ERROR: custom bridge missing'; exit 1; }
           test -f ios/App/App/public/feedback/finish.wav || { echo 'ERROR: scoring sounds missing'; exit 1; }
           grep -q 'PushNotificationsPlugin' ios/App/App/capacitor.config.json || { echo "ERROR: native push plugin missing"; exit 1; }
 
@@ -147,8 +147,8 @@ workflows:
 
           # App Store Connect requires the marketing version to be greater than
           # the the prior TestFlight train so this diagnostic build is unmistakable.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.41" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.41" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.42" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.42" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 

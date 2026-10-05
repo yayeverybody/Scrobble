@@ -1,4 +1,4 @@
-# Scrobble feedback — 1.0.41
+# Scrobble feedback — 1.0.42
 
 The custom Capacitor plugin uses Core Haptics transients with distinct intensity,
 sharpness and spacing. Tile placement gets a crisp click, rack return a soft tap,
@@ -61,3 +61,11 @@ CSS before first paint, prepare the Core Haptics engine, then release the visual
 animation and watcher together. Preparation has a 500 ms timeout; a head-level
 2-second failsafe prevents a stuck pause if initialization fails. Website animation
 is not gated. This replaces the previous landing/peak timing that felt late.
+
+1.0.42 fixes custom feedback discovery. The native plugin is added to the generated
+capacitor.config.json packageClassList, which CapacitorBridge loads before the
+webview. The standard bridge storyboard controller is used; the custom controller
+registration path is removed. JS prefers the exported Capacitor.Plugins instance
+and no longer requires the availability helper to recognize that instance.
+Packaging checks now cover the actual registration manifest, Swift class identity,
+exported methods, standard controller and audio resources together.

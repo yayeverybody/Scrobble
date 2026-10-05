@@ -2,14 +2,14 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync(process.argv[2] || 'scripts/scrobble-haptics.js', 'utf8');
-function setup({ native = true, fail = false, register = false, custom = false, stored = {}, elements = {}, audioResult } = {}) {
+function setup({ native = true, fail = false, register = false, custom = false, stored = {}, elements = {}, audioResult, exported = false } = {}) {
   const calls = [], listeners = {};
   const plugin = {
     impact(options) { calls.push({ method: 'impact', ...options }); return fail ? Promise.reject(Error('unavailable')) : Promise.resolve(); },
     notification(options) { calls.push({ method: 'notification', ...options }); return Promise.resolve(); }
   };
   const rich = { play(options) { calls.push({ method: "play", ...options }); return Promise.resolve(audioResult); }, cancel(options) { calls.push({ method: "cancel", ...options }); return Promise.resolve(); } };
-  const cap = { isPluginAvailable: () => custom, isNativePlatform: () => native, Plugins: register ? {} : { Haptics: plugin }, registerPlugin(name) { if(name === "ScrobbleFeedback") return rich; assert.equal(name, 'Haptics'); return plugin; } };
+  const cap = { isPluginAvailable: () => custom, isNativePlatform: () => native, Plugins: exported ? { Haptics: plugin, ScrobbleFeedback: rich } : register ? {} : { Haptics: plugin }, registerPlugin(name) { if(name === "ScrobbleFeedback") return rich; assert.equal(name, 'Haptics'); return plugin; } };
   const ctx = { console: { warn() {} }, localStorage: { getItem: key => stored[key] || null }, window: { Capacitor: cap, addEventListener: (type, fn) => { listeners[type] = fn; } }, document: { getElementById: id => elements[id] || null, addEventListener: (type, fn) => { listeners[type] = fn; } } };
   vm.createContext(ctx); vm.runInContext(source, ctx);
   const button = (id, disabled = false, cpu = false) => ({ id, disabled, getAttribute: () => null, hasAttribute: () => cpu });
@@ -82,6 +82,10 @@ function setup({ native = true, fail = false, register = false, custom = false, 
   assert.equal(faster.calls.length, 1);
   faster.ctx.window.ScrobbleHaptics.scoreProgress(0, 0, 77);
   assert.equal(faster.calls.length, 2, 'Rapid visible changes must respect the pulse rate cap');
+  const direct = setup({ exported: true });
+  direct.ctx.window.ScrobbleHaptics.scoreStart(0, 30);
+  direct.ctx.window.ScrobbleHaptics.scoreProgress(0, .5, 500);
+  assert.equal(direct.calls.at(-1).method, 'play', 'Native exported plugin must work without availability helper support');
   const muted = setup({ custom: true, stored: { 'scrobble-feedback-sound': 'off', 'scrobble-feedback-haptics': 'off' } });
   muted.ctx.window.ScrobbleHaptics.scoreStart(0, 30);
   muted.ctx.window.ScrobbleHaptics.scoreProgress(0, .5, 500);
