@@ -103,7 +103,7 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
                     let note = chime ? "finish" : "note-\(max(0, min(11, Int(p * 11))))"
                     if let url = Bundle.main.url(forResource: note, withExtension: "wav", subdirectory: "public/feedback") {
                         let player = try AVAudioPlayer(contentsOf: url)
-                        player.volume = kind == "splashTile" ? 0.2 + p * 0.08 : kind == "splashStudio" ? 0.35 : kind == "finish" ? 0.55 : 0.25 + p * 0.2
+                        player.volume = (kind == "splashTile" ? 0.2 + p * 0.08 : kind == "splashStudio" ? 0.35 : kind == "finish" ? 0.55 : 0.25 + p * 0.2) * 0.6
                         var live = (self.audio[key] ?? []).filter { $0.isPlaying }
                         live.append(player)
                         self.audio[key] = Array(live.suffix(4))
