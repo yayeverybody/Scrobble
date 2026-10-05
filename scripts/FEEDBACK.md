@@ -1,4 +1,4 @@
-# Scrobble feedback — 1.0.38
+# Scrobble feedback — 1.0.39
 
 The custom Capacitor plugin uses Core Haptics transients with distinct intensity,
 sharpness and spacing. Tile placement gets a crisp click, rack return a soft tap,
@@ -40,3 +40,11 @@ button with playback/error status; it uses the same finish chime path as scoring
 tones finish one second sooner together. Core Haptics intensity for score pulses
 and the score payoff is multiplied by 0.7; sharpness and other interactions retain
 their existing values. The 30% faster pulse cadence remains in place.
+
+1.0.39 synchronizes feedback with actual displayed score increments. Progress for
+pitch and intensity comes from the visible points gained rather than elapsed time.
+Repeated frames with an unchanged number send no pulses or tones. A 77 ms rate cap
+keeps very large scores comfortable. When the rounded score first reaches its
+final total, the animation and feedback end together immediately; there is no
+silent visual pause followed by a delayed payoff. The cubic easing, two-second
+maximum duration and 30% softer score intensity remain.

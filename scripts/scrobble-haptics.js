@@ -76,7 +76,7 @@
     },
     scoreProgress(slot, progress, now) {
       const pulse = scorePulses.get(slot);
-      if (!pulse || progress >= 1 || now - pulse.last < (260 - 165 * progress) / 1.3) return;
+      if (!pulse || progress >= 1 || now - pulse.last < 100 / 1.3) return;
       pulse.last = now;
       play('score', { key: 'score-' + slot, progress, gain: pulse.gain });
     },

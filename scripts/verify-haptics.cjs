@@ -78,10 +78,10 @@ function setup({ native = true, fail = false, register = false, custom = false, 
   const faster = setup({ custom: true });
   faster.ctx.window.ScrobbleHaptics.scoreStart(0, 30);
   faster.ctx.window.ScrobbleHaptics.scoreProgress(0, 0, 0);
-  faster.ctx.window.ScrobbleHaptics.scoreProgress(0, 0, 199);
+  faster.ctx.window.ScrobbleHaptics.scoreProgress(0, 0, 76);
   assert.equal(faster.calls.length, 1);
-  faster.ctx.window.ScrobbleHaptics.scoreProgress(0, 0, 200);
-  assert.equal(faster.calls.length, 2, 'Pulse cadence must increase exactly 30%');
+  faster.ctx.window.ScrobbleHaptics.scoreProgress(0, 0, 77);
+  assert.equal(faster.calls.length, 2, 'Rapid visible changes must respect the pulse rate cap');
   const muted = setup({ custom: true, stored: { 'scrobble-feedback-sound': 'off', 'scrobble-feedback-haptics': 'off' } });
   muted.ctx.window.ScrobbleHaptics.scoreStart(0, 30);
   muted.ctx.window.ScrobbleHaptics.scoreProgress(0, .5, 500);
