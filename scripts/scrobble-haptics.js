@@ -32,13 +32,32 @@
       Promise.resolve(basic?.[method]?.(options)).catch(() => {});
     } catch (_) {}
   }
+  const webSounds = new Map();
+  function soundFallback(payload) {
+    if (!payload.sound || document.hidden || typeof Audio === 'undefined') return;
+    const p = Math.max(0, Math.min(1, payload.progress || 0));
+    const chime = ['finish', 'splashStudio'].includes(payload.kind);
+    const name = chime ? 'finish' : 'note-' + Math.min(11, Math.floor(p * 11));
+    try {
+      const player = new Audio('feedback/' + name + '.wav');
+      player.volume = (payload.kind === 'splashTile' ? .2 + p * .08 : payload.kind === 'splashStudio' ? .35 : payload.kind === 'finish' ? .55 : .25 + p * .2) * .6;
+      const key = payload.key || 'ui';
+      const live = (webSounds.get(key) || []).filter(a => !a.ended && !a.paused);
+      while (live.length >= 4) live.shift().pause();
+      live.push(player); webSounds.set(key, live);
+      Promise.resolve(player.play()).catch(() => {});
+    } catch (_) {}
+  }
   function play(kind, options = {}) {
     if (document.hidden || !plugins()) return;
     const payload = { kind, ...options, haptics: settings.haptics, sound: settings.sound && ['score', 'finish', 'splashTile', 'splashStudio'].includes(kind) };
     try {
-      if (custom) Promise.resolve(custom.play(payload)).then(result => { if (result?.audioError) console.warn('Scrobble scoring audio:', result.audioError); }).catch(() => fallback(kind, options.progress));
-      else fallback(kind, options.progress);
-    } catch (_) { fallback(kind, options.progress); }
+      if (custom) Promise.resolve(custom.play(payload)).then(result => {
+        if (result?.audioError) console.warn('Scrobble scoring audio:', result.audioError);
+        if (result?.audioPlayed === false && payload.sound) soundFallback(payload);
+      }).catch(() => { fallback(kind, options.progress); soundFallback(payload); });
+      else { fallback(kind, options.progress); soundFallback(payload); }
+    } catch (_) { fallback(kind, options.progress); soundFallback(payload); }
   }
   const testSound = document.getElementById('feedback-test');
   if (testSound) testSound.addEventListener('click', async () => {
@@ -55,11 +74,17 @@
     } catch (_) { status.textContent = 'Sound test unavailable. Please reopen the app.'; }
     finally { testSound.disabled = false; }
   });
+  function stopWebSound(key) {
+    for (const player of webSounds.get(key) || []) player.pause();
+    webSounds.delete(key);
+  }
   function cancel(slot) {
+    stopWebSound('score-' + slot);
     if (!scorePulses.delete(slot)) return;
     try { if (custom) Promise.resolve(custom.cancel({ key: 'score-' + slot })).catch(() => {}); } catch (_) {}
   }
   function cancelAll() {
+    for (const key of [...webSounds.keys()]) stopWebSound(key);
     for (const slot of [...scorePulses.keys()]) cancel(slot);
     try { if (custom) Promise.resolve(custom.cancel({ key: '*' })).catch(() => {}); } catch (_) {}
   }
@@ -97,6 +122,7 @@
     const started = performance.now();
     const tickSplash = () => {
       if (document.hidden || splash.classList.contains('hide') || reduced?.matches || performance.now() - started > 6000) {
+        stopWebSound('splash');
         try { if (custom) Promise.resolve(custom.cancel({ key: 'splash' })).catch(() => {}); } catch (_) {}
         return;
       }
