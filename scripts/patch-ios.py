@@ -564,3 +564,6 @@ index.write_text(text.replace(anchor,controls+anchor,1))
 text=index.read_text()
 splash_gate = """<style id="scrobble-splash-feedback-gate">html.scrobbleSplashFeedbackPending #scrobbleSplash .splashTileLogo span,html.scrobbleSplashFeedbackPending #scrobbleSplash .splashStudio{animation-play-state:paused!important}</style><script>(()=>{if(location.protocol==='capacitor:'||window.Capacitor?.isNativePlatform?.()){document.documentElement.classList.add('scrobbleSplashFeedbackPending');setTimeout(()=>document.documentElement.classList.remove('scrobbleSplashFeedbackPending'),2000)}})();</script>"""
 index.write_text(text.replace('<head>', '<head>'+splash_gate, 1))
+
+# Repair startup and cancel stale asynchronous CPU work in the packaged source.
+exec(compile(Path(__file__).with_name('patch-regressions.py').read_text(), 'patch-regressions.py', 'exec'))
