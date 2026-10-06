@@ -19,9 +19,16 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
 
     public override func load() {
         NotificationCenter.default.addObserver(self, selector: #selector(stopFeedback), name: UIApplication.willResignActiveNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(stopFeedback), name: AVAudioSession.interruptionNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(audioInterrupted(_:)), name: AVAudioSession.interruptionNotification, object: nil)
     }
     deinit { NotificationCenter.default.removeObserver(self) }
+    @objc private func audioInterrupted(_ notification: Notification) {
+        guard let value = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              AVAudioSession.InterruptionType(rawValue: value) == .began else { return }
+        stopFeedback()
+        // The next feedback action must build a fresh engine after interruption.
+        engine = nil
+    }
     @objc private func stopFeedback() {
         for player in players.values { try? player.stop(atTime: CHHapticTimeImmediate) }
         players.removeAll()
