@@ -12,7 +12,7 @@ workflows:
       xcode: latest
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.yayeverybody.trobble
+        bundle_identifier: Com.yayeverybody.trobble
 
     scripts:
       - name: Prepare Trobble project
@@ -23,7 +23,7 @@ workflows:
           node <<'NODE'
           const fs = require('fs');
           const config = JSON.parse(fs.readFileSync('capacitor.config.json', 'utf8'));
-          config.appId = 'com.yayeverybody.trobble';
+          config.appId = 'Com.yayeverybody.trobble';
           config.appName = 'Trobble';
           // This prototype ships its web assets inside the app.
           delete config.server;
@@ -60,7 +60,7 @@ workflows:
           sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 1;/g' ios/App/App.xcodeproj/project.pbxproj
 
           # Stop if generation or a patch restored the Scrobble bundle ID.
-          grep -q 'PRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.trobble;' ios/App/App.xcodeproj/project.pbxproj
+          grep -q 'PRODUCT_BUNDLE_IDENTIFIER = Com.yayeverybody.trobble;' ios/App/App.xcodeproj/project.pbxproj
           if grep -q 'PRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.scrobble;' ios/App/App.xcodeproj/project.pbxproj; then
             echo "Wrong bundle identifier: refusing to upload a Scrobble build."
             exit 1
