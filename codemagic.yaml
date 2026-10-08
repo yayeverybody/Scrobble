@@ -1,6 +1,6 @@
 workflows:
-  scrobble-ios-release:
-    name: Yay Everybody iOS Release
+  trobble-ios-release:
+    name: Trobble iOS TestFlight
     max_build_duration: 60
     instance_type: mac_mini_m2
 
@@ -12,13 +12,23 @@ workflows:
       xcode: latest
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.yayeverybody.scrobble
+        bundle_identifier: com.yayeverybody.trobble
 
     scripts:
-      - name: Prepare Yay Everybody project
+      - name: Prepare Trobble project
         script: |
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
           cd scrobble-mobile
+          # Set the app identity before Capacitor generates the native project.
+          node <<'NODE'
+          const fs = require('fs');
+          const config = JSON.parse(fs.readFileSync('capacitor.config.json', 'utf8'));
+          config.appId = 'com.yayeverybody.trobble';
+          config.appName = 'Trobble';
+          // This prototype ships its web assets inside the app.
+          delete config.server;
+          fs.writeFileSync('capacitor.config.json', JSON.stringify(config, null, 2));
+          NODE
           npm install
           CAP_MAJOR=$(node -p "String(require('./package.json').dependencies?.['@capacitor/core'] || require('./package.json').devDependencies?.['@capacitor/core'] || '7').match(/[0-9]+/)[0]")
           npm install --no-save "@capacitor/haptics@$CAP_MAJOR"
@@ -49,11 +59,18 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily:0 integer 1" ios/App/App/Info.plist
           sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 1;/g' ios/App/App.xcodeproj/project.pbxproj
 
+          # Stop if generation or a patch restored the Scrobble bundle ID.
+          grep -q 'PRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.trobble;' ios/App/App.xcodeproj/project.pbxproj
+          if grep -q 'PRODUCT_BUNDLE_IDENTIFIER = com.yayeverybody.scrobble;' ios/App/App.xcodeproj/project.pbxproj; then
+            echo "Wrong bundle identifier: refusing to upload a Scrobble build."
+            exit 1
+          fi
+
           # App Store metadata: installed app name must match marketplace name.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Yay Everybody" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Yay Everybody" ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleName Yay Everybody" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleName string Yay Everybody" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Trobble" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Trobble" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName Trobble" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleName string Trobble" ios/App/App/Info.plist
 
           # Camera/photo permissions. Missing usage descriptions cause iOS to terminate
           # the app when Take Photo or the photo library is requested.
