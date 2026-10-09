@@ -1,5 +1,22 @@
 # Activate native iPhone notifications
 
+## Delivery repair, October 8, 2026
+
+Both players' iPhones registered successfully, but the live worker returned
+`403 InvalidProviderToken` from Apple. Trimming the APNs key and identifier
+settings and normalizing escaped PEM newlines resolved the rejection on a
+retry: Apple accepted the push (`count: 1`, `failed: 0`). The worker fix is
+deployed to `super-worker` version 9; it does not require a new app build.
+
+The worker now records APNs response status/reason without device tokens or
+credentials. `BadDeviceToken` preserves the registration because an environment
+or configuration mismatch can cause it. Only a 410/Unregistered response removes
+an expired registration. Run `node scripts/verify-push-worker.cjs` to check
+normalization, rejection reporting, token cleanup, and worker authentication.
+
+Apple accepting a notification does not prove the phone displayed it. Confirm
+the alert on the receiving phone, then check notification tap-to-game behavior.
+
 The app and notification service are implemented. Apple credentials and a push-enabled signing profile are required before building 1.0.33.
 
 1. In Apple Developer → Certificates, Identifiers & Profiles → Identifiers, open `com.yayeverybody.scrobble`. Enable **Push Notifications** and save.
