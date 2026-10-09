@@ -2,13 +2,15 @@ import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { importPKCS8, SignJWT } from 'npm:jose@6.1.0';
 
-const apnsReady=()=>['APNS_PRIVATE_KEY','APNS_KEY_ID','APNS_TEAM_ID'].every(k=>!!Deno.env.get(k));
+const apnsSetting=(name:string)=>Deno.env.get(name)?.trim()||'';
+const normalizeAPNSKey=(value:string)=>value.trim().replace(/\\n/g,'\n');
+const apnsReady=()=>['APNS_PRIVATE_KEY','APNS_KEY_ID','APNS_TEAM_ID'].every(k=>!!apnsSetting(k));
 const admin=()=>createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 let cachedJWT:string|null=null, signedAt=0;
 async function providerToken(){
   if(cachedJWT&&Date.now()-signedAt<50*60*1000)return cachedJWT;
-  const key=await importPKCS8(Deno.env.get('APNS_PRIVATE_KEY')!.replace(/\\n/g,'\n'),'ES256');
-  cachedJWT=await new SignJWT({}).setProtectedHeader({alg:'ES256',kid:Deno.env.get('APNS_KEY_ID')!}).setIssuer(Deno.env.get('APNS_TEAM_ID')!).setIssuedAt().sign(key);
+  const key=await importPKCS8(normalizeAPNSKey(apnsSetting('APNS_PRIVATE_KEY')),'ES256');
+  cachedJWT=await new SignJWT({}).setProtectedHeader({alg:'ES256',kid:apnsSetting('APNS_KEY_ID')}).setIssuer(apnsSetting('APNS_TEAM_ID')).setIssuedAt().sign(key);
   signedAt=Date.now();return cachedJWT;
 }
 const json=(body:unknown,status=200)=>Response.json(body,{status});
@@ -38,6 +40,7 @@ Deno.serve(async req=>{
     const body=kind==='nudge'?`${name} is waiting for your move. Come play!`:`${name} played. It’s your move.`;
     const url=`/?game=${encodeURIComponent(game_id)}`;
     let delivered=0,failed=0;
+    const failures:string[]=[];
     const {data:subs,error:subError}=await db.from('scrobble_push_subscriptions').select('id,endpoint,p256dh,auth').eq('user_id',user_id);
     if(subError)throw subError;
     if(subs?.length){
@@ -60,13 +63,14 @@ Deno.serve(async req=>{
           try{
             const response=await fetch(`https://api.push.apple.com/3/device/${t.token}`,{method:'POST',client,headers:{authorization:`bearer ${jwt}`,'apns-topic':'com.yayeverybody.scrobble','apns-push-type':'alert','apns-priority':'10','apns-collapse-id':`scrobble-${game_id}`,'content-type':'application/json'},body:JSON.stringify({aps:{alert:{title,body},sound:'default'},game_id,url})});
             if(response.ok){delivered++;await response.body?.cancel();}
-            else{failed++;const result=await response.json();if(response.status===410||result.reason==='BadDeviceToken')await db.from('scrobble_native_push_tokens').delete().eq('token',t.token);}
-          }catch(_){failed++;}
+            else{failed++;const result=await response.json();failures.push(`apns:${response.status}:${result.reason||'Unknown'}`);if(response.status===410||result.reason==='Unregistered')await db.from('scrobble_native_push_tokens').delete().eq('token',t.token);}
+          }catch(e){failed++;failures.push(`apns_transport:${e instanceof Error?e.message:'Unknown'}`);}
         }
       }finally{client.close();}
-    }else if(tokens?.length){failed+=tokens.length;}
+    }else if(tokens?.length){failed+=tokens.length;failures.push('apns:credentials_missing');}
+    if(failures.length)console.error(JSON.stringify({event_id:eventId,failures}));
     if(eventId)await db.from('scrobble_notification_events').update({status:delivered?'delivered':'failed',delivered_count:delivered}).eq('id',eventId);
-    return json({ok:delivered>0,count:delivered,failed,native_push_ready:apnsReady()});
+    return json({ok:delivered>0,count:delivered,failed,failures,native_push_ready:apnsReady()});
   }catch(_){
     if(eventId)await db.from('scrobble_notification_events').update({status:'failed'}).eq('id',eventId);
     return json({error:'Notification delivery failed'},500);
