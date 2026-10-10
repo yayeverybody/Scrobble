@@ -18,6 +18,7 @@ workflows:
       - name: Prepare Yay Everybody project
         script: |
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
+          python3 scripts/patch-weird-labels.py
           cd scrobble-mobile
           npm install
           python3 ../scripts/patch-ios.py
