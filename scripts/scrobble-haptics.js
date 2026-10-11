@@ -1,0 +1,183 @@
+/* Feedback follows accepted actions and score animation; it never blocks gameplay. */
+(() => {
+  'use strict';
+  if (window.ScrobbleHaptics) return;
+  const scorePulses = new Map();
+  let basic, custom;
+  const settings = { sound: true, haptics: true };
+  for (const key of Object.keys(settings)) {
+    try { settings[key] = localStorage.getItem('scrobble-feedback-' + key) !== 'off'; } catch (_) {}
+    const input = document.getElementById('feedback-' + key);
+    if (input) {
+      input.checked = settings[key];
+      input.addEventListener('change', () => {
+        settings[key] = input.checked;
+        try { localStorage.setItem('scrobble-feedback-' + key, input.checked ? 'on' : 'off'); } catch (_) {}
+        if (!input.checked) cancelAll();
+      });
+    }
+  }
+  function plugins() {
+    const cap = window.Capacitor;
+    if (!cap?.isNativePlatform?.()) return false;
+    if (!basic) basic = cap.Plugins?.Haptics || cap.registerPlugin?.('Haptics');
+    if (!custom) custom = cap.Plugins?.ScrobbleFeedback || (cap.isPluginAvailable?.('ScrobbleFeedback') ? cap.registerPlugin?.('ScrobbleFeedback') : null);
+    return true;
+  }
+  function fallback(kind, progress) {
+    if (!settings.haptics) return;
+    try {
+      const method = kind === 'finish' ? 'notification' : 'impact';
+      const options = kind === 'finish' ? { type: 'SUCCESS' } : { style: kind === 'tap' || kind === 'return' || kind.startsWith('splash') || progress < .33 ? 'LIGHT' : progress > .66 ? 'HEAVY' : 'MEDIUM' };
+      Promise.resolve(basic?.[method]?.(options)).catch(() => {});
+    } catch (_) {}
+  }
+  const webSounds = new Map();
+  function soundFallback(payload) {
+    if (!payload.sound || document.hidden || typeof Audio === 'undefined') return;
+    const p = Math.max(0, Math.min(1, payload.progress || 0));
+    const chime = ['finish', 'splashStudio'].includes(payload.kind);
+    const name = chime ? 'finish' : 'note-' + Math.min(11, Math.floor(p * 11));
+    try {
+      const player = new Audio('feedback/' + name + '.wav');
+      player.volume = (payload.kind === 'splashTile' ? .2 + p * .08 : payload.kind === 'splashStudio' ? .35 : payload.kind === 'finish' ? .55 : .25 + p * .2) * .6;
+      const key = payload.key || 'ui';
+      const live = (webSounds.get(key) || []).filter(a => !a.ended && !a.paused);
+      while (live.length >= 4) live.shift().pause();
+      live.push(player); webSounds.set(key, live);
+      Promise.resolve(player.play()).catch(() => {});
+    } catch (_) {}
+  }
+  function play(kind, options = {}) {
+    if (document.hidden || !plugins()) return;
+    const payload = { kind, ...options, haptics: settings.haptics, sound: settings.sound && ['score', 'finish', 'splashTile', 'splashStudio'].includes(kind) };
+    try {
+      if (custom) Promise.resolve(custom.play(payload)).then(result => {
+        if (result?.audioError) console.warn('Scrobble scoring audio:', result.audioError);
+        if (result?.audioPlayed === false && payload.sound) soundFallback(payload);
+      }).catch(() => { fallback(kind, options.progress); soundFallback(payload); });
+      else { fallback(kind, options.progress); soundFallback(payload); }
+    } catch (_) { fallback(kind, options.progress); soundFallback(payload); }
+  }
+  const testSound = document.getElementById('feedback-test');
+  if (testSound) testSound.addEventListener('click', async () => {
+    const status = document.getElementById('feedback-test-status');
+    if (!status) return;
+    if (!settings.sound) { status.textContent = 'Enable Game sounds first.'; return; }
+    if (!plugins()) { status.textContent = 'Sound test is available in the iPhone app.'; return; }
+    if (!custom) { status.textContent = 'Custom feedback plugin is unavailable in this build.'; return; }
+    testSound.disabled = true;
+    status.textContent = 'Testing sound…';
+    try {
+      const result = await custom.play({ kind: 'finish', key: 'test', gain: 30, sound: true, haptics: false });
+      status.textContent = result?.audioPlayed ? 'Test chime played. Silent Mode must be off to hear it.' : 'Sound could not play: ' + (result?.audioError || 'Audio player unavailable.');
+    } catch (_) { status.textContent = 'Sound test unavailable. Please reopen the app.'; }
+    finally { testSound.disabled = false; }
+  });
+  function stopWebSound(key) {
+    for (const player of webSounds.get(key) || []) player.pause();
+    webSounds.delete(key);
+  }
+  function cancel(slot) {
+    stopWebSound('score-' + slot);
+    if (!scorePulses.delete(slot)) return;
+    try { if (custom) Promise.resolve(custom.cancel({ key: 'score-' + slot })).catch(() => {}); } catch (_) {}
+  }
+  function cancelAll() {
+    for (const key of [...webSounds.keys()]) stopWebSound(key);
+    for (const slot of [...scorePulses.keys()]) cancel(slot);
+    try { if (custom) Promise.resolve(custom.cancel({ key: '*' })).catch(() => {}); } catch (_) {}
+  }
+  const feedback = {
+    tap: () => play('tap'),
+    create: () => play('create'),
+    success: () => play('finish'),
+    tile: () => play('tile'),
+    tileReturn: () => play('return'),
+    error: () => play('error'),
+    scoreCancel: cancel,
+    scoreStart(slot, gain) {
+      cancel(slot);
+      if (gain > 0 && !document.hidden) scorePulses.set(slot, { last: -Infinity, gain });
+    },
+    scoreProgress(slot, progress, now) {
+      const pulse = scorePulses.get(slot);
+      if (!pulse || progress >= 1 || now - pulse.last < 100 / 1.3) return;
+      pulse.last = now;
+      play('score', { key: 'score-' + slot, progress, gain: pulse.gain });
+    },
+    scoreEnd(slot) {
+      const pulse = scorePulses.get(slot);
+      if (!pulse) return;
+      scorePulses.delete(slot);
+      play('finish', { key: 'score-' + slot, gain: pulse.gain });
+    }
+  };
+  window.ScrobbleHaptics = feedback;
+  // Follow CSS animation clocks instead of guessing startup delays.
+  const splash = document.getElementById('scrobbleSplash');
+  if (splash?.getAnimations) {
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const fired = new WeakSet();
+    const started = performance.now();
+    const tickSplash = () => {
+      if (document.hidden || splash.classList.contains('hide') || reduced?.matches || performance.now() - started > 6000) {
+        stopWebSound('splash');
+        try { if (custom) Promise.resolve(custom.cancel({ key: 'splash' })).catch(() => {}); } catch (_) {}
+        return;
+      }
+      try {
+        const animations = splash.getAnimations({ subtree: true });
+        const tiles = animations.filter(a => a.animationName === 'scrobbleSplashWave');
+        for (const animation of animations) {
+          const tile = animation.animationName === 'scrobbleSplashWave';
+          const studio = animation.animationName === 'scrobbleStudioPop';
+          if ((!tile && !studio) || fired.has(animation) || animation.currentTime == null) continue;
+          const timing = animation.effect?.getComputedTiming();
+          if (!timing || !Number.isFinite(timing.duration)) continue;
+          // Pulse at motion onset, not at the later landing/peak keyframe.
+          const beat = timing.delay;
+          const now = Number(animation.currentTime);
+          if (now < beat) continue;
+          fired.add(animation);
+          // Skip missed beats on a slow launch rather than delivering a late burst.
+          if (animation.playState === 'running' && now - beat < 50) {
+            play(tile ? 'splashTile' : 'splashStudio', { key: 'splash', progress: tile ? tiles.indexOf(animation) / Math.max(1, tiles.length - 1) : 1 });
+          }
+        }
+      } catch (_) { return; }
+      requestAnimationFrame(tickSplash);
+    };
+    const releaseSplash = () => {
+      document.documentElement?.classList.remove('scrobbleSplashFeedbackPending');
+      requestAnimationFrame(tickSplash);
+    };
+    if (document.documentElement?.classList.contains('scrobbleSplashFeedbackPending')) {
+      let timeout;
+      try {
+        plugins();
+        const warm = custom?.prepare ? custom.prepare() : Promise.resolve();
+        Promise.race([warm, new Promise(resolve => { timeout = setTimeout(resolve, 500); })])
+          .catch(() => {}).finally(() => { clearTimeout(timeout); releaseSplash(); });
+      } catch (_) { releaseSplash(); }
+    } else releaseSplash();
+  }
+
+  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAll(); });
+  window.addEventListener('scrobble:home', cancelAll);
+  document.addEventListener('click', event => {
+    if (!event.isTrusted) return;
+    const button = event.target?.closest?.('button');
+    if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return;
+    // Successful tile placement provides its own precise feedback.
+    if (button.closest?.('.cell') || button.closest?.('.rackbtn')) return;
+    if (button.id === 'startFriendGame' || button.hasAttribute('data-cpu-difficulty')) feedback.create();
+    else feedback.tap();
+  }, true);
+  document.addEventListener('change', event => {
+    if (event.isTrusted && event.target?.matches?.('#gameModeBox .weirdChoice input') && !event.target.disabled) feedback.tap();
+  }, true);
+  window.addEventListener('scrobble:turn-ended', event => {
+    if (['pass', 'swap'].includes(event.detail?.move_type)) feedback.create();
+  });
+})();
