@@ -61,7 +61,7 @@
     try{
       const result=await rpc('nudge_scrobble_game',{p_game_id:gameId});
       if(!result?.ok){
-        const messages={not_waiting:'You can nudge only when it is your opponent’s turn.',cooldown:'You already nudged this game. Try again after 12 hours.',notifications_off:'Your opponent has not turned on notifications yet.'};
+        const messages={not_waiting:'You can nudge only when it is your opponent’s turn.',cooldown:'You already nudged this game. Try again after 12 hours.',notifications_off:'Your opponent’s device has not registered for Scrobble notifications. Ask them to open Scrobble, sign in, and enable notifications in the app. iPhone Settings alone is not enough.'};
         throw new Error(messages[result?.reason]||'Could not send a nudge. Please try again.');
       }
       let status='queued';
