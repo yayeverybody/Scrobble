@@ -1,33 +1,27 @@
-"""Verify bundled game features, rename modes, and mark this test build."""
+"""Patch the ACTUAL legacy Capacitor archive. Fail if any expected source differs."""
 from pathlib import Path
-
-root = Path("scrobble-mobile/www")
-index = root / "index.html"
-app_path = root / "app-v3140.js"
-engine_path = root / "game-engine-v3140.js"
-html = index.read_text(encoding="utf-8")
-app = app_path.read_text(encoding="utf-8")
-engine = engine_path.read_text(encoding="utf-8")
-
-ids = ("quad_chaos", "name_dropper", "suffix_suffocation")
-checks = {
-    "new setup toggles": all(f'value="{rule}"' in html for rule in ids),
-    "new engine rule handlers": all(rule in engine for rule in ids),
-    "multi-select setup": "Optional. Mix and match." in html,
-    "correct JavaScript loaded": 'src="app-v3140.js"' in html and 'src="game-engine-v3140.js"' in html,
-}
-failed = [name for name, ok in checks.items() if not ok]
-if failed:
-    raise SystemExit("Invalid Scrobble game archive: " + ", ".join(failed))
-
-html = html.replace("<strong>Quad Chaos</strong>", "<strong>Crazy Random Bonus Spots</strong>")
-html = html.replace("<strong>Suffix Suffocation</strong>", "<strong>Suffixly</strong>")
-app = app.replace("quad_chaos:'Quad Chaos'", "quad_chaos:'Crazy Random Bonus Spots'")
-app = app.replace("suffix_suffocation:'Suffix Suffocation'", "suffix_suffocation:'Suffixly'")
-# Visible diagnostic distinguishes a new native bundle from stale installed content.
-html = html.replace('<h2 id="gameModeTitle">New Game</h2>', '<h2 id="gameModeTitle">New Game</h2><div style="text-align:center;color:#cce9ff;font-size:12px;margin-top:-5px;margin-bottom:10px">Make It Weird test • 1.0.47</div>')
-if "<strong>Crazy Random Bonus Spots</strong>" not in html or "<strong>Suffixly</strong>" not in html:
-    raise SystemExit("Make It Weird display labels were not applied")
-index.write_text(html, encoding="utf-8")
-app_path.write_text(app, encoding="utf-8")
-print("Verified bundled rules and applied Make It Weird 1.0.47 test marker.")
+root=Path("scrobble-mobile/www")
+html_path=root/"index.html"
+app_path=root/"app-v3140.js"
+engine_path=root/"game-engine-v3140.js"
+html=html_path.read_text()
+app=app_path.read_text()
+engine=engine_path.read_text()
+def replace_once(source,old,new,description):
+    if source.count(old)!=1:
+        raise SystemExit(f"Unexpected source for {description}: {source.count(old)} matches")
+    return source.replace(old,new,1)
+start=html.index('      <div class="weirdSub">Optional. Choose one.</div>')
+end=html.index('    </div>',start)
+html=html[:start]+'''      <div class="weirdSub">Optional. Mix and match.</div>
+      <label class="weirdChoice"><input type="checkbox" value="quad_chaos"><span><strong>Crazy Random Bonus Spots</strong><small>Five floating 4× word bonuses move after every turn.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="name_dropper"><span><strong>Name Dropper</strong><small>Names, places and other proper nouns are allowed.</small></span></label>
+      <label class="weirdChoice"><input type="checkbox" value="suffix_suffocation"><span><strong>Suffixly</strong><small>Extra S, D, R and Y tiles in the bag.</small></span></label>
+'''+html[end:]
+app=replace_once(app,"  const WEIRD_LABELS={","  const WEIRD_LABELS={\n    quad_chaos:'Crazy Random Bonus Spots',\n    name_dropper:'Name Dropper',\n    suffix_suffocation:'Suffixly',","new mode labels")
+app=replace_once(app,"  gameModeBox.querySelectorAll('.weirdChoice input').forEach(input=>input.addEventListener('change',()=>{if(input.checked)gameModeBox.querySelectorAll('.weirdChoice input').forEach(other=>{if(other!==input)other.checked=false})}));","  // Multiple Make It Weird rules can be selected together.","multi-select")
+engine=replace_once(engine,"  const a=[];\n  Object.entries(counts).forEach(([l,n])=>{for(let i=0;i<n;i++)a.push(l)});\n  shuffle(a);\n  return a","  if(hasWeirdRule('suffix_suffocation')){for(const [letter,n] of Object.entries({S:4,D:3,R:3,Y:2}))counts[letter]=(counts[letter]||0)+n}\n  const a=[];\n  Object.entries(counts).forEach(([l,n])=>{for(let i=0;i<n;i++)a.push(l)});\n  shuffle(a);\n  return a","suffix tile bag")
+html_path.write_text(html)
+app_path.write_text(app)
+engine_path.write_text(engine)
+print("Patched legacy archive setup, multi-select, suffix bag. Floating bonuses and proper noun acceptance still require engine implementation.")
