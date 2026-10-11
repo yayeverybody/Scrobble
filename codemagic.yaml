@@ -18,16 +18,91 @@ workflows:
       - name: Prepare Yay Everybody project
         script: |
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
-          python3 scripts/patch-weird-labels.py
-          grep -q 'WEIRD TEST 1.0.48' scrobble-mobile/www/index.html || exit 1
-          grep -q 'Crazy Random Bonus Spots' scrobble-mobile/www/index.html || exit 1
-          grep -q 'Suffixly' scrobble-mobile/www/index.html || exit 1
-          echo 'Verified 1.0.48 embedded Make It Weird bundle'
           cd scrobble-mobile
           npm install
+          npm install @capacitor/app @capacitor/share @capacitor/haptics
+          npm install @capacitor/push-notifications@8.0.0
+          python3 -m py_compile ../scripts/patch-ios.py
           python3 ../scripts/patch-ios.py
+          (cd .. && python3 scripts/patch-weird-labels.py)
+          node ../scripts/test-weird-modes.cjs www
+          python3 ../scripts/generate-feedback-audio.py
+          (cd .. && node scripts/verify-notifications.cjs)
+          node ../scripts/verify-regressions.cjs www
+          node ../scripts/verify-audio-fallback.cjs www/scrobble-haptics.js
+          node ../scripts/verify-friend-invite.cjs www
+          node ../scripts/verify-haptics.cjs www/scrobble-haptics.js
+          node ../scripts/verify-splash-feedback.cjs www/scrobble-haptics.js www/styles-v2930.css
+          node ../scripts/verify-score-feedback.cjs www/game-engine-v3140.js
+          node ../scripts/verify-rack-drop.cjs www/game-engine-v3140.js
+
+          # Verify the clean source-of-truth architecture before and after Capacitor sync.
+          echo "=== Scrobble clean-flow verification ==="
+          grep -q 'id="scrobbleWelcome"' www/index.html || { echo "ERROR: clean welcome missing"; exit 1; }
+          grep -q 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' www/index.html || { echo "ERROR: original auth form changed"; exit 1; }
+          ! grep -q 'id="loginAccountPanel"' www/index.html || { echo "ERROR: split auth DOM returned"; exit 1; }
+          grep -q 'signInAccount.onclick' www/app-v3140.js || { echo "ERROR: original sign-in handler missing"; exit 1; }
+
           npx cap add ios
           npx cap sync ios
+          python3 ../scripts/patch-native-push.py
+          python3 ../scripts/patch-native-feedback.py
+          node ../scripts/verify-native-feedback.cjs ios/App/App
+          grep -q 'customClass="CAPBridgeViewController"' ios/App/App/Base.lproj/Main.storyboard || { echo 'ERROR: custom bridge missing'; exit 1; }
+          test -f ios/App/App/public/feedback/finish.wav || { echo 'ERROR: scoring sounds missing'; exit 1; }
+          grep -q 'PushNotificationsPlugin' ios/App/App/capacitor.config.json || { echo "ERROR: native push plugin missing"; exit 1; }
+
+          grep -q 'scrobble-haptics.js' ios/App/App/public/index.html || { echo "ERROR: haptics adapter not loaded"; exit 1; }
+          node ../scripts/verify-haptics.cjs ios/App/App/public/scrobble-haptics.js
+          grep -q 'ScrobbleHaptics?.scoreProgress' ios/App/App/public/game-engine-v3140.js || { echo "ERROR: score haptics hooks not copied"; exit 1; }
+          node ../scripts/verify-rack-drop.cjs ios/App/App/public/game-engine-v3140.js
+          grep -q 'HapticsPlugin' ios/App/App/capacitor.config.json || { echo "ERROR: native Haptics plugin not registered"; exit 1; }
+
+          grep -q 'id="scrobbleWelcome"' ios/App/App/public/index.html || { echo "ERROR: clean welcome not copied"; exit 1; }
+          grep -q 'USERNAME <span style="font-weight:500">(NEW ACCOUNTS)</span>' ios/App/App/public/index.html || { echo "ERROR: original auth form not copied"; exit 1; }
+          ! grep -q 'id="loginAccountPanel"' ios/App/App/public/index.html || { echo "ERROR: split auth DOM copied"; exit 1; }
+          grep -q 'signInAccount.onclick' ios/App/App/public/app-v3140.js || { echo "ERROR: sign-in handler not copied"; exit 1; }
+          grep -q 'id="playComputerMode"' ios/App/App/public/index.html || { echo "ERROR: progressive computer chooser missing"; exit 1; }
+          grep -q 'id="startFriendGame"' ios/App/App/public/index.html || { echo "ERROR: Create Game action missing"; exit 1; }
+          ! grep -q 'OR PLAY THE COMPUTER' ios/App/App/public/index.html || { echo "ERROR: legacy New Game layout survived"; exit 1; }
+          grep -q "startFriendGame.onclick=()=>createGame()" ios/App/App/public/app-v3140.js || { echo "ERROR: friend creation handler changed"; exit 1; }
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path('ios/App/App/public/app-v3140.js').read_text()
+          assert 'friendModePanel.appendChild(inviteBox)' in app, 'ERROR: inline invite not copied'
+          html = Path('ios/App/App/public/index.html').read_text()
+          assert '#friendModePanel #inviteBox{position:static' in html, 'ERROR: inline invite style not copied'
+          PY
+          grep -q "btn.onclick=()=>createComputerGame(btn.dataset.cpuDifficulty)" ios/App/App/public/app-v3140.js || { echo "ERROR: CPU creation handler changed"; exit 1; }
+          echo "CLEAN_FLOW_MARKER=SOURCE_OF_TRUTH_V1"
+
+          # Universal Links: the App Store build must be signed with Associated
+          # Domains enabled for this bundle ID. The matching AASA file must be
+          # served by yayeverybody.com.
+          cat > ios/App/App/App.entitlements <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>aps-environment</key>
+            <string>production</string>
+            <key>com.apple.developer.associated-domains</key>
+            <array>
+              <string>applinks:yayeverybody.com</string>
+              <string>applinks:www.yayeverybody.com</string>
+            </array>
+          </dict>
+          </plist>
+          PLIST
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("ios/App/App.xcodeproj/project.pbxproj")
+          s=p.read_text()
+          marker="CODE_SIGN_STYLE = Automatic;"
+          if "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" not in s:
+              s=s.replace(marker, "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\t"+marker)
+          p.write_text(s)
+          PY
 
           /usr/libexec/PlistBuddy -c "Delete :UIDeviceFamily" ios/App/App/Info.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :UIDeviceFamily array" ios/App/App/Info.plist
@@ -74,11 +149,65 @@ workflows:
           }
           JSON
 
-          # Keep the TestFlight/App Store marketing version ahead of the latest TestFlight version 1.0.45.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.48" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.48" ios/App/App/Info.plist
+          # App Store Connect requires the marketing version to be greater than
+          # the the prior TestFlight train so this diagnostic build is unmistakable.
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.49" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.49" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
+
+      - name: Verify Associated Domains signing profile
+        script: |
+          cd scrobble-mobile
+          FOUND=""
+          PROFILE_COUNT=0
+          echo "=== Provisioning profiles available to this build ==="
+          for PROFILE in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision; do
+            [ -f "$PROFILE" ] || continue
+            PROFILE_COUNT=$((PROFILE_COUNT + 1))
+            PLIST="/tmp/scrobble-profile-$PROFILE_COUNT.plist"
+            security cms -D -i "$PROFILE" > "$PLIST"
+
+            NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PLIST" 2>/dev/null || echo "<unknown>")
+            UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PLIST" 2>/dev/null || echo "<unknown>")
+            APPID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" "$PLIST" 2>/dev/null || echo "<none>")
+            DOMAINS=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" "$PLIST" 2>/dev/null || echo "<none>")
+
+            echo "--- Profile $PROFILE_COUNT ---"
+            echo "File: $(basename "$PROFILE")"
+            echo "Name: $NAME"
+            echo "UUID: $UUID"
+            echo "Application identifier: $APPID"
+            echo "Associated Domains:"
+            echo "$DOMAINS"
+
+            # Apple's provisioning profile may authorize Associated Domains
+            # with "*" while the app target carries the specific applinks domains.
+            if [ "$APPID" = "QX9HW7SCL2.com.yayeverybody.scrobble" ] && echo "$DOMAINS" | grep -Eq '(^|[[:space:]])(\*|applinks:yayeverybody\.com)($|[[:space:]])'; then
+              FOUND="$PROFILE"
+              echo "MATCH: This profile authorizes Associated Domains for Scrobble."
+            fi
+          done
+
+          echo "=== End provisioning profile diagnostics ==="
+          echo "Profiles inspected: $PROFILE_COUNT"
+
+          APP_ENTITLEMENTS="ios/App/App/App.entitlements"
+          test -f "$APP_ENTITLEMENTS" || {
+            echo "ERROR: App.entitlements is missing"
+            exit 1
+          }
+          /usr/libexec/PlistBuddy -c "Print :com.apple.developer.associated-domains" "$APP_ENTITLEMENTS" | grep -q "applinks:yayeverybody.com" || {
+            echo "ERROR: App.entitlements does not contain applinks:yayeverybody.com"
+            exit 1
+          }
+          echo "Verified app entitlement contains applinks:yayeverybody.com"
+
+          test -n "$FOUND" || {
+            echo "ERROR: No App Store profile for Scrobble authorizes Associated Domains"
+            exit 1
+          }
+          echo "Verified Associated Domains in $(basename "$FOUND")"
 
       - name: Set up iOS code signing
         script: |
@@ -101,4 +230,5 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Upload builds for internal testing; submit external beta reviews manually.
+        submit_to_testflight: false
