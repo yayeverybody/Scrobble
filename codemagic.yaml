@@ -26,6 +26,11 @@ workflows:
           python3 ../scripts/patch-ios.py
           (cd .. && python3 scripts/patch-weird-labels.py)
           node ../scripts/test-weird-modes.cjs www
+          grep -q 'id="playComputerMode"' www/index.html || { echo 'Missing modern Play Computer flow'; exit 1; }
+          grep -q 'id="friendModePanel"' www/index.html || { echo 'Missing modern Play Friend flow'; exit 1; }
+          grep -q 'nudgeGame' www/app-v3140.js || { echo 'Missing Nudge feature'; exit 1; }
+          grep -q 'Crazy Random Bonus Spots' www/index.html || { echo 'Missing bonus mode'; exit 1; }
+          grep -q 'Suffixly' www/index.html || { echo 'Missing suffix mode'; exit 1; }
           python3 ../scripts/generate-feedback-audio.py
           (cd .. && node scripts/verify-notifications.cjs)
           node ../scripts/verify-regressions.cjs www
