@@ -19,6 +19,10 @@ workflows:
         script: |
           unzip -q Scrobble_Mobile_0_1_Capacitor.zip -d scrobble-mobile
           python3 scripts/patch-weird-labels.py
+          grep -q 'WEIRD TEST 1.0.48' scrobble-mobile/www/index.html || exit 1
+          grep -q 'Crazy Random Bonus Spots' scrobble-mobile/www/index.html || exit 1
+          grep -q 'Suffixly' scrobble-mobile/www/index.html || exit 1
+          echo 'Verified 1.0.48 embedded Make It Weird bundle'
           cd scrobble-mobile
           npm install
           python3 ../scripts/patch-ios.py
@@ -71,8 +75,8 @@ workflows:
           JSON
 
           # Keep the TestFlight/App Store marketing version ahead of the latest TestFlight version 1.0.45.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.47" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.47" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.48" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.48" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 
