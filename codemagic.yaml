@@ -25,6 +25,9 @@ workflows:
           python3 -m py_compile ../scripts/patch-ios.py
           python3 ../scripts/patch-ios.py
           python3 ../scripts/patch-no-moves.py
+          python3 ../scripts/patch-opening-vowels.py
+          grep -q 'ensureOpeningVowels(0);ensureOpeningVowels(1)' www/game-engine-v3140.js || exit 1
+          grep -q 'weirdChoice strong{font-size:21px' www/index.html || exit 1
           (cd .. && python3 scripts/patch-weird-labels.py)
           node ../scripts/test-weird-modes.cjs www
           grep -q 'id="playComputerMode"' www/index.html || { echo 'Missing modern Play Computer flow'; exit 1; }
@@ -157,8 +160,8 @@ workflows:
 
           # App Store Connect requires the marketing version to be greater than
           # the the prior TestFlight train so this diagnostic build is unmistakable.
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.49" ios/App/App/Info.plist || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.49" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.50" ios/App/App/Info.plist || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.0.50" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" ios/App/App/Info.plist || \
             /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${BUILD_NUMBER}" ios/App/App/Info.plist
 
