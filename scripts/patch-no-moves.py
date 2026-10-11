@@ -9,8 +9,8 @@ def one(old,new):
 one('function finishComputerGame(finisher){', '''let consecutiveNoPlayTurns=0;
 function finishStalledComputerGame(){
   if(!cpuMode||bag.length)return false;
-  cpuThinking=false;swapMode=false;swapSelected.clear();spectatorMode=true;
-  status.textContent='Game over — neither player could make a move.';
+  cpuThinking=false;swapMode=false;swapSelected.clear();spectatorMode=true;current=0;
+  status.textContent='Game over — both players passed and no tiles remain to exchange.';
   render();
   const n1=($('#name1')?.textContent)||'Player 1',n2=($('#name2')?.textContent)||'Computer';
   const winner=scores[0]===scores[1]?null:(scores[0]>scores[1]?0:1);
