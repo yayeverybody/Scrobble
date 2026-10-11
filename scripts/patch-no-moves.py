@@ -28,7 +28,7 @@ replace_once('  if(bag.length>=2&&racks[1].length){', '  if(bag.length>=2&&racks
 replace_once('  }else{\n    current=0;cpuThinking=false;refreshQuadSpaces(true);lastMoveSummary=', '  }else{\n    consecutiveCpuPasses++;\n    if(finishComputerPassStalemate())return;\n    current=0;cpuThinking=false;refreshQuadSpaces(true);lastMoveSummary=')
 replace_once('draw(current);bag.push(...old);shuffle(bag);swapMode=false;', 'draw(current);bag.push(...old);shuffle(bag);consecutiveCpuPasses=0;swapMode=false;')
 replace_once("recall();const playedBy=current,playerName=", "recall();if(cpuMode){consecutiveCpuPasses++;if(finishComputerPassStalemate())return;}const playedBy=current,playerName=")
-replace_once('function freshLocalGame(){hideTurnNotice();hideGameOver();startingPlayer=0;', 'function freshLocalGame(){hideTurnNotice();hideGameOver();consecutiveCpuPasses=0;spectatorMode=false;startingPlayer=0;')
+replace_once('function freshLocalGame(){', 'function freshLocalGame(){consecutiveCpuPasses=0;')
 replace_once('board,racks,scores,bag,current,committed,startingPlayer,weirdRules,quadSpaces,quadTurnKey,', 'board,racks,scores,bag,current,committed,startingPlayer,consecutiveCpuPasses,weirdRules,quadSpaces,quadTurnKey,')
 replace_once('committed=s.committed||0;startingPlayer=', 'committed=s.committed||0;consecutiveCpuPasses=s.consecutiveCpuPasses||0;startingPlayer=')
 replace_once('committed,startingPlayer,lastMoveSummary,weirdRules,quadSpaces,quadTurnKey,updatedAt:', 'committed,startingPlayer,lastMoveSummary,consecutiveCpuPasses,weirdRules,quadSpaces,quadTurnKey,updatedAt:')
