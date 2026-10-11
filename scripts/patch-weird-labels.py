@@ -25,3 +25,5 @@ html_path.write_text(html)
 app_path.write_text(app)
 engine_path.write_text(engine)
 print("Patched legacy archive setup, multi-select, suffix bag. Floating bonuses and proper noun acceptance still require engine implementation.")
+
+raise SystemExit("Development build intentionally blocked: floating 4x bonuses, proper-noun approval, and no-viable-moves logic are not implemented yet.")
