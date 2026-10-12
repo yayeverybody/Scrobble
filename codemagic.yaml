@@ -26,6 +26,8 @@ workflows:
           python3 ../scripts/patch-ios.py
           python3 ../scripts/patch-no-moves.py
           python3 ../scripts/patch-opening-vowels.py
+          python3 ../scripts/patch-name-dropper-names.py
+          grep -q 'SARA SARAH' www/game-engine-v3140.js || { echo 'Missing common first-name allowlist'; exit 1; }
           grep -q 'ensureOpeningVowels(0);ensureOpeningVowels(1)' www/game-engine-v3140.js || exit 1
           grep -q 'weirdChoice strong{font-size:21px' www/index.html || exit 1
           (cd .. && python3 scripts/patch-weird-labels.py)
