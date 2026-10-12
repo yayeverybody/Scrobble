@@ -34,6 +34,7 @@ workflows:
           grep -q 'weirdChoice strong{font-size:21px' www/index.html || exit 1
           (cd .. && python3 scripts/patch-weird-labels.py)
           node ../scripts/test-weird-modes.cjs www
+          node ../scripts/verify-ssa-names.cjs www/game-engine-v3140.js
           grep -q 'finishComputerPassStalemate' www/game-engine-v3140.js || exit 1
           node ../scripts/verify-integration.cjs www
           grep -q 'id="playComputerMode"' www/index.html || { echo 'Missing modern Play Computer flow'; exit 1; }
