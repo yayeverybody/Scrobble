@@ -27,6 +27,7 @@ workflows:
           python3 ../scripts/patch-no-moves.py
           python3 ../scripts/patch-opening-vowels.py
           python3 ../scripts/patch-direct-invites.py
+          node --check www/app-v3140.js
           python3 ../scripts/patch-name-dropper-names.py
           python3 ../scripts/patch-ssa-names.py
           grep -q 'SSA national baby names, imported at build time' www/game-engine-v3140.js || { echo 'Missing SSA name data'; exit 1; }
