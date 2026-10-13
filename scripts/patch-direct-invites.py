@@ -1,4 +1,4 @@
-"""Add direct player lookup and in-app invitation inbox to the existing Scrobble UI.
+"""Add in-app invitation inbox to the existing Scrobble UI.
 Runs after patch-ios.py; preserves shareable invitation links.
 """
 from pathlib import Path
@@ -7,49 +7,7 @@ s=p.read_text()
 anchor="  function askEndGame(id){"
 if s.count(anchor)!=1:raise SystemExit('Direct invite app anchor missing')
 js=r"""
-  // Direct invites use the existing server-created game and secure invitation RPCs.
-  const directPanel=document.createElement('section');
-  directPanel.id='scrobbleDirectInvite';
-  directPanel.innerHTML='<div style="margin:12px 0;color:#fff;font-weight:800">INVITE A SCROBBLE PLAYER</div><input id="directPlayerSearch" maxlength="40" placeholder="Search by username (2+ letters)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:12px;border-radius:9px"><div id="directPlayerResults" role="status" style="margin:8px 0"></div><p style="color:#eee;font-size:13px">Or use Create Game to share a link with someone new.</p>';
-  friendModePanel.insertBefore(directPanel,startFriendGame);
-  const directSearch=directPanel.querySelector('#directPlayerSearch');
-  const directResults=directPanel.querySelector('#directPlayerResults');
-  let directSearchSerial=0,directSending=false;
-  function directMessage(message){directResults.textContent=message}
-  directSearch.addEventListener('input',async()=>{
-    const q=directSearch.value.trim(),serial=++directSearchSerial;
-    directResults.replaceChildren();
-    if(q.length<2)return;
-    directMessage('Searching…');
-    try{
-      const players=await rpc('search_scrobble_players',{p_query:q});
-      if(serial!==directSearchSerial)return;
-      directResults.replaceChildren();
-      if(!players?.length){directMessage('No matching players. You can still share a link.');return}
-      for(const player of players){
-        const b=document.createElement('button');b.type='button';
-        b.textContent='INVITE '+player.display_name;
-        b.style.cssText='display:block;width:100%;margin:7px 0;padding:12px;background:#f2bd45;color:#173044;border:0;border-radius:9px;font-weight:800';
-        b.onclick=async()=>{
-          if(directSending)return;
-          directSending=true;b.disabled=true;
-          try{
-            await createGame();
-            if(!pendingNewGame)throw Error('Could not prepare game');
-            const created=await persistPendingNewGame();
-            if(!created?.id)throw Error('Game could not be created');
-            await rpc('send_scrobble_direct_invite',{p_game_id:created.id,p_recipient_id:player.id});
-            resetFriendInvite();gameModeBox.classList.add('hidden');
-            await refreshGames();
-            alert('Invitation sent to '+player.display_name+'. They can accept in Scrobble.');
-          }catch(e){alert('Could not invite player: '+e.message)}
-          finally{directSending=false;b.disabled=false}
-        };
-        directResults.appendChild(b);
-      }
-    }catch(e){if(serial===directSearchSerial)directMessage('Player search unavailable: '+e.message)}
-  });
-  const inbox=document.createElement('section');
+  // No username search: invitations are handled by existing link flow.\n  const inbox=document.createElement('section');
   inbox.id='scrobbleDirectInbox';
   inbox.style.cssText='margin:12px 0;padding:12px;border-radius:12px;background:#133e60;color:#fff';
   const inboxTitle=document.createElement('div');inboxTitle.textContent='GAME INVITATIONS';inboxTitle.style.fontWeight='900';
