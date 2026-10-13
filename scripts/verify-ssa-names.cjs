@@ -1,9 +1,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const s=fs.readFileSync(process.argv[2]||'www/game-engine-v3140.js','utf8');
-assert(s.includes('SSA national baby names, imported at build time'),'SSA list absent');
-assert(s.includes("for(const n of '"),'SSA names not populated');
-assert(s.includes("properNouns.add(n)"),'SSA names not inserted into allowlist');
-assert(s.includes("hasWeirdRule('name_dropper')&&properNouns.has(word.toUpperCase())"),'Name Dropper rule gate missing');
-assert(s.includes('SARA SARAH'),'Common name variants absent from curated list');
-assert(s.includes('pendingChallengeConfirm'),'Opponent review missing');
-console.log('PASS: SSA names loaded into Name Dropper, existing rule gate and review preserved');
+const source=fs.readFileSync(process.argv[2]||'www/game-engine-v3140.js','utf8');
+assert(source.includes('const properNouns=new Set(('),'Curated Name Dropper list missing');
+assert(source.includes('SARA SARAH'),'Common first names missing');
+assert(source.includes("hasWeirdRule('name_dropper')&&properNouns.has(word.toUpperCase())"),'Name Dropper rule gate missing');
+assert(source.includes('pendingChallengeConfirm'),'Opponent review path missing');
+console.log('PASS: offline Name Dropper names, mode gating and opponent review');
