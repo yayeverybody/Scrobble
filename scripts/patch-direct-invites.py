@@ -36,6 +36,20 @@ js=r"""
         name.textContent=opponent.display_name||'Player';
         name.style.cssText='font-size:11px;line-height:1.2;max-width:100%;overflow-wrap:anywhere';
         btn.append(photo,name);
+        client.from('profiles').select('avatar_url').eq('id',opponent.id).maybeSingle().then(({data})=>{
+          if(!data?.avatar_url)return;
+          try{
+            const url=new URL(data.avatar_url,location.href);
+            if(url.protocol!=='https:')return;
+            const img=document.createElement('img');
+            img.src=url.href;
+            img.alt='';
+            img.loading='lazy';
+            img.style.cssText='width:100%;height:100%;object-fit:cover';
+            img.onerror=()=>{photo.textContent=(opponent.display_name||'?').trim().slice(0,1).toUpperCase()};
+            photo.replaceChildren(img);
+          }catch(e){}
+        }).catch(()=>{});
         btn.onclick=async()=>{
           if(btn.disabled)return;
           btn.disabled=true;
