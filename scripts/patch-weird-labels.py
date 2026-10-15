@@ -39,14 +39,7 @@ for old,new in (
         raise SystemExit("Missing app label " + old)
     app = app.replace(old,new)
 
-# Permanent diagnostic for this development build, independent of game mode modal layout.
-marker = '<div id="scrobble-build-id" style="position:fixed;bottom:0;right:0;z-index:2147483647;background:#13283a;color:white;padding:3px 7px;font:11px Arial;pointer-events:none">WEIRD TEST 1.0.50</div>'
-if 'id="scrobble-build-id"' not in html:
-    if '</body>' not in html:
-        raise SystemExit("No closing body tag for build marker")
-    html = html.replace('</body>', marker + '\\n</body>', 1)
-if "WEIRD TEST 1.0.50" not in html:
-    raise SystemExit("Missing build marker")
+# No persistent debug banner in TestFlight or release builds.
 html_path.write_text(html, encoding="utf-8")
 app_path.write_text(app, encoding="utf-8")
 print("PASS: bundled game contains three stackable modes and existing gameplay handlers.")
