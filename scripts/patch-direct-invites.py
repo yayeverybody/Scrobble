@@ -28,8 +28,14 @@ js=r"""
       recentPanel.hidden=false;
       for(const opponent of opponents){
         const btn=document.createElement('button');btn.type='button';
-        btn.textContent=opponent.display_name||'Previous opponent';
-        btn.style.cssText='display:block;width:100%;padding:12px;margin:7px 0;border-radius:10px;border:0;background:#f2bd45;color:#173044;font-weight:900;text-align:left';
+        btn.style.cssText='display:flex;flex-direction:column;align-items:center;gap:5px;width:100%;min-width:0;padding:6px 2px;border:0;background:transparent;color:#fff;font-weight:700;text-align:center';
+        const photo=document.createElement('div');
+        photo.style.cssText='width:100%;aspect-ratio:1;border-radius:50%;background:#f2bd45;color:#173044;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:23px;font-weight:900';
+        photo.textContent=(opponent.display_name||'?').trim().slice(0,1).toUpperCase();
+        const name=document.createElement('span');
+        name.textContent=opponent.display_name||'Player';
+        name.style.cssText='font-size:11px;line-height:1.2;max-width:100%;overflow-wrap:anywhere';
+        btn.append(photo,name);
         btn.onclick=async()=>{
           if(btn.disabled)return;
           btn.disabled=true;
