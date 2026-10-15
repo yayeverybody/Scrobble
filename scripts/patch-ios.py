@@ -412,7 +412,7 @@ new_game='''    <div class="modeChooser">
       <label class="weirdChoice"><input type="checkbox" value="name_dropper"><span><strong>Name Dropper</strong><small>Names and places are allowed; unlisted names need opponent approval.</small></span></label>
       <label class="weirdChoice"><input type="checkbox" value="suffix_suffocation"><span><strong>Suffixly</strong><small>Add 4 S, 3 D, 3 R and 2 Y tiles.</small></span></label>
     </div>
-    <div id="friendModePanel" class="modePanel hidden"><button id="startFriendGame" class="friendStart" type="button">CREATE GAME</button></div>
+    <div id="friendModePanel" class="modePanel hidden"><button id="startFriendGame" class="friendStart" type="button" style="font-size:calc(1em + 4pt)">INVITE A FRIEND</button></div>
     <div id="computerModePanel" class="modePanel hidden"><div class="cpuChoices">
       <button type="button" data-cpu-difficulty="easy"><strong>EASY</strong><span>Relaxed opponent</span></button>
       <button type="button" data-cpu-difficulty="medium"><strong>MEDIUM</strong><span>Competitive opponent</span></button>
