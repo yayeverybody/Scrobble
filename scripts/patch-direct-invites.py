@@ -15,6 +15,7 @@ js=r"""
   recentHeading.textContent='PLAY AGAINST SOMEONE YOU KNOW';
   recentHeading.style.cssText='font-weight:900;margin:8px 0';
   const recentItems=document.createElement('div');
+  recentItems.style.cssText='display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start';
   recentPanel.append(recentHeading,recentItems);
   friendModePanel.insertBefore(recentPanel,startFriendGame);
   async function refreshRecentOpponents(){
