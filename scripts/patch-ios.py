@@ -123,3 +123,89 @@ if 'deleteAccount.onclick=async()=>{' not in app_text:
 '''
     app_text = app_text.replace(auth_marker, handler + auth_marker, 1)
 app.write_text(app_text)
+
+# Keep board presentation and delayed UI work scoped to the loaded game.
+# Applied after extracting the archived mobile source, as with the other iOS fixes.
+def replace_required(source, old, new):
+    if old not in source:
+        raise SystemExit('Game UI patch target missing: ' + old[:90])
+    return source.replace(old, new, 1)
+
+engine = Path('www/game-engine-v3140.js')
+game = engine.read_text()
+if 'function resetGamePresentation()' not in game:
+    helpers = '''let gameGeneration=0;
+function scheduleGameTask(callback,delay){
+  const generation=gameGeneration;
+  return setTimeout(()=>{if(generation===gameGeneration)callback()},delay)
+}
+function resetGamePresentation(){
+  gameGeneration++;
+  turnNoticeSummary=null;
+  turnNoticeOverlay.classList.add('hidden');
+  wordOverlay.classList.add('hidden');
+  hideGameOver();noticeMode=false;
+  clearTimeout(movePreviewTimer);movePreviewToken++;
+  moveText.textContent='';status.textContent='';
+  const bar=$('#lastPlayBar');if(bar)bar.textContent='';
+  boardTransform.classList.remove('slowZoomOut');
+  scoreAnimations.forEach(id=>{if(id)cancelAnimationFrame(id)});
+  scoreAnimations=[null,null];displayedScores=[null,null];
+}
+function renderGameDetails(){
+  const bar=$('#lastPlayBar');
+  if(bar)bar.textContent=lastMoveSummary?.move_type==='play'?(lastMoveSummary.text||`${lastMoveSummary.playerName||'Player'} played ${(lastMoveSummary.words||[]).join(' / ')} for ${Number(lastMoveSummary.points)||0}`):'';
+  const indicator=$('#activeWeirdRules');
+  if(indicator){
+    const names={all_or_none:'All or None',too_many_ts:'All or None',vowel_movement:'Vowel Movement',high_roller:'High Roller',too_many_tiles:'Too Many Tiles',seven_heaven:'Too Many Tiles',oops_all_ys:'Oops! All Y’s'};
+    const active=[...new Set(weirdRules.map(id=>names[id]||id.replace(/_/g,' ')))];
+    indicator.textContent=active.length?'Make it weird: '+active.join(' • '):'';
+    indicator.hidden=!active.length;
+  }
+}
+'''
+    # Scope all existing delayed board UI operations; leave Promise timers intact
+    # so in-flight operations can settle and check their generation afterward.
+    game = game.replace('setTimeout(()=>', 'scheduleGameTask(()=>')
+    game = replace_required(game, 'function hasWeirdRule(id)', helpers + 'function hasWeirdRule(id)')
+    for old, new in [
+        ('function freshLocalGame(){hideTurnNotice();hideGameOver();', 'function freshLocalGame(){resetGamePresentation();'),
+        ("loadComputerState(s,difficulty='medium'){", "loadComputerState(s,difficulty='medium'){resetGamePresentation();"),
+        ('loadCloudState(s,slot){', 'loadCloudState(s,slot){resetGamePresentation();'),
+        ('render=function(){originalRender();', 'render=function(){originalRender();renderGameDetails();'),
+        ('board,racks,scores,bag,current,committed,startingPlayer,\n      updatedAt', 'board,racks,scores,bag,current,committed,startingPlayer,weirdRules,\n      updatedAt'),
+        ('  showTurnNotice(summary){showTurnNotice(summary)},', '  showTurnNotice(summary){showTurnNotice(summary)},\n  scheduleTask(callback,delay){return scheduleGameTask(callback,delay)},\n  leaveGame(){resetGamePresentation()},'),
+        ('  if(!cpuMode||current!==1||cpuThinking)return;', '  if(!cpuMode||current!==1||cpuThinking)return;\n  const generation=gameGeneration;'),
+        ('await new Promise(r=>setTimeout(r,850));', 'await new Promise(r=>setTimeout(r,850));\n  if(generation!==gameGeneration)return;'),
+        ('const result=await realDictionaryLookup(w.word);\n      if(result.valid', 'const result=await realDictionaryLookup(w.word);\n      if(generation!==gameGeneration)return;\n      if(result.valid'),
+        ('async function playMove(){', 'async function playMove(){\n  const generation=gameGeneration;'),
+        ('for(const w of words)results.push(await realDictionaryLookup(w.word));', 'for(const w of words){results.push(await realDictionaryLookup(w.word));if(generation!==gameGeneration)return;}')
+    ]:
+        game = replace_required(game, old, new)
+    engine.write_text(game)
+
+app = Path('www/app-v3140.js')
+app_text = app.read_text()
+if 'window.ScrobbleGame.leaveGame();' not in app_text:
+    app_text = replace_required(app_text, '  function showDash(){', '  function showDash(){\n    window.ScrobbleGame.leaveGame();')
+    for old in [
+        'setTimeout(()=>window.ScrobbleGame.showTurnNotice(rec.state.lastMoveSummary),180)',
+        'setTimeout(()=>window.ScrobbleGame.showTurnNotice(summary),180)',
+        'setTimeout(()=>window.ScrobbleGame.runComputerTurn(rec.difficulty),350)',
+        'setTimeout(()=>window.ScrobbleGame.runComputerTurn(rec.difficulty),6000)'
+    ]:
+        app_text = replace_required(app_text, old, old.replace('setTimeout(', 'window.ScrobbleGame.scheduleTask('))
+    app.write_text(app_text)
+
+index = Path('www/index.html')
+text = index.read_text()
+if 'id="activeWeirdRules"' not in text:
+    # The bar now renders from the loaded state instead of a global turn listener.
+    text = replace_required(text, '<script src="last-play-v3120.js?v=312"></script>', '')
+    text = replace_required(text, '</span></button></div></section>\n</div>', '</span></button></div><div id="activeWeirdRules" class="activeWeirdRules" hidden></div></section>\n</div>')
+    text = replace_required(text, '</head>', '''<style>
+#scrobble-v4 .activeWeirdRules{padding:6px 8px 2px;text-align:center;color:#d9efff;font:600 11px/1.35 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}
+#scrobble-v4 .activeWeirdRules[hidden]{display:none}
+</style>
+</head>''')
+    index.write_text(text)
