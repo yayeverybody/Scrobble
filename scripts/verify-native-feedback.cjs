@@ -14,7 +14,7 @@ assert(swift.includes('didRegisterForRemoteNotificationsWithDeviceToken'));
 const storyboard = fs.readFileSync(path.join(root, 'Base.lproj/Main.storyboard'), 'utf8');
 assert(storyboard.includes('customClass="CAPBridgeViewController" customModule="Capacitor"'));
 assert(!storyboard.includes('ScrobbleViewController'));
-for (const note of ['finish', ...Array.from({ length: 12 }, (_, i) => 'note-' + i)]) {
+for (const note of ['finish', 'big-finish', 'button', 'return', 'shuffle', 'error', 'create', ...Array.from({ length: 3 }, (_, i) => 'tile-' + i), ...Array.from({ length: 12 }, (_, i) => 'note-' + i)]) {
   const file = fs.readFileSync(path.join(root, 'public/feedback', note + '.wav'));
   assert.equal(file.subarray(0, 4).toString(), 'RIFF');
   assert(file.length > 1000);

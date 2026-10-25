@@ -33,11 +33,20 @@
     } catch (_) {}
   }
   const webSounds = new Map();
+  let tileVariant = 0;
+  function soundName(kind, options = {}) {
+    if (kind === 'tile' || kind === 'splashTile') return 'tile-' + (tileVariant++ % 3);
+    if (kind === 'finish') return options.gain >= 50 ? 'big-finish' : 'finish';
+    if (kind === 'splashStudio') return 'create';
+    if (kind === 'tap') return 'button';
+    if (['return', 'shuffle', 'error', 'create'].includes(kind)) return kind;
+    return 'note-' + Math.min(11, Math.floor(Math.max(0, Math.min(1, options.progress || 0)) * 11));
+  }
   function soundFallback(payload) {
     if (!payload.sound || document.hidden || typeof Audio === 'undefined') return;
     const p = Math.max(0, Math.min(1, payload.progress || 0));
     const chime = ['finish', 'splashStudio'].includes(payload.kind);
-    const name = chime ? 'finish' : 'note-' + Math.min(11, Math.floor(p * 11));
+    const name = payload.soundName || soundName(payload.kind, payload);
     try {
       const player = new Audio('feedback/' + name + '.wav');
       player.volume = (payload.kind === 'splashTile' ? .2 + p * .08 : payload.kind === 'splashStudio' ? .35 : payload.kind === 'finish' ? .55 : .25 + p * .2) * .6;
@@ -49,8 +58,10 @@
     } catch (_) {}
   }
   function play(kind, options = {}) {
-    if (document.hidden || !plugins()) return;
-    const payload = { kind, ...options, haptics: settings.haptics, sound: settings.sound && ['score', 'finish', 'splashTile', 'splashStudio'].includes(kind) };
+    if (document.hidden) return;
+    const native = plugins();
+    const payload = { kind, ...options, haptics: settings.haptics, soundName: soundName(kind, options), sound: settings.sound };
+    if (!native) { soundFallback(payload); return; }
     try {
       if (custom) Promise.resolve(custom.play(payload)).then(result => {
         if (result?.audioError) console.warn('Scrobble scoring audio:', result.audioError);
@@ -95,6 +106,7 @@
     tile: () => play('tile'),
     tileReturn: () => play('return'),
     error: () => play('error'),
+    shuffle: () => play('shuffle'),
     scoreCancel: cancel,
     scoreStart(slot, gain) {
       cancel(slot);
@@ -165,6 +177,12 @@
 
   document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAll(); });
   window.addEventListener('scrobble:home', cancelAll);
+  window.addEventListener('scrobble:game-over', () => {
+    // Let the score animation deliver the final flourish instead of layering two.
+    if (scorePulses.size) {
+      for (const pulse of scorePulses.values()) pulse.gain = Math.max(50, pulse.gain);
+    } else play('finish', { key: 'game-over', gain: 50 });
+  });
   document.addEventListener('click', event => {
     if (!event.isTrusted) return;
     const button = event.target?.closest?.('button');
@@ -172,12 +190,14 @@
     // Successful tile placement provides its own precise feedback.
     if (button.closest?.('.cell') || button.closest?.('.rackbtn')) return;
     if (button.id === 'startFriendGame' || button.hasAttribute('data-cpu-difficulty')) feedback.create();
-    else feedback.tap();
+    else if (button.id === 'shuffle') feedback.shuffle();
+    else if (!['pass', 'swap', 'play', 'feedback-test'].includes(button.id)) feedback.tap();
   }, true);
   document.addEventListener('change', event => {
     if (event.isTrusted && event.target?.matches?.('#gameModeBox .weirdChoice input') && !event.target.disabled) feedback.tap();
   }, true);
   window.addEventListener('scrobble:turn-ended', event => {
-    if (['pass', 'swap'].includes(event.detail?.move_type)) feedback.create();
+    if (event.detail?.move_type === 'swap') feedback.shuffle();
+    else if (event.detail?.move_type === 'pass') feedback.tileReturn();
   });
 })();

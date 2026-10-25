@@ -1,0 +1,112 @@
+{
+  "tile-0": {
+    "pack": "impact",
+    "source": "impactWood_light_000.ogg",
+    "pitch": 1
+  },
+  "tile-1": {
+    "pack": "impact",
+    "source": "impactWood_light_001.ogg",
+    "pitch": 1
+  },
+  "tile-2": {
+    "pack": "impact",
+    "source": "impactWood_light_002.ogg",
+    "pitch": 1
+  },
+  "button": {
+    "pack": "interface",
+    "source": "click_001.ogg",
+    "pitch": 1
+  },
+  "return": {
+    "pack": "impact",
+    "source": "impactWood_medium_001.ogg",
+    "pitch": 1
+  },
+  "shuffle": {
+    "pack": "interface",
+    "source": "switch_006.ogg",
+    "pitch": 1
+  },
+  "error": {
+    "pack": "impact",
+    "source": "impactWood_heavy_002.ogg",
+    "pitch": 1
+  },
+  "create": {
+    "pack": "interface",
+    "source": "confirmation_001.ogg",
+    "pitch": 1
+  },
+  "finish": {
+    "pack": "interface",
+    "source": "confirmation_002.ogg",
+    "pitch": 1
+  },
+  "big-finish": {
+    "pack": "interface",
+    "source": "confirmation_004.ogg",
+    "pitch": 1
+  },
+  "note-0": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 0.8655365610061431
+  },
+  "note-1": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 0.8908987181403393
+  },
+  "note-2": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 0.9170040432046712
+  },
+  "note-3": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 0.9438743126816935
+  },
+  "note-4": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 0.9715319411536059
+  },
+  "note-5": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 1.0
+  },
+  "note-6": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 1.029302236643492
+  },
+  "note-7": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 1.0594630943592953
+  },
+  "note-8": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 1.0905077326652577
+  },
+  "note-9": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 1.122462048309373
+  },
+  "note-10": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 1.155352696872273
+  },
+  "note-11": {
+    "pack": "interface",
+    "source": "select_001.ogg",
+    "pitch": 1.189207115002721
+  }
+}
