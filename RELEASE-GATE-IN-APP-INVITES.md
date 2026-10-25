@@ -27,7 +27,8 @@ This checklist is required before shipping the next iOS release. The static Code
 - [ ] Classic mode uses ordinary dictionary validation, not the SSA proper-name list.
 - [ ] Name Dropper recognizes Sara, Sarah, Josh, Joshua and other SSA names.
 - [ ] Unknown proper names still follow the opponent-review path.
-- [ ] Crazy Random Bonus Spots, Name Dropper, and Suffixly each work alone and together.
+- [ ] Crazy Random Bonus Spots, Name Dropper, and Vowels Are Worth Too Much each work alone and together.
+- [ ] A/E/I/O/U show and score 20, Y stays normal, and multiplayer endgame deductions use the saved rule.
 - [ ] Game ends correctly on last tile played with an empty bag.
 - [ ] Game ends correctly after consecutive passes with an empty bag, including CPU games.
 - [ ] Final scores and tile deductions are correct and persist after reopening.
