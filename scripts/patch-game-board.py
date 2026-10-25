@@ -57,7 +57,7 @@ if 'function clearBoardPresentation()' not in game:
     html = once(html, '<script src="last-play-v3120.js?v=312"></script>', '')
     html = once(html, '</span></button></div></section>\n</div>', '</span></button></div><div id="activeWeirdRules" class="activeWeirdRules" hidden></div></section>\n</div>')
     html = once(html, '</head>', '''<style id="current-game-rule-label">
-#scrobble-v4 .activeWeirdRules{padding:6px 8px 2px;text-align:center;color:#d9efff;font:600 16.5px/1.35 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}
+#scrobble-v4 .activeWeirdRules{background:#0b69a9;padding:7px 10px;text-align:center;color:#d9efff;font:600 16.5px/1.35 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}
 #scrobble-v4 .activeWeirdRules[hidden]{display:none}
 </style></head>''')
     engine.write_text(game);app.write_text(js);index.write_text(html)
