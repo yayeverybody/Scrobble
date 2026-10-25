@@ -62,3 +62,28 @@ if 'function clearBoardPresentation()' not in game:
 </style></head>''')
     engine.write_text(game);app.write_text(js);index.write_text(html)
 print('PASS: board fixes applied to the modern integration, preserving all three stackable modes')
+
+# Paint the waiting rack directly. Nested filters on percentage-sized SVG tiles
+# can disappear in WKWebView even when the rack DOM and saved data are intact.
+game=engine.read_text()
+if 'owner=startingPlayer,muted=false' not in game:
+    game=once(game, 'function tileSVG(letter,owner=startingPlayer){', 'function tileSVG(letter,owner=startingPlayer,muted=false){')
+    game=once(game, "gid='g'+letter+value+(opponent?'o':'s')", "gid='g'+letter+value+(opponent?'o':'s')+(muted?'m':'')")
+    for old,new in [
+        ("top=opponent?'#ffeebc':'#ffdc79'", "top=muted?'#e0e9ef':opponent?'#ffeebc':'#ffdc79'"),
+        ("middle=opponent?'#ffe3a4':'#ffc748'", "middle=muted?'#bccedb':opponent?'#ffe3a4':'#ffc748'"),
+        ("bottom=opponent?'#f6d08f':'#eda01f'", "bottom=muted?'#9bb3c5':opponent?'#f6d08f':'#eda01f'"),
+        ("stroke=opponent?'#eac589':'#d58b12'", "stroke=muted?'#7893a8':opponent?'#eac589':'#d58b12'"),
+        ("ink='#111'", "ink=muted?'#344b5c':'#111'"),
+        ('tileSVG(l,rackOwner)', 'tileSVG(l,rackOwner,spectatorMode||(cpuMode&&current===1))')
+    ]:
+        game=once(game,old,new)
+    engine.write_text(game)
+html=index.read_text()
+if 'id="waiting-rack-paint"' not in html:
+    html=once(html,'</head>','''<style id="waiting-rack-paint">
+#scrobble-v4.spectator #rack .rackTile{filter:none!important;opacity:1!important;transform:none!important}
+#scrobble-v4 #rack .tileGraphic{filter:none!important}
+#scrobble-v4 #rack .rackTile{aspect-ratio:1/1}
+</style></head>''')
+    index.write_text(html)

@@ -40,7 +40,8 @@ try{
       const rackState={...blank(),rack:['A','B','C','D','E','F','G'],current_slot:0,weird_rules:['high_roller']};
       g.loadCloudState(rackState,1);g.setSpectator(false);
       byId('pass').click();
-      const rackAfterPass={count:byId('rack').children.length,locked:byId('scrobble-v4').classList.contains('spectator'),playDisabled:byId('play').disabled};
+      const mutedColor=()=>document.querySelector('#rack linearGradient stop')?.getAttribute('stop-color');
+      const rackAfterPass={color:mutedColor(),filter:getComputedStyle(document.querySelector('#rack .rackTile')).filter,count:byId('rack').children.length,locked:byId('scrobble-v4').classList.contains('spectator'),playDisabled:byId('play').disabled};
       const waiting={...rackState,current_slot:1};
       g.loadCloudState(waiting,1);g.setSpectator(true);
       const rackWaiting=byId('rack').children.length;
@@ -48,13 +49,17 @@ try{
       const slotTwoWaiting=byId('rack').children.length;
       g.loadCloudState({...rackState,current_slot:1},2);g.setSpectator(false);
       const slotTwoActive=byId('rack').children.length;
+      const activeColor=mutedColor();
       const fontSize=getComputedStyle(byId('activeWeirdRules')).fontSize;
       g.newComputerGame('easy');
       const computerRack=byId('rack').children.length;
-      return {rackAfterPass,rackWaiting,slotTwoWaiting,slotTwoActive,fontSize,computerRack,first,clean,cloud,leftClean,freshClean,persisted,cpuCancelled:before.scores.join()===after.scores.join()&&after.current===0};
+      return {activeColor,rackAfterPass,rackWaiting,slotTwoWaiting,slotTwoActive,fontSize,computerRack,first,clean,cloud,leftClean,freshClean,persisted,cpuCancelled:before.scores.join()===after.scores.join()&&after.current===0};
     };
     const result=JSON.parse(JSON.stringify(await w.eval('('+run.toString()+')()')));
     assert.equal(result.rackAfterPass.count,7);
+    assert.equal(result.rackAfterPass.color,'#e0e9ef');
+    assert.equal(result.rackAfterPass.filter,'none');
+    assert.notEqual(result.activeColor,'#e0e9ef');
     assert.ok(result.rackAfterPass.locked);
     assert.ok(result.rackAfterPass.playDisabled);
     assert.equal(result.rackWaiting,7);
