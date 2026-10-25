@@ -11,3 +11,5 @@ subprocess.run([sys.executable,str(repo/'scripts/patch-weird-labels.py')],cwd=ro
 subprocess.run([sys.executable,str(repo/'scripts/patch-game-board.py')],cwd=web,check=True,stdout=subprocess.DEVNULL)
 
 subprocess.run([sys.executable,str(repo/'scripts/patch-vowel-mode.py')],cwd=web,check=True,stdout=subprocess.DEVNULL)
+
+subprocess.run([sys.executable,str(repo/'scripts/patch-fake-ad.py')],cwd=web,check=True,stdout=subprocess.DEVNULL)

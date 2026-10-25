@@ -1,0 +1,25 @@
+<style id="mirrors-ad-style">
+#mirrorsAd[hidden]{display:none!important}
+#mirrorsAd{position:fixed;inset:0;z-index:2147483500;display:flex;align-items:center;justify-content:center;overflow:auto;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:#173343;font-family:Arial,Helvetica,sans-serif;color:#30251b}
+#mirrorsAd .mirrorCard{position:relative;width:min(100%,440px);max-height:100%;overflow:auto;background:#fff3d9;border:3px solid #d8aa5e;border-radius:12px;box-shadow:0 12px 40px #0005;text-align:center;padding:6px}
+#mirrorsAdClose{position:absolute;right:6px;top:6px;min-width:44px;min-height:44px;z-index:1;border:0;border-radius:50%;background:#173343;color:#fff;font:32px/1 Arial;cursor:pointer}
+#mirrorsAdClose:focus-visible{outline:3px solid #e09520;outline-offset:3px}
+#mirrorsAd .sponsor,#mirrorsAd h1,#mirrorsAd .mirrorTagline,#mirrorsAd .mirrorFooter{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#mirrorsAd .sponsor{font-size:11px;letter-spacing:.2em;text-transform:uppercase;margin:4px 38px 8px}
+#mirrorsAd h1{font-family:Georgia,serif;font-weight:900;font-size:clamp(42px,12vw,62px);line-height:1;margin:0 0 10px;letter-spacing:-.045em}
+#mirrorsAd .mirrorTagline{font:700 clamp(18px,5vw,23px)/1.2 Georgia,serif;margin:0 auto 16px;max-width:300px}
+#mirrorsAd img{display:block;width:100%;height:auto;max-height:calc(100dvh - 70px - env(safe-area-inset-top) - env(safe-area-inset-bottom));object-fit:contain;border-radius:5px;background:#e8ba94}
+#mirrorsAd .mirrorFooter{font:italic 16px/1.3 Georgia,serif;margin:13px 0 0}
+body.scrobbleAdActive{overflow:hidden!important}
+</style>
+<div id="mirrorsAd" role="dialog" aria-modal="true" aria-labelledby="mirrorsAdTitle" aria-describedby="mirrorsAdTagline" hidden>
+  <div class="mirrorCard">
+    <button id="mirrorsAdClose" type="button" aria-label="Close ad and return to games">×</button>
+    <p class="sponsor">Sponsored by</p>
+    <h1 id="mirrorsAdTitle">Mirrors.</h1>
+    <p id="mirrorsAdTagline" class="mirrorTagline">Reflect yourself back to yourself.</p>
+    <img src="fake-ads/mirrors.jpg" alt="A delighted goof gazes adoringly at his own reflection in an ornate mirror. Now featuring: you." width="1024" height="1536">
+    <p class="mirrorFooter">Now featuring: you.</p>
+  </div>
+</div>
+<script src="mirrors-ad.js"></script>
