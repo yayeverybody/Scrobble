@@ -1,0 +1,77 @@
+// Install jsdom, then run: node tests/game-switch.cjs
+const {JSDOM}=require('jsdom');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {execFileSync}=require('node:child_process');
+const assert=require('node:assert/strict');
+const repo=path.resolve(__dirname,'..');
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'scrobble-ui-'));
+(async()=>{
+try{
+  execFileSync('python3',[path.join(repo,'scripts/prepare-board-tests.py'),dir]);
+  const read=name=>fs.readFileSync(path.join(dir,'scrobble-mobile','www',name),'utf8');
+  const dom=new JSDOM(read('index.html'),{url:'http://localhost/',runScripts:'outside-only',pretendToBeVisual:true});
+  try{
+    const w=dom.window;
+    w.fetch=async()=>({ok:true,text:async()=>read('scrobble-classic-lexicon.txt')});
+    w.Element.prototype.scrollIntoView=function(){};
+    w.eval(read('game-engine-v3140.js'));
+    const run=async function(){
+      const g=window.ScrobbleGame;
+      const byId=id=>document.getElementById(id);
+      const blank=()=>({board:Array.from({length:15},()=>Array(15).fill(null)),racks:[['A','T'],['E','N']],scores:[18,5],bag:['A'],current:0,committed:0,weirdRules:[]});
+      const a=blank();
+      a.lastMoveSummary={move_type:'play',playerName:'Josh',words:['CAT'],points:18,text:'Josh played CAT for 18'};
+      a.weirdRules=['high_roller'];g.loadComputerState(a);
+      const first={score:byId('lastPlayBar').textContent,rules:byId('activeWeirdRules').textContent};
+      g.scheduleTask(()=>g.showTurnNotice(a.lastMoveSummary),20);
+      g.loadComputerState(blank());await new Promise(r=>setTimeout(r,60));
+      const clean=!byId('lastPlayBar').textContent&&byId('turnNoticeOverlay').classList.contains('hidden')&&byId('activeWeirdRules').hidden;
+      const b=blank();b.lastMoveSummary={move_type:'play',playerName:'Sara',words:['DOG'],points:5};b.weird_rules=['too_many_tiles'];b.rack=['A'];b.current_slot=0;
+      g.loadCloudState(b,1);
+      const cloud={score:byId('lastPlayBar').textContent,rules:byId('activeWeirdRules').textContent};
+      g.scheduleTask(()=>g.showTurnNotice(a.lastMoveSummary),20);g.leaveGame();await new Promise(r=>setTimeout(r,60));
+      const leftClean=byId('turnNoticeOverlay').classList.contains('hidden')&&!byId('lastPlayBar').textContent;
+      g.newComputerGame('easy',['vowel_movement']);
+      const freshClean=!byId('lastPlayBar').textContent&&byId('activeWeirdRules').textContent.includes('Vowel Movement');
+      const persisted=JSON.parse(localStorage.getItem('scrobble-v9-current')).weirdRules;
+      const cpu=blank();cpu.current=1;g.loadComputerState(cpu);const running=g.runComputerTurn('easy');g.loadComputerState(blank());const before=g.exportState();await running;const after=g.exportState();
+      const rackState={...blank(),rack:['A','B','C','D','E','F','G'],current_slot:0,weird_rules:['high_roller']};
+      g.loadCloudState(rackState,1);g.setSpectator(false);
+      byId('pass').click();
+      const rackAfterPass={count:byId('rack').children.length,locked:byId('scrobble-v4').classList.contains('spectator'),playDisabled:byId('play').disabled};
+      const waiting={...rackState,current_slot:1};
+      g.loadCloudState(waiting,1);g.setSpectator(true);
+      const rackWaiting=byId('rack').children.length;
+      g.loadCloudState({...rackState,current_slot:0},2);g.setSpectator(true);
+      const slotTwoWaiting=byId('rack').children.length;
+      g.loadCloudState({...rackState,current_slot:1},2);g.setSpectator(false);
+      const slotTwoActive=byId('rack').children.length;
+      const fontSize=getComputedStyle(byId('activeWeirdRules')).fontSize;
+      g.newComputerGame('easy');
+      const computerRack=byId('rack').children.length;
+      return {rackAfterPass,rackWaiting,slotTwoWaiting,slotTwoActive,fontSize,computerRack,first,clean,cloud,leftClean,freshClean,persisted,cpuCancelled:before.scores.join()===after.scores.join()&&after.current===0};
+    };
+    const result=JSON.parse(JSON.stringify(await w.eval('('+run.toString()+')()')));
+    assert.equal(result.rackAfterPass.count,7);
+    assert.ok(result.rackAfterPass.locked);
+    assert.ok(result.rackAfterPass.playDisabled);
+    assert.equal(result.rackWaiting,7);
+    assert.equal(result.slotTwoWaiting,7);
+    assert.equal(result.slotTwoActive,7);
+    assert.equal(result.fontSize,'16.5px');
+    assert.equal(result.computerRack,7);
+    assert.equal(result.first.score,'Josh played CAT for 18');
+    assert.match(result.first.rules,/High Roller/);
+    assert.ok(result.clean,'Old score, popup, and weird label must clear on switch');
+    assert.equal(result.cloud.score,'Sara played DOG for 5');
+    assert.match(result.cloud.rules,/Too Many Tiles/);
+    assert.ok(result.leftClean,'Leaving must invalidate delayed popup');
+    assert.ok(result.freshClean);
+    assert.deepEqual(result.persisted,['vowel_movement']);
+    assert.ok(result.cpuCancelled,'In-flight CPU turn must not mutate next game');
+    console.log('PASS: own rack stays visible and locked after a turn and for both multiplayer slots, text is 16.5px; score isolation, delayed popup isolation, computer cancellation, and weird-rule indicators');
+  }finally{dom.window.close()}
+}finally{fs.rmSync(dir,{recursive:true,force:true})}
+})().catch(e=>{console.error(e);process.exitCode=1});

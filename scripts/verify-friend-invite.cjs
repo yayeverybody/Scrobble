@@ -11,9 +11,9 @@ function between(start, end) {
   return app.slice(from, to);
 }
 function element(hidden = false) {
-  const classes = new Set(hidden ? ['hidden'] : []);
+  const classes = new Set(hidden ? ['hidden'] : []), listeners = {};
   return {
-    children: [], dataset: {}, textContent: '',
+    children: [], dataset: {}, style: {}, textContent: '',
     classList: {
       add: x => classes.add(x), remove: x => classes.delete(x),
       contains: x => classes.has(x),
@@ -23,20 +23,23 @@ function element(hidden = false) {
       if (child.parentNode) child.parentNode.children = child.parentNode.children.filter(x => x !== child);
       child.parentNode = this; this.children.push(child);
     },
+    append(...children) { for(const child of children)this.appendChild(child); },
+    insertBefore(child, before) { this.appendChild(child);this.children=this.children.filter(x=>x!==child);const i=this.children.indexOf(before);this.children.splice(i<0?this.children.length:i,0,child); },
+    replaceChildren(...children) { this.children=[];this.append(...children); },
     contains(child) { return this.children.includes(child); },
-    addEventListener(type, handler) { this[type] = handler; },
+    addEventListener(type, handler) { (listeners[type]||=[]).push(handler); },
     querySelectorAll() { return []; },
-    click() { return this.onclick(); }
+    click() { const result=this.onclick?.();for(const handler of listeners.click||[])handler();return result; }
   };
 }
 function setup(fail = false) {
   const ids = Object.fromEntries(['inviteBox', 'inviteLink', 'gameModeBox', 'closeGameMode', 'playFriendMode', 'playComputerMode', 'friendModePanel', 'computerModePanel', 'startFriendGame', 'sharedWeirdBox', 'gameModeTitle', 'newGameDash', 'closeInvite', 'copyInvite', 'shareInvite'].map(id => [id, element(true)]));
-  const home = element(); home.appendChild(ids.inviteBox);
+  const home = element(); home.appendChild(ids.inviteBox);home.appendChild(ids.newGameDash);
   const input = { value: 'high_roller', checked: false };
   ids.sharedWeirdBox.querySelectorAll = () => [input];
   const calls = { copy: [], share: [], rpc: [], alerts: [] };
   const ctx = {
-    document: { getElementById: id => ids[id] },
+    document: { getElementById: id => ids[id], createElement: () => element() },
     inviteBox: ids.inviteBox, inviteLinkEl: ids.inviteLink,
     gameModeBox: ids.gameModeBox, closeGameMode: ids.closeGameMode, playFriendMode: ids.playFriendMode,
     user: { id: 'test' }, pendingNewGame: null,
@@ -50,7 +53,7 @@ function setup(fail = false) {
       clipboard: { async writeText(url) { calls.copy.push(url); } },
       async share(data) { calls.share.push(data); }
     },
-    async rpc(name, args) { calls.rpc.push({ name, args }); return name === 'list_scrobble_games' ? [] : { id: 'created' }; },
+    async rpc(name, args) { if(name==='scrobble_recent_opponents')return [];calls.rpc.push({ name, args }); return name === 'list_scrobble_games' ? [] : { id: 'created' }; },
     refreshGames: async () => {}, createComputerGame: () => {},
     alert: message => calls.alerts.push(message), setTimeout: () => {}
   };
