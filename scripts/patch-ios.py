@@ -204,8 +204,21 @@ if 'id="activeWeirdRules"' not in text:
     text = replace_required(text, '<script src="last-play-v3120.js?v=312"></script>', '')
     text = replace_required(text, '</span></button></div></section>\n</div>', '</span></button></div><div id="activeWeirdRules" class="activeWeirdRules" hidden></div></section>\n</div>')
     text = replace_required(text, '</head>', '''<style>
-#scrobble-v4 .activeWeirdRules{padding:6px 8px 2px;text-align:center;color:#d9efff;font:600 11px/1.35 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}
+#scrobble-v4 .activeWeirdRules{padding:6px 8px 2px;text-align:center;color:#d9efff;font:600 16.5px/1.35 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}
 #scrobble-v4 .activeWeirdRules[hidden]{display:none}
 </style>
 </head>''')
     index.write_text(text)
+
+# Multiplayer stores only the signed-in player's rack locally. Never render the
+# other player's (intentionally empty) array when the turn advances.
+engine = Path('www/game-engine-v3140.js')
+game = engine.read_text()
+if 'let cloudRackMode=false;' not in game:
+    game = replace_required(game, 'let gameGeneration=0;', 'let gameGeneration=0;\nlet cloudRackMode=false;')
+    game = replace_required(game, 'function freshLocalGame(){resetGamePresentation();', 'function freshLocalGame(){resetGamePresentation();cloudRackMode=false;spectatorMode=false;')
+    game = replace_required(game, "loadComputerState(s,difficulty='medium'){resetGamePresentation();", "loadComputerState(s,difficulty='medium'){resetGamePresentation();cloudRackMode=false;")
+    game = replace_required(game, 'loadCloudState(s,slot){resetGamePresentation();', 'loadCloudState(s,slot){resetGamePresentation();cloudRackMode=true;')
+    game = replace_required(game, 'const rackOwner=cpuMode?0:(spectatorMode?viewRackIndex:current);', 'const rackOwner=cpuMode?0:((cloudRackMode||spectatorMode)?viewRackIndex:current);')
+    game = replace_required(game, "function render(){boardEl.innerHTML='';", "function render(){if(cloudRackMode&&current!==viewRackIndex)spectatorMode=true;boardEl.innerHTML='';")
+    engine.write_text(game)
