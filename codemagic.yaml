@@ -35,6 +35,7 @@ workflows:
           grep -q 'weirdChoice strong{font-size:21px' www/index.html || exit 1
           (cd .. && python3 scripts/patch-weird-labels.py)
           python3 ../scripts/patch-game-board.py
+          python3 ../scripts/patch-vowel-mode.py
           node ../scripts/test-weird-modes.cjs www
           node ../scripts/verify-quad-placement.cjs www
           node ../scripts/verify-ssa-names.cjs www/game-engine-v3140.js
@@ -44,7 +45,7 @@ workflows:
           grep -q 'id="friendModePanel"' www/index.html || { echo 'Missing modern Play Friend flow'; exit 1; }
           grep -q 'nudgeGame' www/app-v3140.js || { echo 'Missing Nudge feature'; exit 1; }
           grep -q 'Crazy Random Bonus Spots' www/index.html || { echo 'Missing bonus mode'; exit 1; }
-          grep -q 'Suffixly' www/index.html || { echo 'Missing suffix mode'; exit 1; }
+          grep -q 'Vowels Are Worth Too Much' www/index.html || { echo 'Missing vowel mode'; exit 1; }
           python3 ../scripts/generate-feedback-audio.py
           (cd .. && node scripts/verify-notifications.cjs)
           node ../scripts/verify-regressions.cjs www
