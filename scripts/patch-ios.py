@@ -222,3 +222,78 @@ if 'let cloudRackMode=false;' not in game:
     game = replace_required(game, 'const rackOwner=cpuMode?0:(spectatorMode?viewRackIndex:current);', 'const rackOwner=cpuMode?0:((cloudRackMode||spectatorMode)?viewRackIndex:current);')
     game = replace_required(game, "function render(){boardEl.innerHTML='';", "function render(){if(cloudRackMode&&current!==viewRackIndex)spectatorMode=true;boardEl.innerHTML='';")
     engine.write_text(game)
+
+# Quad Chaos uses a deterministic per-turn layout shared by both participants.
+engine = Path('www/game-engine-v3140.js')
+game = engine.read_text()
+if 'function refreshQuadSpaces()' not in game:
+    helpers = '''let quadContext='local',quadTurnNumber=0,quadLayoutKey='',quadSpaces=new Set();
+function refreshQuadSpaces(){
+  if(!hasWeirdRule('quad_chaos')){quadSpaces.clear();quadLayoutKey='';return}
+  const cells=[];
+  for(let r=0;r<15;r++)for(let c=0;c<15;c++)if(board[r][c]&&!board[r][c].pending)cells.push([r,c]);
+  const key=JSON.stringify([quadContext,quadTurnNumber,current,cells]);
+  if(key===quadLayoutKey)return;
+  quadLayoutKey=key;
+  // Seed from shared cloud turn data, never the viewer, rack, clock, or render count.
+  let seed=2166136261;
+  for(let i=0;i<key.length;i++){seed^=key.charCodeAt(i);seed=Math.imul(seed,16777619)>>>0}
+  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
+  const anchors=cells.length?cells:[[7,7]],candidates=[];
+  for(let r=0;r<15;r++)for(let c=0;c<15;c++){
+    if(board[r][c]&&!board[r][c].pending)continue;
+    const distance=Math.min(...anchors.map(([ar,ac])=>Math.max(Math.abs(r-ar),Math.abs(c-ac))));
+    candidates.push({r,c,distance})
+  }
+  let best=[];
+  // Retry the seeded ordering to avoid a greedy pick blocking a fifth space.
+  for(let attempt=0;attempt<80;attempt++){
+    const pool=attempt<60?candidates.filter(cell=>cell.distance<=3):candidates;
+    const ordered=pool.map(cell=>({...cell,rank:random()}));
+    ordered.sort((a,b)=>(a.distance<=3?0:a.distance)-(b.distance<=3?0:b.distance)||a.rank-b.rank);
+    const picked=[];
+    for(const cell of ordered){
+      if(picked.every(p=>Math.max(Math.abs(p.r-cell.r),Math.abs(p.c-cell.c))>=3))picked.push(cell);
+      if(picked.length===5)break
+    }
+    if(picked.length>best.length)best=picked;
+    if(best.length===5)break
+  }
+  quadSpaces=new Set(best.map(({r,c})=>r+'-'+c));
+}
+function boardBonusAt(r,c){return hasWeirdRule('quad_chaos')&&quadSpaces.has(r+'-'+c)?'qw':(bonus[r+'-'+c]||'')}
+'''
+    game = replace_required(game, 'function hasWeirdRule(id)', helpers + 'function hasWeirdRule(id)')
+    game = replace_required(game, 'function render(){', 'function render(){refreshQuadSpaces();')
+    game = replace_required(game, "const type=bonus[r+'-'+c]||''", 'const type=boardBonusAt(r,c)')
+    game = replace_required(game, 'const labels={dl:', "const labels={qw:'4×',dl:")
+    game = replace_required(game, "b=t.pending?bonus[r+'-'+c]:''", "b=t.pending?boardBonusAt(r,c):''")
+    game = replace_required(game, "b=bonus[r+'-'+c]||''", 'b=boardBonusAt(r,c)')
+    game = replace_required(game, "b=bonus[rr+'-'+cc]||''", 'b=boardBonusAt(rr,cc)')
+    game = replace_required(game, "if(b==='tw')m*=3;", "if(b==='tw')m*=3;if(b==='qw')m*=4;")
+    game = replace_required(game, "if(b==='tw')mult*=3;", "if(b==='tw')mult*=3;if(b==='qw')mult*=4;")
+    game = replace_required(game, "if(b==='tw')mainMult*=3;", "if(b==='tw')mainMult*=3;if(b==='qw')mainMult*=4;")
+    game = game.replace('current=1-current;', 'current=1-current;quadTurnNumber++;')
+    game = replace_required(game, 'current=0;cpuThinking=false;lastMoveSummary={playedBy:1', 'current=0;quadTurnNumber++;cpuThinking=false;lastMoveSummary={playedBy:1')
+    game = replace_required(game, 'shuffle(bag);current=0;cpuThinking=false;', 'shuffle(bag);current=0;quadTurnNumber++;cpuThinking=false;')
+    game = replace_required(game, 'function freshLocalGame(){', "function freshLocalGame(){quadContext='local-'+Date.now()+'-'+Math.random();quadTurnNumber=0;quadLayoutKey='';")
+    game = replace_required(game, 'loadCloudState(s,slot){', "loadCloudState(s,slot){quadContext=String(s.id||'cloud')+'|'+String(s.updated_at||'');quadTurnNumber=0;quadLayoutKey='';")
+    game = replace_required(game, "loadComputerState(s,difficulty='medium'){", "loadComputerState(s,difficulty='medium'){quadContext=s.quadContext||'local';quadTurnNumber=s.quadTurnNumber||0;quadLayoutKey='';")
+    game = replace_required(game, 'if(!s)return false;', "if(!s)return false;quadContext=s.quadContext||'local';quadTurnNumber=s.quadTurnNumber||0;quadLayoutKey='';")
+    game = replace_required(game, 'lastMoveSummary,weirdRules,updatedAt:', 'lastMoveSummary,weirdRules,quadContext,quadTurnNumber,updatedAt:')
+    game = replace_required(game, 'const names={all_or_none:', "const names={quad_chaos:'Quad Chaos',all_or_none:")
+    game = game.replace('startingPlayer,weirdRules,', 'startingPlayer,weirdRules,quadContext,quadTurnNumber,')
+    engine.write_text(game)
+
+index = Path('www/index.html')
+text = index.read_text()
+if 'id="quad-chaos-style"' not in text:
+    text = text.replace('</head>', '<style id="quad-chaos-style">#scrobble-v4 .cell.qw{background:#7630b8!important;color:#fff!important;font-weight:900!important;font-size:clamp(9px,2.8vw,18px)!important;box-shadow:inset 0 0 0 2px #d8a8ff}</style></head>')
+if 'value="quad_chaos"' not in text:
+    text = replace_required(text, '<div class="weirdSub">Optional. Choose one.</div>', '<div class="weirdSub">Optional. Choose one.</div><label class="weirdChoice"><input type="checkbox" value="quad_chaos"><span><strong>Quad Chaos</strong><small>Five moving 4× word spaces each turn, at least three squares apart near played tiles.</small></span></label>')
+index.write_text(text)
+app = Path('www/app-v3140.js')
+app_text = app.read_text()
+if "quad_chaos:'Quad Chaos'" not in app_text:
+    app_text = replace_required(app_text, 'const WEIRD_LABELS={', "const WEIRD_LABELS={quad_chaos:'Quad Chaos',")
+    app.write_text(app_text)
