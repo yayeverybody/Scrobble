@@ -10,7 +10,7 @@ with tempfile.TemporaryDirectory(prefix='scrobble-current-') as tmp:
     for name,*args in checks:
         result=subprocess.run(['node',str(repo/'scripts'/name),*args],cwd=repo)
         if result.returncode:failed.append(name)
-    for name in ['app-v3140.js','game-engine-v3140.js','scrobble-haptics.js']:
+    for name in ['app-v3140.js','game-engine-v3140.js','scrobble-haptics.js','mirrors-ad.js']:
         if subprocess.run(['node','--check',web+'/'+name],cwd=repo).returncode:failed.append(name)
     if failed:raise SystemExit('Failed checks: '+', '.join(failed))
 print('PASS: all current-source web checks. Native build and two-iPhone release gate still required.')

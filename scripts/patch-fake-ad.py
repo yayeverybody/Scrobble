@@ -28,5 +28,6 @@ if 'id="mirrorsAd"' not in h:
     html.write_text(h)
 shutil.copyfile(scripts/'mirrors-ad.js',Path('www/mirrors-ad.js'))
 assets=Path('www/fake-ads');assets.mkdir(exist_ok=True)
-shutil.copyfile(scripts/'fake-ad-assets/mirrors.jpg',assets/'mirrors.jpg')
-print('PASS: Mirrors ad appears after saved player plays, with explicit close-to-games')
+for name in ['mirrors','clear-spaghetti-sauce','ceiling-carpet']:
+    shutil.copyfile(scripts/'fake-ad-assets'/(name+'.jpg'),assets/(name+'.jpg'))
+print('PASS: three fictional sponsors rotate after saved player plays, with explicit close-to-games')

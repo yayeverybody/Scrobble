@@ -4,6 +4,7 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
  execFileSync('python3',[path.join(repo,'scripts/prepare-board-tests.py'),dir]);
  const root=path.join(dir,'scrobble-mobile/www'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),app=fs.readFileSync(path.join(root,'app-v3140.js'),'utf8');
  const dom=new JSDOM(html,{runScripts:'outside-only',url:'http://localhost'}),w=dom.window;
+ w.Math.random=()=>0;
  w.eval(fs.readFileSync(path.join(root,'mirrors-ad.js'),'utf8'));
  const ad=w.document.getElementById('mirrorsAd'),close=w.document.getElementById('mirrorsAdClose');let home=0;
  w.addEventListener('scrobble:home',()=>home++);
@@ -14,7 +15,25 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
  assert(fs.statSync(path.join(root,'fake-ads/mirrors.jpg')).size>10000);
  close.click();assert(ad.hidden);assert.equal(home,1);close.click();assert.equal(home,1,'Dismiss only once');
  w.ScrobbleFakeAd.show();const token=w.ScrobbleFakeAd.viewToken;w.ScrobbleFakeAd.reset();assert(ad.hidden);assert(w.ScrobbleFakeAd.viewToken>token);
- dom.window.close();
+ const seen=new Set([ad.dataset.sponsor]);let previous=ad.dataset.sponsor;
+ for(let i=0;i<60;i++){
+  w.Math.random=()=>i%3*.49;w.ScrobbleFakeAd.show();
+  const id=ad.dataset.sponsor;assert.notEqual(id,previous,'No consecutive sponsor repeats');seen.add(id);previous=id;
+  assert.equal(w.localStorage.getItem('scrobble-last-fictional-sponsor'),id);
+  assert(w.document.getElementById('fakeAdArtwork').src.endsWith('/fake-ads/'+id+'.jpg'));
+  assert(fs.statSync(path.join(root,'fake-ads',id+'.jpg')).size>10000);
+  if(id==='clear-spaghetti-sauce')assert.equal(w.document.getElementById('mirrorsAdTagline').textContent,'You can’t see it!');
+  if(id==='ceiling-carpet')assert.equal(w.document.getElementById('mirrorsAdTagline').textContent,'Shut up. You’re stupid.');
+  w.ScrobbleFakeAd.reset();
+ }
+ assert.equal(seen.size,3,'All three sponsors are available');
+ const reopened=new JSDOM(html,{runScripts:'outside-only',url:'http://localhost'});
+ reopened.window.localStorage.setItem('scrobble-last-fictional-sponsor',previous);
+ reopened.window.Math.random=()=>0;
+ reopened.window.eval(fs.readFileSync(path.join(root,'mirrors-ad.js'),'utf8'));
+ reopened.window.document.body.classList.add('scrobbleGameActive');reopened.window.ScrobbleFakeAd.show();
+ assert.notEqual(reopened.window.document.getElementById('mirrorsAd').dataset.sponsor,previous,'No repeat across app launches');
+ reopened.window.close();dom.window.close();
  const block=app.slice(app.indexOf("  window.addEventListener('scrobble:turn-ended',async e=>{"),app.indexOf("  window.addEventListener('scrobble:challenge-created'"));
  for(const scenario of ['human','cpu','pass','swap','cloud','failed','navigated']){
   const tasks=[],ads=[],ctx={currentComputer:['human','cpu'].includes(scenario),currentGame:'one',currentSlot:1,statusEl:{},user:{},myProfile:{},saveCurrentComputerGame(){},loadComputerRecord:()=>({id:'cpu'}),rpc:async()=>{if(scenario==='failed')throw Error('save failed');if(scenario==='navigated')ctx.window.ScrobbleFakeAd.viewToken++;return{}},sleep:async()=>{},refreshCurrentCloudGame:async()=>{},refreshGames:async()=>{},accountDisplayName:()=>'',profileLabel:()=>'',alert(){},document:{body:{classList:{contains:()=>false}}},window:{ScrobbleFakeAd:{viewToken:1,show:()=>ads.push('ad'),afterTurn:()=>tasks.push({fn:()=>ads.push('ad'),ms:1600})},ScrobbleGame:{scheduleTask:(fn,ms)=>tasks.push({fn,ms}),exportState:()=>({racks:[[],[]],board:[],bag:[],scores:[0,0]}),runComputerTurn(){}},addEventListener:(event,fn)=>ctx.handler=fn}};
@@ -24,5 +43,5 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   for(const t of sponsor)t.fn();assert.equal(ads.length,sponsor.length);
  }
  assert(app.includes('window.ScrobbleFakeAd?.reset();'),'Navigation resets stale ad eligibility');
- console.log('PASS: exact ad text, bundled art, close-to-games event, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
+ console.log('PASS: all three sponsors, 60 nonrepeating rotations, persisted choice across launches, exact text, bundled art, close-to-games event, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
 }finally{fs.rmSync(dir,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});

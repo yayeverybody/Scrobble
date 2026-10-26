@@ -19,3 +19,17 @@ when that game is reopened. Native TestFlight layout verification is pending.
 
 Validation: NODE_PATH=<jsdom modules> node tests/mirrors-ad.cjs;
 python3 scripts/verify-current-source.py.
+
+## Roster added for 1.0.53
+
+`clear-spaghetti-sauce.jpg`: approved generated creative with SPONSORED BY,
+Clear Spaghetti Sauce and You can’t see it! Kid eating spaghetti and meatballs
+beside a jar of clear sauce. No intermediate tagline.
+
+`ceiling-carpet.jpg`: approved generated creative with SPONSORED BY, Ceiling
+Carpet and Shut up. You’re stupid. The word You’re is italic, footer one line.
+Professional vacuuming a carpet-covered ceiling in an ordinary living room.
+
+Both created and edited with the built-in image-generation tool; converted to
+JPEG for the app. Random selection excludes the last shown sponsor, remembered
+locally when storage is available. No real ad SDK or tracking.
