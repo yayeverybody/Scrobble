@@ -16,8 +16,8 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
  close.click();assert(ad.hidden);assert.equal(home,1);close.click();assert.equal(home,1,'Dismiss only once');
  w.ScrobbleFakeAd.show();const token=w.ScrobbleFakeAd.viewToken;w.ScrobbleFakeAd.reset();assert(ad.hidden);assert(w.ScrobbleFakeAd.viewToken>token);
  const seen=new Set([ad.dataset.sponsor]);let previous=ad.dataset.sponsor;
- for(let i=0;i<60;i++){
-  w.Math.random=()=>i%3*.49;w.ScrobbleFakeAd.show();
+ for(let i=0;i<120;i++){
+  w.Math.random=()=>(i%5)/5;w.ScrobbleFakeAd.show();
   const id=ad.dataset.sponsor;assert.notEqual(id,previous,'No consecutive sponsor repeats');seen.add(id);previous=id;
   assert.equal(w.localStorage.getItem('scrobble-last-fictional-sponsor'),id);
   assert(w.document.getElementById('fakeAdArtwork').src.endsWith('/fake-ads/'+id+'.jpg'));
@@ -26,7 +26,7 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   if(id==='ceiling-carpet')assert.equal(w.document.getElementById('mirrorsAdTagline').textContent,'Shut up. You’re stupid.');
   w.ScrobbleFakeAd.reset();
  }
- assert.equal(seen.size,3,'All three sponsors are available');
+ assert.equal(seen.size,6,'All six sponsors are available');
  const reopened=new JSDOM(html,{runScripts:'outside-only',url:'http://localhost'});
  reopened.window.localStorage.setItem('scrobble-last-fictional-sponsor',previous);
  reopened.window.Math.random=()=>0;
@@ -43,5 +43,5 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   for(const t of sponsor)t.fn();assert.equal(ads.length,sponsor.length);
  }
  assert(app.includes('window.ScrobbleFakeAd?.reset();'),'Navigation resets stale ad eligibility');
- console.log('PASS: all three sponsors, 60 nonrepeating rotations, persisted choice across launches, exact text, bundled art, close-to-games event, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
+ console.log('PASS: all six sponsors, 120 nonrepeating rotations, persisted choice across launches, exact text, bundled art, close-to-games event, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
 }finally{fs.rmSync(dir,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});

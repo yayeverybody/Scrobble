@@ -1,4 +1,4 @@
-# Scrobble 1.0.53
+# Scrobble 1.0.54
 
 Branch: `fix/current-scrobble-board`
 Workflow: **Yay Everybody iOS Release**
@@ -30,3 +30,11 @@ It now uses that game's player profile, or the move's saved name, or “Opponent
 if neither exists. Restored score summaries also prefer the loaded profile.
 The regression test covers play/pass/swap and both player positions. Existing
 board-generation guards still cancel delayed notices when leaving a game.
+
+## Three additional approved sponsors for 1.0.54
+
+- Soft-Sided Coffee Mugs: Better drink it quick.
+- Nelson’s Business Suits: Fine tailoring. All-day comfort. Insulated gravy pocket.
+- Dr. Small’s Prescription Windshields: Throw away your eyeglasses. Final approved art preserves normal car proportions with driver-centered fisheye glass distortion.
+
+All six sponsors are bundled offline and rotate without consecutive repeats. Existing three retained. This build retains current board fixes and is for internal testing, not public App Store submission.

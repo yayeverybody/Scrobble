@@ -6,7 +6,10 @@
   const roster = [
     {id:'mirrors', title:'Mirrors.', tagline:'Reflect yourself back to yourself.', footer:'Now featuring: you.', alt:'A delighted goof gazes adoringly at his own reflection in an ornate mirror.'},
     {id:'clear-spaghetti-sauce', title:'Clear Spaghetti Sauce', tagline:'You can’t see it!', footer:'', alt:'A kid eats a huge bowl of spaghetti and meatballs beside a jar of transparent spaghetti sauce.'},
-    {id:'ceiling-carpet', title:'Ceiling Carpet', tagline:'Shut up. You’re stupid.', footer:'', alt:'An installer on a stepladder vacuums a living room ceiling covered in beige carpet.'}
+    {id:'ceiling-carpet', title:'Ceiling Carpet', tagline:'Shut up. You’re stupid.', footer:'', alt:'An installer on a stepladder vacuums a living room ceiling covered in beige carpet.'},
+    {id:'soft-sided-coffee-mugs', title:'Soft-Sided Coffee Mugs', tagline:'Finally. A softer cup of coffee.', footer:'Better drink it quick.', alt:'A woman presents quilted fabric coffee mugs that leak coffee through their seams.'},
+    {id:'nelsons-business-suits', title:'Nelson’s Business Suits', tagline:'', footer:'Fine tailoring. All-day comfort. Insulated gravy pocket.', alt:'A businessman on a bus pours gravy from his suit pocket onto mashed potatoes in his palm.'},
+    {id:'prescription-windshields', title:'Dr. Small’s Prescription Windshields', tagline:'', footer:'Throw away your eyeglasses.', alt:'A normal blue sedan with a prescription windshield that magnifies and distorts the driver’s face and surrounding interior like a fisheye lens.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;

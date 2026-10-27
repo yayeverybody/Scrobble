@@ -33,3 +33,7 @@ Professional vacuuming a carpet-covered ceiling in an ordinary living room.
 Both created and edited with the built-in image-generation tool; converted to
 JPEG for the app. Random selection excludes the last shown sponsor, remembered
 locally when storage is available. No real ad SDK or tracking.
+
+## Roster added for 1.0.54
+
+soft-sided-coffee-mugs.jpg, nelsons-business-suits.jpg and prescription-windshields.jpg are the final user-approved generated artwork from October 27, converted to JPEG for offline bundling. The mugs footer is Better drink it quick.; Nelson’s feature is Insulated gravy pocket.; Dr. Small’s uses the final driver-centered fisheye with normal exterior car proportions. Earlier creative variants are excluded.
