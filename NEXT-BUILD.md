@@ -21,3 +21,12 @@ Checks: tests/mirrors-ad.cjs exercises all three creatives, 60 rotations without
 consecutive repeats, persistence across launches, saved-turn gating, close/focus,
 and navigation cancellation. scripts/verify-current-source.py checks the current
 web pipeline and JS syntax, including the sponsor module.
+
+## Opponent last-move name fix
+
+Fixes the reported ShortFuse game showing “Zorro PASSED.” The popup previously
+borrowed the opponent name from old board DOM while the next game was loading.
+It now uses that game's player profile, or the move's saved name, or “Opponent”
+if neither exists. Restored score summaries also prefer the loaded profile.
+The regression test covers play/pass/swap and both player positions. Existing
+board-generation guards still cancel delayed notices when leaving a game.

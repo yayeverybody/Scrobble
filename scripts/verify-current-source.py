@@ -5,7 +5,7 @@ repo=Path(__file__).resolve().parent.parent
 with tempfile.TemporaryDirectory(prefix='scrobble-current-') as tmp:
     subprocess.run([sys.executable,str(repo/'scripts/prepare-board-tests.py'),tmp],check=True)
     web=str(Path(tmp)/'scrobble-mobile/www')
-    checks=[['test-weird-modes.cjs',web],['verify-quad-placement.cjs',web],['verify-ssa-names.cjs',web+'/game-engine-v3140.js'],['verify-integration.cjs',web],['verify-notifications.cjs'],['verify-regressions.cjs',web],['verify-audio-fallback.cjs',web+'/scrobble-haptics.js'],['verify-friend-invite.cjs',web],['verify-haptics.cjs',web+'/scrobble-haptics.js'],['verify-splash-feedback.cjs',web+'/scrobble-haptics.js',web+'/styles-v2930.css'],['verify-score-feedback.cjs',web+'/game-engine-v3140.js'],['verify-rack-drop.cjs',web+'/game-engine-v3140.js'],['verify-push-worker.cjs']]
+    checks=[['verify-move-notice.cjs',web],['test-weird-modes.cjs',web],['verify-quad-placement.cjs',web],['verify-ssa-names.cjs',web+'/game-engine-v3140.js'],['verify-integration.cjs',web],['verify-notifications.cjs'],['verify-regressions.cjs',web],['verify-audio-fallback.cjs',web+'/scrobble-haptics.js'],['verify-friend-invite.cjs',web],['verify-haptics.cjs',web+'/scrobble-haptics.js'],['verify-splash-feedback.cjs',web+'/scrobble-haptics.js',web+'/styles-v2930.css'],['verify-score-feedback.cjs',web+'/game-engine-v3140.js'],['verify-rack-drop.cjs',web+'/game-engine-v3140.js'],['verify-push-worker.cjs']]
     failed=[]
     for name,*args in checks:
         result=subprocess.run(['node',str(repo/'scripts'/name),*args],cwd=repo)

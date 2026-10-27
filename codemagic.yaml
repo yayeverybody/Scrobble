@@ -35,8 +35,10 @@ workflows:
           grep -q 'weirdChoice strong{font-size:21px' www/index.html || exit 1
           (cd .. && python3 scripts/patch-weird-labels.py)
           python3 ../scripts/patch-game-board.py
+          python3 ../scripts/patch-move-notice.py
           python3 ../scripts/patch-vowel-mode.py
           python3 ../scripts/patch-fake-ad.py
+          node ../scripts/verify-move-notice.cjs www
           node ../scripts/test-weird-modes.cjs www
           node ../scripts/verify-quad-placement.cjs www
           node ../scripts/verify-ssa-names.cjs www/game-engine-v3140.js

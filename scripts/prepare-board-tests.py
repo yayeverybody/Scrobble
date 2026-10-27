@@ -10,6 +10,7 @@ for name in ['patch-ios.py','patch-no-moves.py','patch-opening-vowels.py','patch
 subprocess.run([sys.executable,str(repo/'scripts/patch-weird-labels.py')],cwd=root,check=True,stdout=subprocess.DEVNULL)
 subprocess.run([sys.executable,str(repo/'scripts/patch-game-board.py')],cwd=web,check=True,stdout=subprocess.DEVNULL)
 
+subprocess.run([sys.executable,str(repo/'scripts/patch-move-notice.py')],cwd=web,check=True,stdout=subprocess.DEVNULL)
 subprocess.run([sys.executable,str(repo/'scripts/patch-vowel-mode.py')],cwd=web,check=True,stdout=subprocess.DEVNULL)
 
 subprocess.run([sys.executable,str(repo/'scripts/patch-fake-ad.py')],cwd=web,check=True,stdout=subprocess.DEVNULL)
