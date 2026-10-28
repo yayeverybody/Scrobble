@@ -37,3 +37,11 @@ locally when storage is available. No real ad SDK or tracking.
 ## Roster added for 1.0.54
 
 soft-sided-coffee-mugs.jpg, nelsons-business-suits.jpg and prescription-windshields.jpg are the final user-approved generated artwork from October 27, converted to JPEG for offline bundling. The mugs footer is Better drink it quick.; Nelson’s feature is Insulated gravy pocket.; Dr. Small’s uses the final driver-centered fisheye with normal exterior car proportions. Earlier creative variants are excluded.
+
+## Neon Green added October 28, 2026
+
+`neon-green.jpg.b64` contains the final user-approved generated artwork: 1980s family and
+living room in neon green, hot pink lampshades, small Sponsored by without top
+pink bars, large Neon Green title, neon yellow From the makers of and orange
+Reflective Orange footer. Converted from the approved PNG to JPEG for offline
+bundling, stored as base64 and decoded by the existing build patch. Included as the seventh sponsor in the existing nonrepeating rotation.
