@@ -17,16 +17,17 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
  w.ScrobbleFakeAd.show();const token=w.ScrobbleFakeAd.viewToken;w.ScrobbleFakeAd.reset();assert(ad.hidden);assert(w.ScrobbleFakeAd.viewToken>token);
  const seen=new Set([ad.dataset.sponsor]);let previous=ad.dataset.sponsor;
  for(let i=0;i<120;i++){
-  w.Math.random=()=>(i%5)/5;w.ScrobbleFakeAd.show();
+  w.Math.random=()=>(i%6)/6;w.ScrobbleFakeAd.show();
   const id=ad.dataset.sponsor;assert.notEqual(id,previous,'No consecutive sponsor repeats');seen.add(id);previous=id;
   assert.equal(w.localStorage.getItem('scrobble-last-fictional-sponsor'),id);
   assert(w.document.getElementById('fakeAdArtwork').src.endsWith('/fake-ads/'+id+'.jpg'));
   assert(fs.statSync(path.join(root,'fake-ads',id+'.jpg')).size>10000);
   if(id==='clear-spaghetti-sauce')assert.equal(w.document.getElementById('mirrorsAdTagline').textContent,'You can’t see it!');
+  if(id==='neon-green'){assert.equal(w.document.getElementById('mirrorsAdTitle').textContent,'Neon Green');assert.equal(ad.querySelector('.mirrorFooter').textContent,'From the makers of Reflective Orange.');}
   if(id==='ceiling-carpet')assert.equal(w.document.getElementById('mirrorsAdTagline').textContent,'Shut up. You’re stupid.');
   w.ScrobbleFakeAd.reset();
  }
- assert.equal(seen.size,6,'All six sponsors are available');
+ assert.equal(seen.size,7,'All seven sponsors are available');
  const reopened=new JSDOM(html,{runScripts:'outside-only',url:'http://localhost'});
  reopened.window.localStorage.setItem('scrobble-last-fictional-sponsor',previous);
  reopened.window.Math.random=()=>0;
@@ -43,5 +44,5 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   for(const t of sponsor)t.fn();assert.equal(ads.length,sponsor.length);
  }
  assert(app.includes('window.ScrobbleFakeAd?.reset();'),'Navigation resets stale ad eligibility');
- console.log('PASS: all six sponsors, 120 nonrepeating rotations, persisted choice across launches, exact text, bundled art, close-to-games event, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
+ console.log('PASS: all seven sponsors, 120 nonrepeating rotations, persisted choice across launches, exact text, bundled art, close-to-games event, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
 }finally{fs.rmSync(dir,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});
