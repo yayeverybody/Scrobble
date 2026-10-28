@@ -45,3 +45,11 @@ living room in neon green, hot pink lampshades, small Sponsored by without top
 pink bars, large Neon Green title, neon yellow From the makers of and orange
 Reflective Orange footer. Converted from the approved PNG to JPEG for offline
 bundling, stored as base64 and decoded by the existing build patch. Included as the seventh sponsor in the existing nonrepeating rotation.
+
+## Approved artwork added for 1.0.55
+
+- `high-cut-jean-shorts.jpg`: High Cut Jean Shorts; Mobility Unmatched. Final lawn creative.
+- `splashless-chili.jpg`: Dalton’s Splashless Chili. No bottom tagline. Three solid chili cylinders: falling, resting on bowl rim, and on the counter.
+- `invest-in-glass.jpg`: Invest in Glass; TURN GOLD INTO GLASS in shiny gold block capitals. No Sponsored By line.
+
+Generated and edited with the built-in image tool, converted from the exact approved PNGs to JPEG for offline bundling. All seven prior sponsors, including Neon Green, are retained. The unapproved disposable-tie draft is excluded.
