@@ -255,3 +255,45 @@ workflows:
         auth: integration
         # Upload builds for internal testing; submit external beta reviews manually.
         submit_to_testflight: false
+
+  scrobble-android-release:
+    name: Yay Everybody Android Release
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 22
+      java: 21
+      android_signing:
+        - yay_everybody_android
+
+    scripts:
+      - name: Verify Android upload signing key
+        script: |
+          set -eu
+          : "${CM_KEYSTORE_PATH:?Configure yay_everybody_android in Codemagic Android keystores}"
+          : "${CM_KEYSTORE_PASSWORD:?Missing keystore password}"
+          : "${CM_KEY_ALIAS:?Missing upload key alias}"
+          : "${CM_KEY_PASSWORD:?Missing upload key password}"
+          test -f "$CM_KEYSTORE_PATH"
+
+      - name: Prepare current game and Android project
+        script: |
+          set -eu
+          bash scripts/prepare-android.sh "$CM_BUILD_DIR/android-build"
+          printf 'sdk.dir=%s\n' "$ANDROID_SDK_ROOT" > android-build/scrobble-mobile/android/local.properties
+
+      - name: Build signed Google Play bundle
+        script: |
+          set -eu
+          cd android-build/scrobble-mobile/android
+          ./gradlew bundleRelease
+          BUNDLE="app/build/outputs/bundle/release/app-release.aab"
+          test -s "$BUNDLE"
+          jarsigner -verify "$BUNDLE" > bundle-verification.txt
+          grep -q 'jar verified' bundle-verification.txt
+          cp "$BUNDLE" "$CM_BUILD_DIR/Yay-Everybody-Android.aab"
+
+    artifacts:
+      - Yay-Everybody-Android.aab
+      - android-build/scrobble-mobile/android/bundle-verification.txt
