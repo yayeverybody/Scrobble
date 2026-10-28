@@ -1,6 +1,6 @@
 """Show a fictional sponsor after a committed player word; X returns to games."""
 from pathlib import Path
-import shutil
+import shutil, base64
 scripts=Path(__file__).resolve().parent
 app=Path('www/app-v3140.js');html=Path('www/index.html')
 s=app.read_text()
@@ -30,4 +30,5 @@ shutil.copyfile(scripts/'mirrors-ad.js',Path('www/mirrors-ad.js'))
 assets=Path('www/fake-ads');assets.mkdir(exist_ok=True)
 for name in ['mirrors','clear-spaghetti-sauce','ceiling-carpet','soft-sided-coffee-mugs','nelsons-business-suits','prescription-windshields']:
     shutil.copyfile(scripts/'fake-ad-assets'/(name+'.jpg'),assets/(name+'.jpg'))
-print('PASS: six fictional sponsors rotate after saved player plays, with explicit close-to-games')
+(assets/'neon-green.jpg').write_bytes(base64.b64decode((scripts/'fake-ad-assets/neon-green.jpg.b64').read_text()))
+print('PASS: seven fictional sponsors rotate after saved player plays, with explicit close-to-games')
