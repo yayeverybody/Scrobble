@@ -9,6 +9,7 @@
     {id:'ceiling-carpet', title:'Ceiling Carpet', tagline:'Shut up. You’re stupid.', footer:'', alt:'An installer on a stepladder vacuums a living room ceiling covered in beige carpet.'},
     {id:'soft-sided-coffee-mugs', title:'Soft-Sided Coffee Mugs', tagline:'Finally. A softer cup of coffee.', footer:'Better drink it quick.', alt:'A woman presents quilted fabric coffee mugs that leak coffee through their seams.'},
     {id:'nelsons-business-suits', title:'Nelson’s Business Suits', tagline:'', footer:'Fine tailoring. All-day comfort. Insulated gravy pocket.', alt:'A businessman on a bus pours gravy from his suit pocket onto mashed potatoes in his palm.'},
+    {id:'neon-green', title:'Neon Green', tagline:'', footer:'From the makers of Reflective Orange.', alt:'An 1980s family dressed in neon green poses in a neon green living room with hot pink lampshades.'},
     {id:'prescription-windshields', title:'Dr. Small’s Prescription Windshields', tagline:'', footer:'Throw away your eyeglasses.', alt:'A normal blue sedan with a prescription windshield that magnifies and distorts the driver’s face and surrounding interior like a fisheye lens.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
