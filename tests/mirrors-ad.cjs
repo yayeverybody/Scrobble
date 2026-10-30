@@ -17,7 +17,7 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
  w.ScrobbleFakeAd.show();const token=w.ScrobbleFakeAd.viewToken;w.ScrobbleFakeAd.reset();assert(ad.hidden);assert(w.ScrobbleFakeAd.viewToken>token);
  const seen=new Set([ad.dataset.sponsor]);let previous=ad.dataset.sponsor;
  for(let i=0;i<120;i++){
-  w.Math.random=()=>(i%9)/9;w.ScrobbleFakeAd.show();
+  w.Math.random=()=>(i%11)/11;w.ScrobbleFakeAd.show();
   const id=ad.dataset.sponsor;assert.notEqual(id,previous,'No consecutive sponsor repeats');seen.add(id);previous=id;
   assert.equal(w.localStorage.getItem('scrobble-last-fictional-sponsor'),id);
   assert(w.document.getElementById('fakeAdArtwork').src.endsWith('/fake-ads/'+id+'.jpg'));
@@ -27,10 +27,12 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   if(id==='ceiling-carpet')assert.equal(w.document.getElementById('mirrorsAdTagline').textContent,'Shut up. You’re stupid.');
   if(id==='high-cut-jean-shorts')assert.equal(w.document.querySelector('.mirrorFooter').textContent,'Mobility Unmatched');
   if(id==='splashless-chili')assert.equal(w.document.querySelector('.mirrorFooter').textContent,'');
+  if(id==='powdered-water')assert.equal(w.document.querySelector('.mirrorFooter').textContent,'ORIGINAL FLAVOR');
+  if(id==='foil-ball')assert.equal(w.document.querySelector('.mirrorFooter').textContent,'ENDLESSLY ENTERTAINING');
   if(id==='invest-in-glass')assert.equal(w.document.querySelector('.mirrorFooter').textContent,'TURN GOLD INTO GLASS');
   w.ScrobbleFakeAd.reset();
  }
- assert.equal(seen.size,10,'All ten sponsors are available');
+ assert.equal(seen.size,12,'All twelve sponsors are available');
  const reopened=new JSDOM(html,{runScripts:'outside-only',url:'http://localhost'});
  reopened.window.localStorage.setItem('scrobble-last-fictional-sponsor',previous);
  reopened.window.Math.random=()=>0;
@@ -47,5 +49,5 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   for(const t of sponsor)t.fn();assert.equal(ads.length,sponsor.length);
  }
  assert(app.includes('window.ScrobbleFakeAd?.reset();'),'Navigation resets stale ad eligibility');
- console.log('PASS: all ten sponsors, 120 nonrepeating rotations, persisted choice across launches, exact text, bundled art, close-to-games event, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
+ console.log('PASS: all twelve sponsors, 120 nonrepeating rotations, persisted choice across launches, exact text, bundled art, close-to-games event, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
 }finally{fs.rmSync(dir,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});

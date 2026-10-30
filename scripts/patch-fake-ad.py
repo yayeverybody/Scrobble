@@ -28,7 +28,7 @@ if 'id="mirrorsAd"' not in h:
     html.write_text(h)
 shutil.copyfile(scripts/'mirrors-ad.js',Path('www/mirrors-ad.js'))
 assets=Path('www/fake-ads');assets.mkdir(exist_ok=True)
-for name in ['mirrors','clear-spaghetti-sauce','ceiling-carpet','soft-sided-coffee-mugs','nelsons-business-suits','prescription-windshields','high-cut-jean-shorts','splashless-chili','invest-in-glass']:
+for name in ['mirrors','clear-spaghetti-sauce','ceiling-carpet','soft-sided-coffee-mugs','nelsons-business-suits','prescription-windshields','high-cut-jean-shorts','splashless-chili','invest-in-glass','powdered-water','foil-ball']:
     shutil.copyfile(scripts/'fake-ad-assets'/(name+'.jpg'),assets/(name+'.jpg'))
 (assets/'neon-green.jpg').write_bytes(base64.b64decode((scripts/'fake-ad-assets/neon-green.jpg.b64').read_text()))
-print('PASS: ten fictional sponsors rotate after saved player plays, with explicit close-to-games')
+print('PASS: twelve fictional sponsors rotate after saved player plays, with explicit close-to-games')

@@ -13,6 +13,8 @@
     {id:'prescription-windshields', title:'Dr. Small’s Prescription Windshields', tagline:'', footer:'Throw away your eyeglasses.', alt:'A normal blue sedan with a prescription windshield that magnifies and distorts the driver’s face and surrounding interior like a fisheye lens.'},
     {id:'high-cut-jean-shorts', title:'High Cut Jean Shorts', tagline:'', footer:'Mobility Unmatched', alt:'A man in high-cut denim shorts poses beside a lawnmower on a suburban lawn.'},
     {id:'splashless-chili', title:'Dalton’s Splashless Chili', tagline:'', footer:'', alt:'A man drops a solid can-shaped cylinder of chili toward a bowl. Another cylinder rests across the bowl edge and a third lies on the counter.'},
+    {id:'powdered-water', title:'Powdered Water', tagline:'', footer:'ORIGINAL FLAVOR', alt:'A freckled redheaded boy in a striped 1970s shirt pours powdered water into a glass.'},
+    {id:'foil-ball', title:'Foil Ball', tagline:'', footer:'ENDLESSLY ENTERTAINING', alt:'A freckled redheaded boy admires a foil ball in a 1970s den beneath shiny silver foil lettering.'},
     {id:'invest-in-glass', title:'Invest in Glass', tagline:'', footer:'TURN GOLD INTO GLASS', alt:'A banker proudly displays stacks of ordinary glass panes in front of a vault. Turn gold into glass appears in shiny gold block lettering.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
