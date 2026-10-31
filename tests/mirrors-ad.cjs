@@ -14,6 +14,13 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
  assert.equal(w.document.getElementById('mirrorsAdTagline').textContent,'Reflect yourself back to yourself.');
  assert(fs.statSync(path.join(root,'fake-ads/mirrors.jpg')).size>10000);
  close.click();assert(ad.hidden);assert.equal(home,1);close.click();assert.equal(home,1,'Dismiss only once');
+ let resumed=0;
+ w.ScrobbleFakeAd.show(()=>resumed++);close.click();assert.equal(resumed,1);assert.equal(home,1,'Computer ad keeps game open');
+ close.click();assert.equal(resumed,1,'Resume only once');
+ w.ScrobbleFakeAd.show(()=>resumed++);
+ ad.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ assert.equal(resumed,2);assert.equal(home,1,'Escape also resumes computer game');
+ w.ScrobbleFakeAd.show(()=>resumed++);w.ScrobbleFakeAd.reset();close.click();assert.equal(resumed,2,'Navigation clears resume callback');
  w.ScrobbleFakeAd.show();const token=w.ScrobbleFakeAd.viewToken;w.ScrobbleFakeAd.reset();assert(ad.hidden);assert(w.ScrobbleFakeAd.viewToken>token);
  const seen=new Set([ad.dataset.sponsor]);let previous=ad.dataset.sponsor;
  for(let i=0;i<120;i++){
@@ -42,12 +49,12 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
  reopened.window.close();dom.window.close();
  const block=app.slice(app.indexOf("  window.addEventListener('scrobble:turn-ended',async e=>{"),app.indexOf("  window.addEventListener('scrobble:challenge-created'"));
  for(const scenario of ['human','cpu','pass','swap','cloud','failed','navigated']){
-  const tasks=[],ads=[],ctx={currentComputer:['human','cpu'].includes(scenario),currentGame:'one',currentSlot:1,statusEl:{},user:{},myProfile:{},saveCurrentComputerGame(){},loadComputerRecord:()=>({id:'cpu'}),rpc:async()=>{if(scenario==='failed')throw Error('save failed');if(scenario==='navigated')ctx.window.ScrobbleFakeAd.viewToken++;return{}},sleep:async()=>{},refreshCurrentCloudGame:async()=>{},refreshGames:async()=>{},accountDisplayName:()=>'',profileLabel:()=>'',alert(){},document:{body:{classList:{contains:()=>false}}},window:{ScrobbleFakeAd:{viewToken:1,show:()=>ads.push('ad'),afterTurn:()=>tasks.push({fn:()=>ads.push('ad'),ms:1600})},ScrobbleGame:{scheduleTask:(fn,ms)=>tasks.push({fn,ms}),exportState:()=>({racks:[[],[]],board:[],bag:[],scores:[0,0]}),runComputerTurn(){}},addEventListener:(event,fn)=>ctx.handler=fn}};
+  let cpuRuns=0;const tasks=[],ads=[],ctx={currentComputer:['human','cpu'].includes(scenario),currentGame:'one',currentSlot:1,statusEl:{},user:{},myProfile:{},saveCurrentComputerGame(){},loadComputerRecord:()=>({id:'cpu'}),rpc:async()=>{if(scenario==='failed')throw Error('save failed');if(scenario==='navigated')ctx.window.ScrobbleFakeAd.viewToken++;return{}},sleep:async()=>{},refreshCurrentCloudGame:async()=>{},refreshGames:async()=>{},accountDisplayName:()=>'',profileLabel:()=>'',alert(){},document:{body:{classList:{contains:()=>false}}},window:{ScrobbleFakeAd:{viewToken:1,show:()=>ads.push('ad'),afterTurn:(token,resume)=>tasks.push({fn:()=>ads.push('ad'),ms:1600,resume})},ScrobbleGame:{scheduleTask:(fn,ms)=>tasks.push({fn,ms}),exportState:()=>({racks:[[],[]],board:[],bag:[],scores:[0,0]}),runComputerTurn(){cpuRuns++}},addEventListener:(event,fn)=>ctx.handler=fn}};
   vm.createContext(ctx);vm.runInContext(block,ctx);
   await ctx.handler({detail:{move_type:['pass','swap'].includes(scenario)?scenario:'play',playedBy:scenario==='cpu'?1:0,words:['CAT'],points:3}});
   const sponsor=tasks.filter(t=>t.ms===1600);assert.equal(sponsor.length,['human','cloud'].includes(scenario)?1:0,scenario);
-  for(const t of sponsor)t.fn();assert.equal(ads.length,sponsor.length);
+  for(const t of sponsor){assert.equal(typeof t.resume,scenario==='human'?'function':'undefined','Only computer ads resume the board');t.fn();if(t.resume){t.resume();assert.equal(cpuRuns,1,'Closing computer ad resumes its turn');ctx.currentComputer=false;t.resume();assert.equal(cpuRuns,1,'Do not resume after leaving the computer game');}}assert.equal(ads.length,sponsor.length);
  }
  assert(app.includes('window.ScrobbleFakeAd?.reset();'),'Navigation resets stale ad eligibility');
- console.log('PASS: all twelve sponsors, 120 nonrepeating rotations, persisted choice across launches, exact text, bundled art, close-to-games event, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
+ console.log('PASS: all twelve sponsors, 120 nonrepeating rotations, persisted choice across launches, exact text, bundled art, computer-game resume by close/Escape, multiplayer close-to-games, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
 }finally{fs.rmSync(dir,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});

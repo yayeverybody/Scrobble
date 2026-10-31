@@ -39,6 +39,7 @@ workflows:
           python3 ../scripts/patch-vowel-mode.py
           python3 ../scripts/patch-fake-ad.py
           node ../scripts/verify-move-notice.cjs www
+          node ../scripts/verify-move-highlights.cjs www
           node ../scripts/test-weird-modes.cjs www
           node ../scripts/verify-quad-placement.cjs www
           node ../scripts/verify-ssa-names.cjs www/game-engine-v3140.js

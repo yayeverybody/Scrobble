@@ -33,30 +33,39 @@
     artwork.alt = ad.alt;
     overlay.dataset.sponsor = ad.id;
   }
-  let viewToken = 0, pendingAd;
+  let viewToken = 0, pendingAd, resumeGame = null;
   function dismiss() {
     if (overlay.hidden) return;
     overlay.hidden = true;
     document.body.classList.remove('scrobbleAdActive');
-    window.dispatchEvent(new CustomEvent('scrobble:home'));
-    document.querySelector('#newGameDash')?.focus();
+    const resume = resumeGame;
+    resumeGame = null;
+    if (resume) {
+      document.querySelector('#play')?.focus();
+      resume();
+    } else {
+      window.dispatchEvent(new CustomEvent('scrobble:home'));
+      document.querySelector('#newGameDash')?.focus();
+    }
   }
   window.ScrobbleFakeAd = {
     get viewToken() { return viewToken; },
     reset() {
       viewToken++;
+      resumeGame = null;
       clearTimeout(pendingAd);
       overlay.hidden = true;
       document.body.classList.remove('scrobbleAdActive');
     },
-    afterTurn(token) {
+    afterTurn(token, onDismiss = null) {
       clearTimeout(pendingAd);
       pendingAd = setTimeout(() => {
-        if (token === viewToken) window.ScrobbleFakeAd.show();
+        if (token === viewToken) window.ScrobbleFakeAd.show(onDismiss);
       }, 1600);
     },
-    show() {
+    show(onDismiss = null) {
       if (!document.body.classList.contains('scrobbleGameActive') || !overlay.hidden) return;
+      resumeGame = onDismiss;
       chooseAd();
       overlay.hidden = false;
       document.body.classList.add('scrobbleAdActive');
@@ -70,6 +79,7 @@
   });
   // Home navigation also dismisses the fictional sponsor.
   window.addEventListener('scrobble:home', () => {
+    window.ScrobbleFakeAd.reset();
     overlay.hidden = true;
     document.body.classList.remove('scrobbleAdActive');
   });
