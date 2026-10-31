@@ -1,4 +1,4 @@
-"""Show a fictional sponsor after a committed player word; X returns to games."""
+"""Show a fictional sponsor after a committed player word; X resumes computer games or returns to Games."""
 from pathlib import Path
 import shutil, base64
 scripts=Path(__file__).resolve().parent
@@ -11,7 +11,7 @@ if 'ScrobbleFakeAd' not in s:
     block=block.replace("async e=>{", "async e=>{\n    const sponsorView=window.ScrobbleFakeAd?.viewToken;",1)
     old='      saveCurrentComputerGame();'
     assert block.count(old)==1
-    block=block.replace(old,old+"\n      if(e.detail?.move_type==='play'&&e.detail?.playedBy===0&&sponsorView===window.ScrobbleFakeAd?.viewToken)window.ScrobbleFakeAd?.afterTurn(sponsorView);")
+    block=block.replace(old,old+"\n      if(e.detail?.move_type==='play'&&e.detail?.playedBy===0&&sponsorView===window.ScrobbleFakeAd?.viewToken)window.ScrobbleFakeAd?.afterTurn(sponsorView,()=>{const rec=loadComputerRecord();if(currentComputer&&rec)window.ScrobbleGame.runComputerTurn(rec.difficulty)});")
     old="      statusEl.textContent='Cloud connected • '+(accountDisplayName(user)||profileLabel(myProfile,'Player'))"
     assert block.count(old)==1
     block=block.replace(old,old+";\n      if(e.detail?.move_type==='play'&&sponsorView===window.ScrobbleFakeAd?.viewToken)window.ScrobbleFakeAd?.afterTurn(sponsorView)")
@@ -31,4 +31,4 @@ assets=Path('www/fake-ads');assets.mkdir(exist_ok=True)
 for name in ['mirrors','clear-spaghetti-sauce','ceiling-carpet','soft-sided-coffee-mugs','nelsons-business-suits','prescription-windshields','high-cut-jean-shorts','splashless-chili','invest-in-glass','powdered-water','foil-ball']:
     shutil.copyfile(scripts/'fake-ad-assets'/(name+'.jpg'),assets/(name+'.jpg'))
 (assets/'neon-green.jpg').write_bytes(base64.b64decode((scripts/'fake-ad-assets/neon-green.jpg.b64').read_text()))
-print('PASS: twelve fictional sponsors rotate after saved player plays, with explicit close-to-games')
+print('PASS: twelve fictional sponsors rotate after saved player plays, with mode-aware dismissal')
