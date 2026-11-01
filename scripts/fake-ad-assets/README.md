@@ -57,3 +57,7 @@ Generated and edited with the built-in image tool, converted from the exact appr
 ## The Border Smoothie
 
 `border-smoothie.jpg` is the final approved Señor Pronto creative with THE BORDER SMOOTHIE and LEAVE YOUR TEETH AT HOME. Converted from the exact approved PNG for offline bundling. Added as sponsor thirteen.
+
+## Sea Ferrets
+
+`sea-ferrets.jpg` is the final approved vintage comic-book creative, including double quotation marks around “THEY’RE YOUR PROBLEM NOW.” Converted from the exact approved PNG for offline bundling. Added as sponsor fourteen.

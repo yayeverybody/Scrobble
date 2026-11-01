@@ -16,7 +16,8 @@
     {id:'powdered-water', title:'Powdered Water', tagline:'', footer:'ORIGINAL FLAVOR', alt:'A freckled redheaded boy in a striped 1970s shirt pours powdered water into a glass.'},
     {id:'foil-ball', title:'Foil Ball', tagline:'', footer:'ENDLESSLY ENTERTAINING', alt:'A freckled redheaded boy admires a foil ball in a 1970s den beneath shiny silver foil lettering.'},
     {id:'invest-in-glass', title:'Invest in Glass', tagline:'', footer:'TURN GOLD INTO GLASS', alt:'A banker proudly displays stacks of ordinary glass panes in front of a vault. Turn gold into glass appears in shiny gold block lettering.'},
-    {id:'border-smoothie', title:'The Border Smoothie', tagline:'', footer:'LEAVE YOUR TEETH AT HOME', alt:'Señor Pronto introduces The Border Smoothie: a savory burrito smoothie in a giant striped cup, with the slogan Leave your teeth at home.'}
+    {id:'border-smoothie', title:'The Border Smoothie', tagline:'', footer:'LEAVE YOUR TEETH AT HOME', alt:'Señor Pronto introduces The Border Smoothie: a savory burrito smoothie in a giant striped cup, with the slogan Leave your teeth at home.'},
+    {id:'sea-ferrets', title:'Sea Ferrets', tagline:'', footer:'“THEY’RE YOUR PROBLEM NOW.”', alt:'Vintage comic-book Sea Ferrets advertisement with an underwater ferret family and the quoted slogan They’re your problem now.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;

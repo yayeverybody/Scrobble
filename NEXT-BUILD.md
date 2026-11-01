@@ -1,4 +1,4 @@
-# Scrobble 1.0.63
+# Scrobble 1.0.64
 
 Branch: `feature/hidden-land-mines`
 Workflow: **Yay Everybody iOS Release** (`scrobble-ios-release`)
@@ -21,4 +21,6 @@ Setup layout: tighter headings, mode buttons, Weird rows and difficulty cards; s
 
 Placement update: at least two of the ten mines are randomly seeded inside the central 7×7 (rows/columns 4–10, zero-based). All mine pairs stay at least three spaces apart. Remaining mines use randomized board-wide placement. Existing games keep their original concealed coordinates; new computer games and multiplayer games/rematches use the revised layout.
 
-Sponsor addition: The Border Smoothie by Señor Pronto, using the final approved artwork and LEAVE YOUR TEETH AT HOME tagline. Thirteen offline sponsors now rotate without consecutive repeats.
+Sponsor addition: The Border Smoothie by Señor Pronto, using the final approved artwork and LEAVE YOUR TEETH AT HOME tagline. Fourteen offline sponsors now rotate without consecutive repeats.
+
+Sponsor addition: Sea Ferrets, using the approved comic-book aquarium artwork with quotation marks around the bottom slogan. Fourteen offline sponsors, including The Border Smoothie, now rotate without consecutive repeats.
