@@ -1,4 +1,4 @@
-# Scrobble 1.0.60
+# Scrobble 1.0.61
 
 Branch: `feature/hidden-land-mines`
 Workflow: **Yay Everybody iOS Release** (`scrobble-ios-release`)
@@ -16,3 +16,5 @@ Suggested What’s New: New Make It Weird option: Hidden Land Mines. Five secret
 Audio follow-up: compressed and normalized the explosion sample and gave it a dedicated 55% playback level on both native iOS and web fallback. Other effects retain their previous levels. Packaging and signal checks now require the explosion, including after Capacitor sync.
 
 Mine notices remain until OK or a backdrop tap. Cloud refreshes retain the open notice; sponsors and computer turns wait for dismissal. Existing games retain their saved mine layout; ten mines apply to new games.
+
+Setup layout: tighter headings, mode buttons, Weird rows and difficulty cards; shorter rule explanations; smaller recent-player avatars. Modal height includes its padding and both iPhone safe areas, with scrolling retained for smaller screens and enlarged text.

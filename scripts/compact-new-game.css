@@ -1,0 +1,37 @@
+/* Keep both New Game flows inside the visible iPhone safe area. */
+#gameModeBox{
+  box-sizing:border-box!important;
+  padding:max(10px,env(safe-area-inset-top)) 10px max(16px,env(safe-area-inset-bottom))!important;
+}
+#gameModeBox .gameModeCard{
+  box-sizing:border-box!important;
+  max-height:calc(100dvh - max(10px,env(safe-area-inset-top)) - max(16px,env(safe-area-inset-bottom)))!important;
+  padding:18px 16px 14px!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+#gameModeBox h2{font-size:25px!important;margin:2px 22px 10px!important;line-height:1.1!important}
+#gameModeBox .modeChooser{gap:8px;margin:10px 0!important}
+#gameModeBox .modeChoice{min-height:48px;padding:8px 6px;font-size:11px}
+#gameModeBox .weirdBox{margin:10px 0 12px!important;padding:11px 12px 8px!important}
+#gameModeBox .weirdTitle{font-size:16px!important}
+#gameModeBox .weirdSub{margin:3px 0 7px!important;font-size:11px!important}
+#gameModeBox .weirdChoice{gap:10px;padding:7px 0!important;min-height:44px;box-sizing:border-box}
+#gameModeBox .weirdChoice strong{font-size:19px!important;line-height:1.15!important}
+#gameModeBox .weirdChoice small{font-size:15px!important;line-height:1.3!important;margin-top:4px}
+#gameModeBox .cpuChoices{gap:7px!important}
+#gameModeBox .cpuChoices button{min-height:48px;padding:10px 14px!important}
+#gameModeBox .friendStart{min-height:48px;margin:6px 0 0!important}
+#gameModeBox #scrobbleRecentOpponents{margin:8px 0!important}
+#gameModeBox #scrobbleRecentOpponents>div:first-child{font-size:13px;margin:6px 0!important}
+#gameModeBox #scrobbleRecentOpponents>div:last-child{gap:6px!important}
+#gameModeBox #scrobbleRecentOpponents button{padding:4px 1px!important;gap:4px!important}
+#gameModeBox #scrobbleRecentOpponents button>div{max-width:44px}
+#gameModeBox #scrobbleRecentOpponents button>span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:700 11px/1.15 Arial,Helvetica,sans-serif!important;letter-spacing:0!important}
+@media(max-height:700px){
+  #gameModeBox .gameModeCard{padding:14px 14px 12px!important}
+  #gameModeBox h2{font-size:24px!important}
+  #gameModeBox .weirdChoice strong{font-size:18px!important}
+  #gameModeBox .weirdChoice small{font-size:14px!important}
+}
