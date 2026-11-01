@@ -18,6 +18,7 @@
     {id:'invest-in-glass', title:'Invest in Glass', tagline:'', footer:'TURN GOLD INTO GLASS', alt:'A banker proudly displays stacks of ordinary glass panes in front of a vault. Turn gold into glass appears in shiny gold block lettering.'},
     {id:'border-smoothie', title:'The Border Smoothie', tagline:'', footer:'LEAVE YOUR TEETH AT HOME', alt:'Señor Pronto introduces The Border Smoothie: a savory burrito smoothie in a giant striped cup, with the slogan Leave your teeth at home.'},
     {id:'sea-ferrets', title:'Sea Ferrets', tagline:'', footer:'“THEY’RE YOUR PROBLEM NOW.”', alt:'Vintage comic-book Sea Ferrets advertisement with an underwater ferret family and the quoted slogan They’re your problem now.'}
+    ,{id:'edible-aquarium-gravel', title:'Edible Aquarium Gravel', tagline:'', footer:'', alt:'Retro Edible Aquarium Gravel advertisement with a girl eating candy pebbles, a detailed product bag, a bowl of candy and a goldfish aquarium.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;
