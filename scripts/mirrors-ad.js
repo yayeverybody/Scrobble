@@ -15,7 +15,8 @@
     {id:'splashless-chili', title:'Dalton’s Splashless Chili', tagline:'', footer:'', alt:'A man drops a solid can-shaped cylinder of chili toward a bowl. Another cylinder rests across the bowl edge and a third lies on the counter.'},
     {id:'powdered-water', title:'Powdered Water', tagline:'', footer:'ORIGINAL FLAVOR', alt:'A freckled redheaded boy in a striped 1970s shirt pours powdered water into a glass.'},
     {id:'foil-ball', title:'Foil Ball', tagline:'', footer:'ENDLESSLY ENTERTAINING', alt:'A freckled redheaded boy admires a foil ball in a 1970s den beneath shiny silver foil lettering.'},
-    {id:'invest-in-glass', title:'Invest in Glass', tagline:'', footer:'TURN GOLD INTO GLASS', alt:'A banker proudly displays stacks of ordinary glass panes in front of a vault. Turn gold into glass appears in shiny gold block lettering.'}
+    {id:'invest-in-glass', title:'Invest in Glass', tagline:'', footer:'TURN GOLD INTO GLASS', alt:'A banker proudly displays stacks of ordinary glass panes in front of a vault. Turn gold into glass appears in shiny gold block lettering.'},
+    {id:'border-smoothie', title:'The Border Smoothie', tagline:'', footer:'LEAVE YOUR TEETH AT HOME', alt:'Señor Pronto introduces The Border Smoothie: a savory burrito smoothie in a giant striped cup, with the slogan Leave your teeth at home.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;

@@ -53,3 +53,7 @@ bundling, stored as base64 and decoded by the existing build patch. Included as 
 - `invest-in-glass.jpg`: Invest in Glass; TURN GOLD INTO GLASS in shiny gold block capitals. No Sponsored By line.
 
 Generated and edited with the built-in image tool, converted from the exact approved PNGs to JPEG for offline bundling. All seven prior sponsors, including Neon Green, are retained. The unapproved disposable-tie draft is excluded.
+
+## The Border Smoothie
+
+`border-smoothie.jpg` is the final approved Señor Pronto creative with THE BORDER SMOOTHIE and LEAVE YOUR TEETH AT HOME. Converted from the exact approved PNG for offline bundling. Added as sponsor thirteen.

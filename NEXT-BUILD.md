@@ -1,4 +1,4 @@
-# Scrobble 1.0.62
+# Scrobble 1.0.63
 
 Branch: `feature/hidden-land-mines`
 Workflow: **Yay Everybody iOS Release** (`scrobble-ios-release`)
@@ -20,3 +20,5 @@ Mine notices remain until OK or a backdrop tap. Cloud refreshes retain the open 
 Setup layout: tighter headings, mode buttons, Weird rows and difficulty cards; shorter rule explanations; smaller recent-player avatars. Modal height includes its padding and both iPhone safe areas, with scrolling retained for smaller screens and enlarged text.
 
 Placement update: at least two of the ten mines are randomly seeded inside the central 7×7 (rows/columns 4–10, zero-based). All mine pairs stay at least three spaces apart. Remaining mines use randomized board-wide placement. Existing games keep their original concealed coordinates; new computer games and multiplayer games/rematches use the revised layout.
+
+Sponsor addition: The Border Smoothie by Señor Pronto, using the final approved artwork and LEAVE YOUR TEETH AT HOME tagline. Thirteen offline sponsors now rotate without consecutive repeats.
