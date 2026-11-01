@@ -35,6 +35,7 @@
   const webSounds = new Map();
   let tileVariant = 0;
   function soundName(kind, options = {}) {
+    if (kind === 'explosion') return 'explosion';
     if (kind === 'tile' || kind === 'splashTile') return 'tile-' + (tileVariant++ % 3);
     if (kind === 'finish') return options.gain >= 50 ? 'big-finish' : 'finish';
     if (kind === 'splashStudio') return 'create';
@@ -101,6 +102,7 @@
   }
   const feedback = {
     tap: () => play('tap'),
+    explosion: () => play('explosion'),
     create: () => play('create'),
     success: () => play('finish'),
     tile: () => play('tile'),

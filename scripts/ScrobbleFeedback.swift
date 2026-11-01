@@ -108,7 +108,7 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
                     try AVAudioSession.sharedInstance().setActive(true)
                     let chime = kind == "finish" || kind == "splashStudio"
                     let requested = call.getString("soundName") ?? (chime ? "finish" : "note-\(max(0, min(11, Int(p * 11))))")
-                    let allowed = ["finish", "big-finish", "button", "return", "shuffle", "error", "create"] + (0...2).map { "tile-\($0)" } + (0...11).map { "note-\($0)" }
+                    let allowed = ["explosion", "finish", "big-finish", "button", "return", "shuffle", "error", "create"] + (0...2).map { "tile-\($0)" } + (0...11).map { "note-\($0)" }
                     let note = allowed.contains(requested) ? requested : "button"
                     if let url = Bundle.main.url(forResource: note, withExtension: "wav", subdirectory: "public/feedback") {
                         let player = try AVAudioPlayer(contentsOf: url)

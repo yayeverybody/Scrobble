@@ -17,3 +17,5 @@ or confirmation_004 for gains of at least 50 points and game completion.
 Existing volume reduction, independent sound/haptic settings, interruption and
 background cancellation remain in place. iPhone listening check is required in
 TestFlight before release; desktop checks cannot verify speaker balance or feel.
+
+`explosion.wav` is an original 0.8-second synthesized noise/low-frequency impact created for Hidden Land Mines, rather than a Kenney sample. It uses the existing game sound setting and native playback path.

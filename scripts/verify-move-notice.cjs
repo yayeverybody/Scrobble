@@ -15,3 +15,11 @@ ctx.currentGame='no-profile';ctx.maybeShowOpponentLastMove({current_slot:0,lastM
 ctx.currentGame='saved-name';ctx.maybeShowOpponentLastMove({current_slot:0,lastMoveSummary:{playedBy:1,move_type:'pass',playerName:'Sara'}},1);pending.shift()();assert.equal(shown.at(-1).playerName,'Sara');
 const count=shown.length;ctx.maybeShowOpponentLastMove({current_slot:0,lastMoveSummary:{playedBy:1,move_type:'pass',playerName:'Sara'}},1);assert.equal(pending.length,0,'Do not repeat a notice for unchanged move');assert.equal(shown.length,count);
 console.log('PASS: Zorro DOM cannot leak into ShortFuse notices, play/pass/swap in both slots, safe missing-profile fallback and duplicate suppression');
+
+for(const slot of [1,2]){
+ ctx.currentGame='mine'+slot;
+ const state={current_slot:2-slot,updated_at:'mine',lastMoveSummary:{playedBy:slot-1,move_type:'play',words:['CAT'],points:-30,landMines:[[7,7]]},['player'+slot+'_profile']:{display_name:'Mine Player'}};
+ ctx.maybeShowOpponentLastMove(state,slot);pending.shift()();assert.equal(shown.at(-1).playerName,'Mine Player');assert.equal(shown.at(-1).points,-30);
+ ctx.maybeShowOpponentLastMove(state,slot);assert.equal(pending.length,0);
+}
+console.log('PASS: own mine and accepted challenge notices reach both slots once');
