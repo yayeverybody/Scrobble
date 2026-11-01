@@ -7,7 +7,8 @@ begin
  for n in 1..100 loop
   positions:=scrobble_private.random_mines();
   assert jsonb_array_length(positions)=10,'Exactly ten mines';
-  assert not exists(select 1 from jsonb_array_elements(positions) a cross join jsonb_array_elements(positions) b where a<>b and ((a->>0)::int-(b->>0)::int)^2+((a->>1)::int-(b->>1)::int)^2<25),'Spacing includes diagonals';
+  assert (select count(*) from jsonb_array_elements(positions) central_cell where (central_cell->>0)::int between 4 and 10 and (central_cell->>1)::int between 4 and 10)>=2,'At least two mines in central 7x7';
+  assert not exists(select 1 from jsonb_array_elements(positions) a cross join jsonb_array_elements(positions) b where a<>b and ((a->>0)::int-(b->>0)::int)^2+((a->>1)::int-(b->>1)::int)^2<9),'Spacing includes diagonals';
  end loop;
  select player_id into u1 from public.game_players limit 1;
  select player_id into u2 from public.game_players where player_id<>u1 limit 1;

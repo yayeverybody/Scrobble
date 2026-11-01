@@ -5,11 +5,15 @@ function randomLandMines(){
   for(let attempt=0;attempt<1000;attempt++){
     const cells=Array.from({length:225},(_,i)=>[Math.floor(i/15),i%15]);shuffle(cells);
     const chosen=[];
-    for(const cell of cells){
-      // Straight-line distance of at least five board spaces, including diagonals.
-      if(chosen.every(([r,c])=>(r-cell[0])**2+(c-cell[1])**2>=25))chosen.push(cell);
-      if(chosen.length===10)return chosen;
+    // Seed two traps in the central 7×7, then fill the rest across the board.
+    const center=cells.filter(([r,c])=>r>=4&&r<=10&&c>=4&&c<=10);
+    for(const [pool,target] of [[center,2],[cells,10]]){
+      for(const cell of pool){
+        if(chosen.every(([r,c])=>(r-cell[0])**2+(c-cell[1])**2>=9))chosen.push(cell);
+        if(chosen.length===target)break;
+      }
     }
+    if(chosen.length===10)return chosen;
   }
   throw new Error('Could not place ten separated land mines');
 }

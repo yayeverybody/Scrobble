@@ -10,9 +10,9 @@ let dom;
  w.fetch=async()=>({ok:true,text:async()=>read('scrobble-classic-lexicon.txt')});w.Element.prototype.scrollIntoView=function(){};
  w.eval(read('game-engine-v3140.js').replace('if(!loadLocalState())freshLocalGame();',`window.__mines={randomLandMines,commit,localMineHits,setup(ps,pts=100){board=Array.from({length:15},()=>Array(15).fill(null));pending=ps.map(([r,c])=>({r,c,letter:'A'}));pending.forEach(p=>board[p.r][p.c]={letter:'A',pending:true,owner:0});racks=[['T'],['T']];bag=['E'];scores=[pts,0];current=0;committed=0;landMines=[[7,7],[7,12],[12,7],[1,1],[1,6]];},cloud(v){cloudRackMode=v},cpu(){current=1},thinking:()=>cpuThinking,red(r,c){return board[r][c]?.landMine}};if(!loadLocalState())freshLocalGame();`));
  const g=w.ScrobbleGame,t=w.__mines;
- for(let n=0;n<300;n++){
-  const mines=t.randomLandMines();assert.equal(mines.length,10);
-  for(let i=0;i<10;i++)for(let j=i+1;j<10;j++)assert((mines[i][0]-mines[j][0])**2+(mines[i][1]-mines[j][1])**2>=25);
+ for(let n=0;n<1000;n++){
+  const mines=t.randomLandMines();assert.equal(mines.length,10);assert(mines.filter(([r,c])=>r>=4&&r<=10&&c>=4&&c<=10).length>=2,'Two mines must be in the central 7x7');
+  for(let i=0;i<10;i++)for(let j=i+1;j<10;j++)assert((mines[i][0]-mines[j][0])**2+(mines[i][1]-mines[j][1])**2>=9);
  }
  g.newComputerGame('easy',['hidden_land_mines']);const initial=g.exportState();assert.equal(initial.landMines.length,10);assert.equal(w.document.querySelectorAll('.detonatedMine').length,0);
  g.loadComputerState(initial);assert.deepEqual(JSON.parse(JSON.stringify(g.exportState().landMines)),JSON.parse(JSON.stringify(initial.landMines)));
@@ -32,5 +32,5 @@ let dom;
  g.newComputerGame('easy',[]);t.setup([[7,7]]);t.commit([{word:'A',cells:[[7,7]]}],30);assert.equal(g.exportState().scores[0],130);
  g.newComputerGame('easy',['hidden_land_mines']);t.setup([[7,7]]);t.cpu();t.commit([{word:'A',cells:[[7,7]]}],30);assert.equal(g.exportState().scores[1],-30,'Computer has the same mine penalty');
  g.newComputerGame('easy',['hidden_land_mines']);t.setup([[7,7]]);t.cloud(true);assert.equal(t.localMineHits().length,0,'Cloud positions are resolved exclusively on server');
- console.log('PASS: 300 random boards, ten separated mines, hidden state, save/reload, negative scores, one deduction for multiple mines, classic unaffected, server-only cloud resolution, red tile and explosion notice');
+ console.log('PASS: 1,000 random boards, ten separated mines, hidden state, save/reload, negative scores, one deduction for multiple mines, classic unaffected, server-only cloud resolution, red tile and explosion notice');
 }finally{dom?.window.close();fs.rmSync(dir,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});
