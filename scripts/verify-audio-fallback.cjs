@@ -7,7 +7,12 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
   ctx.window.ScrobbleHaptics.scoreStart(0,20);ctx.window.ScrobbleHaptics.scoreProgress(0,.5,100);
   for(let i=0;i<5;i++)await Promise.resolve();
   assert.equal(sounds.length,['success','muted'].includes(mode)?0:1,mode);
-  if(sounds.length){assert.equal(sounds[0].src,'feedback/note-5.wav');assert(Math.abs(sounds[0].volume-.21)<.001);ctx.document.hidden=true;listeners.visibilitychange();assert(sounds[0].paused)}
+  if(sounds.length){assert.equal(sounds[0].src,'feedback/note-5.wav');assert(Math.abs(sounds[0].volume-.21)<.001)}
+  const before=sounds.length;ctx.window.ScrobbleHaptics.explosion();
+  for(let i=0;i<5;i++)await Promise.resolve();
+  assert.equal(sounds.length-before,['success','muted'].includes(mode)?0:1,'Explosion fallback '+mode);
+  if(sounds.length>before){assert.equal(sounds.at(-1).src,'feedback/explosion.wav');assert.equal(sounds.at(-1).volume,.55)}
+  ctx.document.hidden=true;listeners.visibilitychange();assert(sounds.every(s=>s.paused));
  }
  console.log('PASS: sound fallback on missing/rejected/failed native audio, no duplicate successful sound, mute preference, retained volume reduction and background cancellation.');
 })();

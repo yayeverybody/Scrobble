@@ -50,7 +50,7 @@
     const name = payload.soundName || soundName(payload.kind, payload);
     try {
       const player = new Audio('feedback/' + name + '.wav');
-      player.volume = (payload.kind === 'splashTile' ? .2 + p * .08 : payload.kind === 'splashStudio' ? .35 : payload.kind === 'finish' ? .55 : .25 + p * .2) * .6;
+      player.volume = payload.kind === 'explosion' ? .55 : (payload.kind === 'splashTile' ? .2 + p * .08 : payload.kind === 'splashStudio' ? .35 : payload.kind === 'finish' ? .55 : .25 + p * .2) * .6;
       const key = payload.key || 'ui';
       const live = (webSounds.get(key) || []).filter(a => !a.ended && !a.paused);
       while (live.length >= 4) live.shift().pause();

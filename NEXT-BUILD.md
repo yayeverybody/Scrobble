@@ -1,4 +1,4 @@
-# Scrobble 1.0.58
+# Scrobble 1.0.59
 
 Branch: `feature/hidden-land-mines`
 Workflow: **Yay Everybody iOS Release** (`scrobble-ios-release`)
@@ -12,3 +12,5 @@ Backend migration has been applied and tested. iOS build and physical-device sou
 Validation: tests/land-mines.cjs, tests/land-mines.sql, all eight Weird combinations, board switching, Quad Chaos, move-coordinate highlights, own/opponent notices, score feedback, existing release web checks. SQL fixtures roll back automatically.
 
 Suggested What’s New: New Make It Weird option: Hidden Land Mines. Five secret board spaces can turn your big score into a deduction. Watch your step.
+
+Audio follow-up: compressed and normalized the explosion sample and gave it a dedicated 55% playback level on both native iOS and web fallback. Other effects retain their previous levels. Packaging and signal checks now require the explosion, including after Capacitor sync.

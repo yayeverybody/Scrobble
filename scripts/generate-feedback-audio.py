@@ -1,4 +1,4 @@
-"""Install bundled, licensed Kenney samples. No synthesis or build-time downloads."""
+"""Install bundled Kenney samples and the original explosion effect. No synthesis or build-time downloads."""
 from pathlib import Path
 import shutil
 
@@ -7,7 +7,7 @@ def generate(directory):
     source = Path(__file__).with_name('feedback-assets')
     for file in source.iterdir():
         shutil.copyfile(file, directory / file.name)
-    expected = ['finish', 'big-finish', 'button', 'return', 'shuffle', 'error', 'create'] + [f'tile-{i}' for i in range(3)] + [f'note-{i}' for i in range(12)]
+    expected = ['explosion', 'finish', 'big-finish', 'button', 'return', 'shuffle', 'error', 'create'] + [f'tile-{i}' for i in range(3)] + [f'note-{i}' for i in range(12)]
     for name in expected:
         assert (directory / (name + '.wav')).read_bytes()[:4] == b'RIFF', name
 
