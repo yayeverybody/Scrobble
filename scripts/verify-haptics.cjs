@@ -53,6 +53,8 @@ function setup({ native = true, fail = false, register = false, custom = false, 
   assert.equal(s.calls.length, completed, 'Cancelled and decreasing scores must stay silent');
   s.listeners['scrobble:turn-ended']({ detail: { move_type: 'swap' } });
   assert.equal(s.calls.at(-1).style, 'MEDIUM');
+  const explosion = setup();explosion.ctx.window.ScrobbleHaptics.explosion();assert.equal(explosion.calls.at(-1).style,'HEAVY');
+  const blast = setup({custom:true});blast.ctx.window.ScrobbleHaptics.explosion();assert.equal(blast.calls.at(-1).kind,'explosion');assert.equal(blast.calls.at(-1).soundName,'explosion');assert.equal(blast.calls.at(-1).haptics,true);
   const web = setup({ native: false }); web.click('shareInvite'); assert.equal(web.calls.length, 0);
   const fallback = setup({ register: true }); fallback.click('shareInvite'); assert.equal(fallback.calls.length, 1);
   const rejected = setup({ fail: true }); assert.doesNotThrow(() => rejected.click('copyInvite'));

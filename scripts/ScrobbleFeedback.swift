@@ -82,6 +82,8 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
             case "splashStudio": events = [self.event(0, 0.22, 0.35), self.event(0.09, 0.14, 0.5)]
             case "return": events = [self.event(0, 0.22, 0.12)]
             case "tile": events = [self.event(0, 0.32, 0.8)]
+            case "explosion":
+                events = [self.event(0, 0.95, 0.85), self.event(0.07, 0.55, 0.2), self.event(0.16, 0.25, 0.1)]
             case "error": events = [self.event(0, 0.4, 0.15), self.event(0.12, 0.3, 0.15)]
             case "create": events = [self.event(0, 0.4, 0.4)]
             default: events = [self.event(0, 0.18, 0.5)]
@@ -93,9 +95,9 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
                         self.players[key] = player
                         try player.start(atTime: CHHapticTimeImmediate)
                     } else {
-                        UIImpactFeedbackGenerator(style: kind == "tap" ? .light : .medium).impactOccurred()
+                        UIImpactFeedbackGenerator(style: kind == "explosion" ? .heavy : kind == "tap" ? .light : .medium).impactOccurred()
                     }
-                } catch { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+                } catch { UIImpactFeedbackGenerator(style: kind == "explosion" ? .heavy : .light).impactOccurred() }
             }
             var audioPlayed = false
             var audioError: String?

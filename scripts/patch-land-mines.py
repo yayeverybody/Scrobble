@@ -13,7 +13,7 @@ s=once(s,'function commit(words,points){', '''function commit(words,points){
 s=once(s,'  moveText.textContent=lastMoveSummary.text;', '''  if(mineHits.length){lastMoveSummary.landMines=mineHits;lastMoveSummary.text=mineMessage(lastMoveSummary);revealMineFeedback(lastMoveSummary)}
   moveText.textContent=lastMoveSummary.text;''')
 s=once(s,'b.dataset.r=r;b.dataset.c=c;',"b.dataset.r=r;b.dataset.c=c;if(board[r][c]?.landMine){b.classList.add('detonatedMine');b.setAttribute('aria-label','Detonated land mine');}")
-s=once(s,"turnNoticeOverlay.querySelector('.reviewLabel').textContent='Last move';", "turnNoticeOverlay.querySelector('.reviewLabel').textContent=summary.landMines?.length?'Hidden Land Mine!':'Last move';\n  revealMineFeedback(summary);")
+s=once(s,"turnNoticeOverlay.querySelector('.reviewLabel').textContent='Last move';", "turnNoticeOverlay.querySelector('.reviewLabel').innerHTML=summary.landMines?.length?'<span class=landMineNoticeIcon role=img aria-label=Explosion>💥</span>Hidden Land Mine!':'Last move';\n  revealMineFeedback(summary);")
 s=once(s,"turnNoticePoints.textContent=`${summary.points} point${summary.points===1?'':'s'}`;", "turnNoticePoints.textContent=summary.landMines?.length?mineMessage(summary):`${summary.points} point${summary.points===1?'':'s'}`;")
 s=s.replace('startingPlayer,weirdRules,quadSpaces,','startingPlayer,weirdRules,landMines,quadSpaces,')
 s=s.replace('weirdRules,quadSpaces,','weirdRules,landMines,quadSpaces,')
@@ -42,7 +42,7 @@ p=Path('www/index.html');s=p.read_text()
 old='<label class="weirdChoice"><input type="checkbox" value="name_dropper"><span><strong>Name Dropper</strong><small>Names and places are allowed; unlisted names need opponent approval.</small></span></label>'
 s=once(s,old,'<label class="weirdChoice"><input type="checkbox" value="hidden_land_mines"><span><strong>Hidden Land Mines</strong><small>Five hidden traps. Hit one and your move’s points are deducted. The word stays.</small></span></label>')
 s=once(s,'</head>','''<style>
-#scrobble-v4 .cell.detonatedMine{background:#800d18!important;box-shadow:inset 0 0 0 3px #b52b37}
+#scrobble-v4 .landMineNoticeIcon{display:block;font-size:64px;line-height:1.1;margin:0 0 10px;text-transform:none}\n#scrobble-v4 .cell.detonatedMine{background:#800d18!important;box-shadow:inset 0 0 0 3px #b52b37}
 #scrobble-v4 .detonatedMine .tileGraphic rect{fill:#800d18;stroke:#bc4350}
 #scrobble-v4 .detonatedMine .tileGraphic text{fill:#fff}
 </style></head>''')

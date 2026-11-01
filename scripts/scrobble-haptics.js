@@ -28,7 +28,7 @@
     if (!settings.haptics) return;
     try {
       const method = kind === 'finish' ? 'notification' : 'impact';
-      const options = kind === 'finish' ? { type: 'SUCCESS' } : { style: kind === 'tap' || kind === 'return' || kind.startsWith('splash') || progress < .33 ? 'LIGHT' : progress > .66 ? 'HEAVY' : 'MEDIUM' };
+      const options = kind === 'finish' ? { type: 'SUCCESS' } : { style: kind === 'explosion' ? 'HEAVY' : kind === 'tap' || kind === 'return' || kind.startsWith('splash') || progress < .33 ? 'LIGHT' : progress > .66 ? 'HEAVY' : 'MEDIUM' };
       Promise.resolve(basic?.[method]?.(options)).catch(() => {});
     } catch (_) {}
   }
