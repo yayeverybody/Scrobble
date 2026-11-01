@@ -83,7 +83,12 @@ public class ScrobbleFeedbackPlugin: CAPPlugin, CAPBridgedPlugin {
             case "return": events = [self.event(0, 0.22, 0.12)]
             case "tile": events = [self.event(0, 0.32, 0.8)]
             case "explosion":
-                events = [self.event(0, 0.95, 0.85), self.event(0.07, 0.55, 0.2), self.event(0.16, 0.25, 0.1)]
+                events = [self.event(0, 1.0, 1.0),
+                    CHHapticEvent(eventType: .hapticContinuous, parameters: [
+                        CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
+                        CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.15)
+                    ], relativeTime: 0.02, duration: 0.75),
+                    self.event(0.12, 1.0, 0.9), self.event(0.3, 1.0, 0.9), self.event(0.52, 1.0, 0.8), self.event(0.74, 0.9, 0.6)]
             case "error": events = [self.event(0, 0.4, 0.15), self.event(0.12, 0.3, 0.15)]
             case "create": events = [self.event(0, 0.4, 0.4)]
             default: events = [self.event(0, 0.18, 0.5)]

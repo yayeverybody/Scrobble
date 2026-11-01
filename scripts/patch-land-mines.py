@@ -26,6 +26,19 @@ s=once(s,'opponent:\'Player 2\'',"lastMoveSummary,opponent:'Player 2'")
 s=once(s,"if(!s)return false;", "if(!s)return false;lastMoveSummary=s.lastMoveSummary||null;")
 s=once(s,"  if(cpuMode&&playedBy===1)","  if(mineHits.length&&playedBy===0)showTurnNotice(lastMoveSummary);\n  if(cpuMode&&playedBy===1)")
 s=once(s,"bar.textContent=lm?.move_type===","bar.textContent=lm?.landMines?.length?mineMessage(lm):lm?.move_type===")
+# Keep the modal until explicit dismissal, even across cloud refreshes.
+s=once(s,'function hideTurnNotice(){',"function hideTurnNotice(){if(preserveMineNotice)return;")
+s=once(s,"  turnNoticeOverlay.classList.add('hidden');\n  if(wasComputerRejection)","  turnNoticeOverlay.classList.add('hidden');\n  releaseMineNoticeWaiters();const queued=mineNoticeQueued;mineNoticeQueued=null;if(queued)scheduleBoardTask(()=>showTurnNotice(queued),0);\n  if(wasComputerRejection)")
+s=once(s,"  boardViewGeneration++;\n  turnNoticeSummary=null;\n  turnNoticeOverlay.classList.add('hidden');", "  boardViewGeneration++;\n  if(!preserveMineNotice){turnNoticeSummary=null;turnNoticeOverlay.classList.add('hidden');mineNoticeQueued=null;releaseMineNoticeWaiters();}")
+s=once(s,'function showTurnNotice(summary){',"function showTurnNotice(summary){if(isMineNoticeOpen()&&summary!==turnNoticeSummary){if(!sameMineNotice(summary,turnNoticeSummary))mineNoticeQueued=summary;return;}")
+s=once(s,"e.target===turnNoticeOverlay&&turnNoticeOverlay.querySelector('.reviewLabel')?.textContent==='Word rejected'", "e.target===turnNoticeOverlay&&(isMineNoticeOpen()||turnNoticeOverlay.querySelector('.reviewLabel')?.textContent==='Word rejected')")
+s=once(s,"  runComputerTurn(difficulty){", "  isMineNoticeOpen,waitForMineNotice,\n  runComputerTurn(difficulty){")
+s=once(s,'  const validTurn=()=>generation===cpuGeneration&&cpuMode&&current===1;', '  const validTurn=()=>generation===cpuGeneration&&cpuMode&&current===1;\n  if(isMineNoticeOpen()){waitForMineNotice().then(()=>{if(validTurn())runComputerTurn(difficulty)});return;}')
+start=s.index('  loadCloudState(s,slot){');end=s.index('\n  }',start)
+cloud=s[start:end]
+cloud=once(cloud,'clearBoardPresentation();',"preserveMineNotice=mineCloudGameId===s.id&&isMineNoticeOpen();mineCloudGameId=s.id;clearBoardPresentation();")
+cloud+=';preserveMineNotice=false;'
+s=s[:start]+cloud+s[end:]
 p.write_text(s)
 p=Path('www/app-v3140.js');s=p.read_text()
 s=once(s,'const WEIRD_LABELS={',"const WEIRD_LABELS={hidden_land_mines:'Hidden Land Mines',")
@@ -40,7 +53,7 @@ s=once(s,"p_points:e.detail.points||0})}catch(wordErr)","p_points:saved.points??
 p.write_text(s)
 p=Path('www/index.html');s=p.read_text()
 old='<label class="weirdChoice"><input type="checkbox" value="name_dropper"><span><strong>Name Dropper</strong><small>Names and places are allowed; unlisted names need opponent approval.</small></span></label>'
-s=once(s,old,'<label class="weirdChoice"><input type="checkbox" value="hidden_land_mines"><span><strong>Hidden Land Mines</strong><small>Five hidden traps. Hit one and your move’s points are deducted. The word stays.</small></span></label>')
+s=once(s,old,'<label class="weirdChoice"><input type="checkbox" value="hidden_land_mines"><span><strong>Hidden Land Mines</strong><small>Ten hidden traps. Hit one and your move’s points are deducted. The word stays.</small></span></label>')
 s=once(s,'</head>','''<style>
 #scrobble-v4 .landMineNoticeIcon{display:block;font-size:64px;line-height:1.1;margin:0 0 10px;text-transform:none}\n#scrobble-v4 .cell.detonatedMine{background:#800d18!important;box-shadow:inset 0 0 0 3px #b52b37}
 #scrobble-v4 .detonatedMine .tileGraphic rect{fill:#800d18;stroke:#bc4350}

@@ -102,7 +102,7 @@
   }
   const feedback = {
     tap: () => play('tap'),
-    explosion: () => play('explosion'),
+    explosion: () => play('explosion', { key: 'land-mine' }),
     create: () => play('create'),
     success: () => play('finish'),
     tile: () => play('tile'),

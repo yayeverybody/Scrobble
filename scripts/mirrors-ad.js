@@ -60,7 +60,9 @@
     afterTurn(token, onDismiss = null) {
       clearTimeout(pendingAd);
       pendingAd = setTimeout(() => {
-        if (token === viewToken) window.ScrobbleFakeAd.show(onDismiss);
+        const show = () => { if (token === viewToken) window.ScrobbleFakeAd.show(onDismiss); };
+        if (window.ScrobbleGame?.isMineNoticeOpen?.()) window.ScrobbleGame.waitForMineNotice().then(show);
+        else show();
       }, 1600);
     },
     show(onDismiss = null) {

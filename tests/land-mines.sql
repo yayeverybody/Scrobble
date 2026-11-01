@@ -6,8 +6,8 @@ declare
 begin
  for n in 1..100 loop
   positions:=scrobble_private.random_mines();
-  assert jsonb_array_length(positions)=5,'Exactly five mines';
-  assert not exists(select 1 from jsonb_array_elements(positions) a cross join jsonb_array_elements(positions) b where a<>b and greatest(abs((a->>0)::int-(b->>0)::int),abs((a->>1)::int-(b->>1)::int))<5),'Spacing includes diagonals';
+  assert jsonb_array_length(positions)=10,'Exactly ten mines';
+  assert not exists(select 1 from jsonb_array_elements(positions) a cross join jsonb_array_elements(positions) b where a<>b and ((a->>0)::int-(b->>0)::int)^2+((a->>1)::int-(b->>1)::int)^2<25),'Spacing includes diagonals';
  end loop;
  select player_id into u1 from public.game_players limit 1;
  select player_id into u2 from public.game_players where player_id<>u1 limit 1;
@@ -17,7 +17,7 @@ begin
  values(game,'active',u1,board,'["E"]',100,0,'["hidden_land_mines"]');
  insert into public.game_players(game_id,player_id,player_number,rack) values(game,u1,1,'["A"]'),(game,u2,2,'["B"]');
  select m.positions into positions from scrobble_private.land_mines m where game_id=game;
- assert jsonb_array_length(positions)=5,'Initialized once for game';
+ assert jsonb_array_length(positions)=10,'Initialized once for game';
  perform set_config('request.jwt.claim.sub',u1::text,true);
  perform public.set_scrobble_weird_rules(game,'["hidden_land_mines"]');
  assert positions=(select m.positions from scrobble_private.land_mines m where game_id=game),'Rules retry cannot reroll mines';
@@ -72,7 +72,7 @@ begin
  assert result->'scores'='[-46,-4]'::jsonb,'Mine penalty precedes endgame rack transfer';
  select jsonb_agg(row) into board from (select jsonb_agg(null::text) as row from generate_series(1,15) a cross join generate_series(1,15) b group by a) x;
  result:=public.create_scrobble_rematch(game,board,'["E"]','["A"]','["B"]');
- assert (select jsonb_array_length(m.positions) from scrobble_private.land_mines m where m.game_id=(result->>'id')::uuid)=5,'Rematch gets five fresh hidden mines';
+ assert (select jsonb_array_length(m.positions) from scrobble_private.land_mines m where m.game_id=(result->>'id')::uuid)=10,'Rematch gets ten fresh hidden mines';
  assert not has_schema_privilege('authenticated','scrobble_private','usage'),'Private coordinates inaccessible';
  raise sqlstate 'P9999' using message='All Hidden Land Mines SQL tests passed; rolling back fixtures';
 exception when sqlstate 'P9999' then

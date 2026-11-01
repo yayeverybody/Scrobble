@@ -22,6 +22,11 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
  assert.equal(resumed,2);assert.equal(home,1,'Escape also resumes computer game');
  w.ScrobbleFakeAd.show(()=>resumed++);w.ScrobbleFakeAd.reset();close.click();assert.equal(resumed,2,'Navigation clears resume callback');
  w.ScrobbleFakeAd.show();const token=w.ScrobbleFakeAd.viewToken;w.ScrobbleFakeAd.reset();assert(ad.hidden);assert(w.ScrobbleFakeAd.viewToken>token);
+ // A sponsor must wait for explicit dismissal of a mine notification.
+ let releaseMine;w.ScrobbleGame={isMineNoticeOpen:()=>true,waitForMineNotice:()=>new Promise(resolve=>releaseMine=resolve)};
+ const realTimer=w.setTimeout;let adTimer;w.setTimeout=fn=>{adTimer=fn;return 1};
+ w.ScrobbleFakeAd.afterTurn(w.ScrobbleFakeAd.viewToken,()=>resumed++);adTimer();assert(ad.hidden);releaseMine();await Promise.resolve();assert(!ad.hidden);close.click();
+ w.ScrobbleFakeAd.afterTurn(w.ScrobbleFakeAd.viewToken,()=>resumed++);adTimer();w.ScrobbleFakeAd.reset();releaseMine();await Promise.resolve();assert(ad.hidden,'Leaving game cancels a mine-delayed sponsor');w.setTimeout=realTimer;delete w.ScrobbleGame;
  const seen=new Set([ad.dataset.sponsor]);let previous=ad.dataset.sponsor;
  for(let i=0;i<120;i++){
   w.Math.random=()=>(i%11)/11;w.ScrobbleFakeAd.show();

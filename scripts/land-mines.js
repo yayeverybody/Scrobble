@@ -2,16 +2,16 @@
 let landMines=[];
 const mineFeedbackSeen=new WeakSet();
 function randomLandMines(){
-  for(let attempt=0;attempt<100;attempt++){
+  for(let attempt=0;attempt<1000;attempt++){
     const cells=Array.from({length:225},(_,i)=>[Math.floor(i/15),i%15]);shuffle(cells);
     const chosen=[];
     for(const cell of cells){
-      // Chebyshev spacing covers horizontal, vertical and diagonal separation.
-      if(chosen.every(([r,c])=>Math.max(Math.abs(r-cell[0]),Math.abs(c-cell[1]))>=5))chosen.push(cell);
-      if(chosen.length===5)return chosen;
+      // Straight-line distance of at least five board spaces, including diagonals.
+      if(chosen.every(([r,c])=>(r-cell[0])**2+(c-cell[1])**2>=25))chosen.push(cell);
+      if(chosen.length===10)return chosen;
     }
   }
-  throw new Error('Could not place five separated land mines');
+  throw new Error('Could not place ten separated land mines');
 }
 function localMineHits(){
   if(cloudRackMode||!hasWeirdRule('hidden_land_mines'))return [];
@@ -25,3 +25,9 @@ function revealMineFeedback(summary){
 function mineMessage(summary){
   return `BOOM! Hidden Land Mine. ${Math.abs(summary.points)} points deducted. The word stays.`;
 }
+
+let mineNoticeWaiters=[],mineNoticeQueued=null,mineCloudGameId=null,preserveMineNotice=false;
+function isMineNoticeOpen(){return !!turnNoticeSummary?.landMines?.length&&!turnNoticeOverlay.classList.contains('hidden')}
+function waitForMineNotice(){return new Promise(resolve=>{if(isMineNoticeOpen())mineNoticeWaiters.push(resolve);else resolve()})}
+function releaseMineNoticeWaiters(){const callbacks=mineNoticeWaiters.splice(0);callbacks.forEach(resolve=>resolve())}
+function sameMineNotice(a,b){return a?.playedBy===b?.playedBy&&a?.points===b?.points&&JSON.stringify(a?.words)===JSON.stringify(b?.words)&&JSON.stringify(a?.landMines)===JSON.stringify(b?.landMines)}
