@@ -32,33 +32,35 @@ function element(hidden = false) {
     click() { const result=this.onclick?.();for(const handler of listeners.click||[])handler();return result; }
   };
 }
-function setup(fail = false) {
+function setup(fail = false, direct = false, confirm = true) {
   const ids = Object.fromEntries(['inviteBox', 'inviteLink', 'gameModeBox', 'closeGameMode', 'playFriendMode', 'playComputerMode', 'friendModePanel', 'computerModePanel', 'startFriendGame', 'sharedWeirdBox', 'gameModeTitle', 'newGameDash', 'closeInvite', 'copyInvite', 'shareInvite'].map(id => [id, element(true)]));
   const home = element(); home.appendChild(ids.inviteBox);home.appendChild(ids.newGameDash);
   const input = { value: 'high_roller', checked: false };
   ids.sharedWeirdBox.querySelectorAll = () => [input];
-  const calls = { copy: [], share: [], rpc: [], alerts: [] };
+  const calls = { copy: [], share: [], rpc: [], alerts: [], confirmations: [] };
   const ctx = {
     document: { getElementById: id => ids[id], createElement: () => element() },
     inviteBox: ids.inviteBox, inviteLinkEl: ids.inviteLink,
     gameModeBox: ids.gameModeBox, closeGameMode: ids.closeGameMode, playFriendMode: ids.playFriendMode,
     user: { id: 'test' }, pendingNewGame: null,
     selectedWeirdRules: () => input.checked ? [input.value] : [],
+    weirdRuleList: rules => rules.map(() => 'High Roller'),
     clearWeirdRules: () => { input.checked = false; }, code: () => 'TESTINVITE',
-    window: { ScrobbleGame: {
+    client: { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) },
+    window: { confirm(message) { calls.confirmations.push(message); return confirm; }, ScrobbleGame: {
       newGame(rules) { if (fail) throw Error('test preparation failure'); this.rules = rules; },
-      exportState() { return { board: [], bag: [], racks: [[], []], weirdRules: this.rules }; }
+      exportState() { return { board: [], bag: [], racks: [[], []] }; }
     } },
     navigator: {
       clipboard: { async writeText(url) { calls.copy.push(url); } },
       async share(data) { calls.share.push(data); }
     },
-    async rpc(name, args) { if(name==='scrobble_recent_opponents')return [];calls.rpc.push({ name, args }); return name === 'list_scrobble_games' ? [] : { id: 'created' }; },
+    async rpc(name, args) { if(name==='scrobble_recent_opponents')return direct ? [{id:'friend',display_name:'Friend'}] : [];calls.rpc.push({ name, args }); return name === 'list_scrobble_games' ? [] : { id: 'created' }; },
     refreshGames: async () => {}, createComputerGame: () => {},
     alert: message => calls.alerts.push(message), setTimeout: () => {}
   };
   vm.createContext(ctx);
-  vm.runInContext(between('  function inviteURL(', '  function code()') + '\n' + between('  async function createGame(){', '  function askEndGame('), ctx);
+  vm.runInContext(between('  function inviteURL(', '  function code()') + '\n' + between('  async function createGame(', '  function askEndGame('), ctx);
   const run = code => vm.runInContext(code, ctx);
   ids.newGameDash.click(); ids.playFriendMode.click(); input.checked = true;
   return { ids, input, calls, ctx, run, home };
@@ -73,12 +75,12 @@ function setup(fail = false) {
   assert(!s.ids.inviteBox.classList.contains('hidden'));
   assert(s.ids.sharedWeirdBox.classList.contains('hidden'));
   assert(s.ids.startFriendGame.classList.contains('hidden'));
-  assert.deepEqual(s.ctx.pendingNewGame.weirdRules, ['high_roller']);
+  assert.deepEqual(Array.from(s.ctx.pendingNewGame.weirdRules), ['high_roller']);
   assert.equal(s.calls.rpc.length, 0, 'Preparation must not persist before copy/share');
   await s.ids.copyInvite.click();
   assert.equal(s.calls.copy[0], 'https://yayeverybody.com/?join=TESTINVITE');
   assert.equal(s.calls.rpc.filter(x => x.name === 'create_scrobble_game').length, 1);
-  assert.deepEqual(s.calls.rpc.find(x => x.name === 'set_scrobble_weird_rules').args.p_rules, ['high_roller']);
+  assert.deepEqual(Array.from(s.calls.rpc.find(x => x.name === 'set_scrobble_weird_rules').args.p_rules), ['high_roller']);
   s.ids.closeInvite.click();
   assert(s.ids.gameModeBox.classList.contains('hidden'));
   assert(s.home.contains(s.ids.inviteBox));
@@ -106,5 +108,20 @@ function setup(fail = false) {
   assert(!failed.ids.startFriendGame.classList.contains('hidden'));
   assert(failed.input.checked);
   assert.equal(failed.calls.alerts.length, 1);
+  const direct = setup(false, true);
+  await direct.run('refreshRecentOpponents()');
+  await direct.run('recentItems.children[0].click()');
+  assert.match(direct.calls.confirmations[0], /Friend\?\s+High Roller/);
+  assert.deepEqual(direct.calls.rpc.map(x => x.name), [
+    'list_scrobble_games', 'create_scrobble_game', 'set_scrobble_weird_rules', 'send_scrobble_direct_invite'
+  ]);
+  assert.deepEqual(Array.from(direct.calls.rpc[2].args.p_rules), ['high_roller']);
+  assert.equal(direct.calls.rpc[3].args.p_recipient_id, 'friend');
+  const skipped = setup(false, true, false);
+  skipped.input.checked = false;
+  await skipped.run('refreshRecentOpponents()');
+  await skipped.run('recentItems.children[0].click()');
+  assert.match(skipped.calls.confirmations[0], /Regular game/);
+  assert.equal(skipped.calls.rpc.length, 0);
   console.log('PASS: inline invite, rule preservation, copy/share persistence, Done, reopen, computer switch, close, existing invites, and preparation failure.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

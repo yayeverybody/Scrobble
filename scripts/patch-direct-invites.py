@@ -4,6 +4,25 @@ Runs after patch-ios.py; preserves shareable invitation links.
 from pathlib import Path
 p=Path('www/app-v3140.js')
 s=p.read_text()
+old_create="""  async function createGame(){
+    if(!user)return;
+    const btn=document.getElementById('newGameDash');btn.disabled=true;
+    try{
+      const weird=selectedWeirdRules();
+      window.ScrobbleGame.newGame(weird);
+      const state=window.ScrobbleGame.exportState(),invite=code();
+      openInvite(invite,state);clearWeirdRules()
+"""
+new_create="""  async function createGame(weird=selectedWeirdRules()){
+    if(!user)return;
+    const btn=document.getElementById('newGameDash');btn.disabled=true;
+    try{
+      window.ScrobbleGame.newGame(weird);
+      const state=window.ScrobbleGame.exportState(),invite=code();
+      openInvite(invite,{...state,weirdRules:[...weird]});clearWeirdRules()
+"""
+if s.count(old_create)!=1:raise SystemExit('Friend game creation source changed')
+s=s.replace(old_create,new_create,1)
 anchor="  function askEndGame(id){"
 if s.count(anchor)!=1:raise SystemExit('Direct invite app anchor missing')
 js=r"""
@@ -15,6 +34,7 @@ js=r"""
   recentHeading.textContent='PLAY AGAINST SOMEONE YOU KNOW';
   recentHeading.style.cssText='font-weight:900;margin:8px 0';
   const recentItems=document.createElement('div');
+  let sendingDirectInvite=false;
   recentItems.style.cssText='display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start';
   recentPanel.append(recentHeading,recentItems);
   friendModePanel.insertBefore(recentPanel,startFriendGame);
@@ -51,10 +71,14 @@ js=r"""
           }catch(e){}
         }).catch(()=>{});
         btn.onclick=async()=>{
-          if(btn.disabled)return;
-          btn.disabled=true;
+          if(sendingDirectInvite)return;
+          const rules=selectedWeirdRules();
+          const mode=rules.length?weirdRuleList(rules).join(', '):'Regular game';
+          const opponentName=opponent.display_name||'your opponent';
+          if(!window.confirm('Invite '+opponentName+'?\n\n'+mode))return;
+          sendingDirectInvite=btn.disabled=true;
           try{
-            await createGame();
+            await createGame(rules);
             if(!pendingNewGame)throw Error('Game could not be prepared');
             const created=await persistPendingNewGame();
             if(!created?.id)throw Error('Game could not be saved');
@@ -62,9 +86,9 @@ js=r"""
             resetFriendInvite();
             gameModeBox.classList.add('hidden');
             await refreshGames();
-            alert('Invitation sent to '+(opponent.display_name||'your opponent')+'.');
+            alert('Invitation sent to '+opponentName+'.');
           }catch(e){alert('Could not send invitation: '+e.message)}
-          finally{btn.disabled=false}
+          finally{sendingDirectInvite=btn.disabled=false}
         };
         recentItems.appendChild(btn);
       }
