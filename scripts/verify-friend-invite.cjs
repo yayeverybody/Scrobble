@@ -60,7 +60,7 @@ function setup(fail = false, direct = false, confirm = true) {
     alert: message => calls.alerts.push(message), setTimeout: () => {}
   };
   vm.createContext(ctx);
-  vm.runInContext(between('  function inviteURL(', '  function code()') + '\n' + between('  async function createGame(', '  function askEndGame('), ctx);
+  vm.runInContext(between('  function inviteURL(', '  function code()') + '\n' + between('  function prepareFriendGame(', '  function askEndGame('), ctx);
   const run = code => vm.runInContext(code, ctx);
   ids.newGameDash.click(); ids.playFriendMode.click(); input.checked = true;
   return { ids, input, calls, ctx, run, home };
@@ -110,7 +110,11 @@ function setup(fail = false, direct = false, confirm = true) {
   assert.equal(failed.calls.alerts.length, 1);
   const direct = setup(false, true);
   await direct.run('refreshRecentOpponents()');
-  await direct.run('recentItems.children[0].click()');
+  const sending = direct.run('recentItems.children[0].click()');
+  assert(direct.ids.inviteBox.classList.contains('hidden'), 'Direct invites must never open the link share screen');
+  assert(direct.home.contains(direct.ids.inviteBox), 'Direct invites must leave the share screen out of the setup panel');
+  assert.equal(direct.ids.inviteBox.dataset.url, undefined);
+  await sending;
   assert.match(direct.calls.confirmations[0], /Friend\?\s+High Roller/);
   assert.deepEqual(direct.calls.rpc.map(x => x.name), [
     'list_scrobble_games', 'create_scrobble_game', 'set_scrobble_weird_rules', 'send_scrobble_direct_invite'

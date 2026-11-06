@@ -13,13 +13,16 @@ old_create="""  async function createGame(){
       const state=window.ScrobbleGame.exportState(),invite=code();
       openInvite(invite,state);clearWeirdRules()
 """
-new_create="""  async function createGame(weird=selectedWeirdRules()){
-    if(!user)return;
+new_create="""  function prepareFriendGame(weird){
+    window.ScrobbleGame.newGame(weird);
+    return {...window.ScrobbleGame.exportState(),weirdRules:[...weird],invite_code:code()};
+  }
+  async function createGame(weird=selectedWeirdRules()){
+    if(!user||sendingDirectInvite)return;
     const btn=document.getElementById('newGameDash');btn.disabled=true;
     try{
-      window.ScrobbleGame.newGame(weird);
-      const state=window.ScrobbleGame.exportState(),invite=code();
-      openInvite(invite,{...state,weirdRules:[...weird]});clearWeirdRules()
+      const state=prepareFriendGame(weird);
+      openInvite(state.invite_code,state);clearWeirdRules()
 """
 if s.count(old_create)!=1:raise SystemExit('Friend game creation source changed')
 s=s.replace(old_create,new_create,1)
@@ -78,16 +81,19 @@ js=r"""
           if(!window.confirm('Invite '+opponentName+'?\n\n'+mode))return;
           sendingDirectInvite=btn.disabled=true;
           try{
-            await createGame(rules);
-            if(!pendingNewGame)throw Error('Game could not be prepared');
+            pendingNewGame=prepareFriendGame(rules);
             const created=await persistPendingNewGame();
             if(!created?.id)throw Error('Game could not be saved');
             await rpc('send_scrobble_direct_invite',{p_game_id:created.id,p_recipient_id:opponent.id});
+            clearWeirdRules();
             resetFriendInvite();
             gameModeBox.classList.add('hidden');
             await refreshGames();
             alert('Invitation sent to '+opponentName+'.');
-          }catch(e){alert('Could not send invitation: '+e.message)}
+          }catch(e){
+            pendingNewGame=null;
+            alert('Could not send invitation: '+e.message);
+          }
           finally{sendingDirectInvite=btn.disabled=false}
         };
         recentItems.appendChild(btn);
