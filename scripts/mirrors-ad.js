@@ -20,6 +20,9 @@
     {id:'sea-ferrets', title:'Sea Ferrets', tagline:'', footer:'“THEY’RE YOUR PROBLEM NOW.”', alt:'Vintage comic-book Sea Ferrets advertisement with an underwater ferret family and the quoted slogan They’re your problem now.'}
     ,{id:'edible-aquarium-gravel', title:'Edible Aquarium Gravel', tagline:'', footer:'', alt:'Retro Edible Aquarium Gravel advertisement with a girl eating candy pebbles, a detailed product bag, a bowl of candy and a goldfish aquarium.'}
     ,{id:'extra-wide-straws', title:'Extra Wide Straws', tagline:'', footer:'', alt:'A boy drains a milkshake through an extra-wide straw while a stunned soda jerk holds a stopwatch. A skull and crossbones warns about brain freeze.'}
+    ,{id:'bear-roll-on', title:'Bear Roll-On', tagline:'', footer:'', alt:'A camper applies roll-on bear repellent to an upright grizzly looming over him.'}
+    ,{id:'gary-glimmer', title:'The Magic of Gary Glimmer', tagline:'', footer:'', alt:'Vintage TV magic special with a levitating assistant and the caption Watch Gary appear from the magic closet.'}
+    ,{id:'gaggalher', title:'Gaggalher Live!', tagline:'', footer:'', alt:'A comedian aims a stage cannon at a watermelon. Front row seats still available. Mother’s Day sold out.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;
