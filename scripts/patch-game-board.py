@@ -33,6 +33,21 @@ if 'function clearBoardPresentation()' not in game:
     game = game[:start]+game[start:end].replace('setTimeout(', 'scheduleBoardTask(')+game[end:]
     game = once(game, 'async function playMove(){', 'async function playMove(){\n  const generation=boardViewGeneration;')
     game = once(game, 'for(const w of words)results.push(await realDictionaryLookup(w.word));', 'for(const w of words){results.push(await realDictionaryLookup(w.word));if(generation!==boardViewGeneration)return;}')
+    game = once(game, "$('#shuffle').onclick=()=>{if(spectatorMode)return;shuffle(racks[current]);render()};", """$('#shuffle').onclick=()=>{
+      if(spectatorMode||(cpuMode&&current===1))return;
+      if(pending.length){recall();return;}
+      swapSelected.clear();
+      selected=null;
+      shuffle(racks[current]);
+      render();
+    };""")
+    game = once(game, "function render(){", """function render(){
+      const rackAction=$('#shuffle');
+      if(rackAction){
+        rackAction.textContent=pending.length?'RECALL':'SHUFFLE';
+        rackAction.setAttribute('aria-label',pending.length?'Recall unplayed tiles to your rack':'Shuffle tiles in your rack');
+      }
+    """)
     # Enrich the restored move from this game's profiles rather than stale DOM names.
     start=game.index('loadCloudState(s,slot){')
     tail=once(game[start:], 'lastMoveSummary=s.lastMoveSummary||null;', "lastMoveSummary=s.lastMoveSummary?{...s.lastMoveSummary,playerName:s.lastMoveSummary.playerName||s['player'+(s.lastMoveSummary.playedBy+1)+'_profile']?.display_name}:null;")
