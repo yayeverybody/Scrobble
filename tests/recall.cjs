@@ -20,12 +20,16 @@ try {
   state.racks[0]=['A','A','B','C','D','E','F'];
   g.loadComputerState(state,'easy');
   const letters=()=>Array.from(g.exportState().racks[0]).sort().join('');
-  assert.equal(button.textContent,'SHUFFLE');
+  assert.equal(button.querySelector('span').textContent,'SHUFFLE');
+  const shuffleIcon=button.querySelector('svg path').getAttribute('d');
+  assert(shuffleIcon);
   for(const column of [8,9]){
     w.document.querySelector('#rack button').click();
     w.document.querySelector('#board [data-r="7"][data-c="'+column+'"]').click();
   }
-  assert.equal(button.textContent,'RECALL');
+  assert.equal(button.querySelector('span').textContent,'RECALL');
+  assert.notEqual(button.querySelector('svg path').getAttribute('d'),shuffleIcon,'Recall has its own icon');
+  assert.equal(button.querySelectorAll('svg').length,1);
   assert.equal(g.exportState().racks[0].length,5);
   button.click();
   const recalled=g.exportState();
@@ -34,7 +38,8 @@ try {
   assert.equal(recalled.board[7][8],null);
   assert.equal(recalled.board[7][9],null);
   assert.equal(recalled.current,0,'Recall must not end the turn');
-  assert.equal(button.textContent,'SHUFFLE');
+  assert.equal(button.querySelector('span').textContent,'SHUFFLE');
+  assert.equal(button.querySelector('svg path').getAttribute('d'),shuffleIcon,'Shuffle icon is restored');
   button.click();
   assert.equal(letters(),'AABCDEF','Shuffle preserves every tile');
   g.setSpectator(true);

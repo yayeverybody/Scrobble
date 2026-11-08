@@ -44,7 +44,12 @@ if 'function clearBoardPresentation()' not in game:
     game = once(game, "function render(){", """function render(){
       const rackAction=$('#shuffle');
       if(rackAction){
-        rackAction.textContent=pending.length?'RECALL':'SHUFFLE';
+        const recalling=pending.length>0;
+        rackAction.querySelector('span').textContent=recalling?'RECALL':'SHUFFLE';
+        rackAction.querySelector('svg').setAttribute('aria-hidden','true');
+        rackAction.querySelector('path').setAttribute('d',recalling
+          ?'M4 15v5h16v-5M12 4v11M7 10l5 5 5-5'
+          :'M4 7h4l8 10h4M16 7h4M4 17h4l2-2M18 5l2 2-2 2M18 15l2 2-2 2');
         rackAction.setAttribute('aria-label',pending.length?'Recall unplayed tiles to your rack':'Shuffle tiles in your rack');
       }
     """)
