@@ -18,7 +18,7 @@ if 'function clearBoardPresentation()' not in game:
         if marker not in game: raise SystemExit('Current release prerequisite missing: ' + marker)
     for marker in ['id="playComputerMode"', 'id="friendModePanel"', 'id="sharedWeirdBox"']:
         if marker not in html: raise SystemExit('Current setup prerequisite missing: ' + marker)
-    game = once(game, 'function hasWeirdRule(id)', (scripts/'game-board-helpers.js').read_text()+'\nfunction hasWeirdRule(id)')
+    game = once(game, 'function hasWeirdRule(id)', (scripts/'game-board-helpers.js').read_text()+'\n'+(scripts/'available-plays.js').read_text()+'\nfunction hasWeirdRule(id)')
     game = once(game, 'function freshLocalGame(){', "function freshLocalGame(){clearBoardPresentation();cloudRackMode=false;spectatorMode=false;quadContext='local-'+Date.now()+'-'+Math.random();quadTurnNumber=0;")
     game = once(game, "loadComputerState(s,difficulty='medium'){", "loadComputerState(s,difficulty='medium'){clearBoardPresentation();cloudRackMode=false;quadContext=s.quadContext||'local';quadTurnNumber=s.quadTurnNumber||0;")
     game = once(game, 'loadCloudState(s,slot){', "loadCloudState(s,slot){clearBoardPresentation();cloudRackMode=true;quadContext=String(s.id||'cloud')+'|'+String(s.updated_at||'');quadTurnNumber=0;")

@@ -17,6 +17,7 @@ function clearBoardPresentation(){
   scoreAnimations=[null,null];displayedScores=[null,null];
 }
 function renderBoardDetails(){
+  updateAvailablePlayNotice();
   const bar=$('#lastPlayBar'),lm=lastMoveSummary;
   if(bar){
     const name=lm?.playerName||(lm?.playedBy===0?$('#name1'):$('#name2'))?.textContent||'Player';
