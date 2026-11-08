@@ -84,6 +84,13 @@ js=r"""
             pendingNewGame=prepareFriendGame(rules);
             const created=await persistPendingNewGame();
             if(!created?.id)throw Error('Game could not be saved');
+            await rpc('set_scrobble_weird_rules',{p_game_id:created.id,p_rules:rules});
+            const savedGame=await rpc('get_scrobble_game',{p_game_id:created.id});
+            const savedRules=savedGame?.weird_rules;
+            if(!Array.isArray(savedRules)||savedRules.length!==rules.length||
+               !rules.every(rule=>savedRules.includes(rule))){
+              throw Error('The selected Weird rules were not saved. Please try again.');
+            }
             await rpc('send_scrobble_direct_invite',{p_game_id:created.id,p_recipient_id:opponent.id});
             clearWeirdRules();
             resetFriendInvite();
@@ -144,5 +151,21 @@ s=s.replace(anchor,js+"\n"+anchor,1)
 refresh="  async function refreshGames(prefetchedGames=null){"
 if s.count(refresh)!=1:raise SystemExit('Refresh games anchor missing')
 s=s.replace(refresh,refresh+"\n    refreshDirectInvites().catch(e=>console.warn('Invite inbox refresh failed',e));",1)
+# A notification can arrive before the recipient has accepted the invitation.
+# Route that game to the invitation inbox before requesting member-only state.
+open_game="""    try{
+      const s=await rpc('get_scrobble_game',{p_game_id:id});"""
+pending_game="""    try{
+      const {data:pendingInvite,error:inviteError}=await client.from('scrobble_direct_invites')
+        .select('id').eq('game_id',id).eq('recipient_id',user.id).eq('status','pending').maybeSingle();
+      if(inviteError)throw inviteError;
+      if(pendingInvite){
+        showDash();
+        await refreshGames();
+        return;
+      }
+      const s=await rpc('get_scrobble_game',{p_game_id:id});"""
+if s.count(open_game)!=1:raise SystemExit('Open cloud game source changed')
+s=s.replace(open_game,pending_game,1)
 p.write_text(s)
 print('Recent opponents and in-app invitation inbox installed')

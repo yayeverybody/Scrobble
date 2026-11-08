@@ -32,7 +32,7 @@ function element(hidden = false) {
     click() { const result=this.onclick?.();for(const handler of listeners.click||[])handler();return result; }
   };
 }
-function setup(fail = false, direct = false, confirm = true) {
+function setup(fail = false, direct = false, confirm = true, loseRules = false) {
   const ids = Object.fromEntries(['inviteBox', 'inviteLink', 'gameModeBox', 'closeGameMode', 'playFriendMode', 'playComputerMode', 'friendModePanel', 'computerModePanel', 'startFriendGame', 'sharedWeirdBox', 'gameModeTitle', 'newGameDash', 'closeInvite', 'copyInvite', 'shareInvite'].map(id => [id, element(true)]));
   const home = element(); home.appendChild(ids.inviteBox);home.appendChild(ids.newGameDash);
   const input = { value: 'high_roller', checked: false };
@@ -55,7 +55,7 @@ function setup(fail = false, direct = false, confirm = true) {
       clipboard: { async writeText(url) { calls.copy.push(url); } },
       async share(data) { calls.share.push(data); }
     },
-    async rpc(name, args) { if(name==='scrobble_recent_opponents')return direct ? [{id:'friend',display_name:'Friend'}] : [];calls.rpc.push({ name, args }); return name === 'list_scrobble_games' ? [] : { id: 'created' }; },
+    async rpc(name, args) { if(name==='scrobble_recent_opponents')return direct ? [{id:'friend',display_name:'Friend'}] : [];calls.rpc.push({ name, args }); return name === 'list_scrobble_games' ? [] : name === 'get_scrobble_game' ? {weird_rules: loseRules ? [] : ['high_roller']} : { id: 'created' }; },
     refreshGames: async () => {}, createComputerGame: () => {},
     alert: message => calls.alerts.push(message), setTimeout: () => {}
   };
@@ -117,10 +117,16 @@ function setup(fail = false, direct = false, confirm = true) {
   await sending;
   assert.match(direct.calls.confirmations[0], /Friend\?\s+High Roller/);
   assert.deepEqual(direct.calls.rpc.map(x => x.name), [
-    'list_scrobble_games', 'create_scrobble_game', 'set_scrobble_weird_rules', 'send_scrobble_direct_invite'
+    'list_scrobble_games', 'create_scrobble_game', 'set_scrobble_weird_rules', 'set_scrobble_weird_rules', 'get_scrobble_game', 'send_scrobble_direct_invite'
   ]);
   assert.deepEqual(Array.from(direct.calls.rpc[2].args.p_rules), ['high_roller']);
-  assert.equal(direct.calls.rpc[3].args.p_recipient_id, 'friend');
+  assert.equal(direct.calls.rpc[5].args.p_recipient_id, 'friend');
+  const lost = setup(false, true, true, true);
+  await lost.run('refreshRecentOpponents()');
+  await lost.run('recentItems.children[0].click()');
+  assert(!lost.calls.rpc.some(call=>call.name==='send_scrobble_direct_invite'), 'Never send an invitation when saved rules differ from confirmed rules');
+  assert(lost.calls.alerts.some(message=>message.includes('not saved')));
+  assert(lost.input.checked, 'Retain selections after a failed rule save');
   const skipped = setup(false, true, false);
   skipped.input.checked = false;
   await skipped.run('refreshRecentOpponents()');
