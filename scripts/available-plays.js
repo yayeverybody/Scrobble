@@ -64,15 +64,23 @@ function updateAvailablePlayNotice(){
     notice=document.createElement('div');
     notice.id='availablePlayNotice';
     notice.setAttribute('role','status');
-    notice.style.cssText='padding:8px;text-align:center;font-weight:bold;color:#ffd15b';
+    notice.textContent='No moves. You must pass.';
+    notice.style.cssText='padding:0;flex:1;min-width:0;white-space:nowrap;text-align:right;font-size:clamp(11px,3.4vw,14px);line-height:1.15;font-weight:bold;color:#ffd15b';
+    const style=document.createElement('style');
+    style.textContent='#scrobble-v4 .movebar.noAvailablePlays #status,#scrobble-v4 .movebar.noAvailablePlays #lastPlayBar{display:none!important}#scrobble-v4 #availablePlayNotice[hidden]{display:none!important}';
+    document.head.appendChild(style);
     status.insertAdjacentElement('afterend',notice);
   }
+  const showNotice=visible=>{
+    notice.hidden=!visible;
+    status.parentElement.classList.toggle('noAvailablePlays',visible);
+  };
   const eligible=!spectatorMode&&!(cpuMode&&current===1)&&!pending.length&&!awaiting&&!cloudChallenge&&!swapMode&&racks[current]?.length;
-  if(!eligible){availablePlayKey=null;notice.hidden=true;return;}
+  if(!eligible){availablePlayKey=null;showNotice(false);return;}
   const key=JSON.stringify([board,racks[current].slice().sort(),current,weirdRules]);
-  const display=()=>{notice.textContent=bag.length?'No dictionary plays available. Swap tiles or pass.':'No dictionary plays available. Pass to let your opponent play.';notice.hidden=availablePlayResult!==false;};
+  const display=()=>showNotice(availablePlayResult===false);
   if(key===availablePlayKey){display();return;}
-  availablePlayKey=key;availablePlayResult=null;notice.hidden=true;
+  availablePlayKey=key;availablePlayResult=null;showNotice(false);
   const grid=board.map(row=>row.map(cell=>cell?{letter:cell.letter}:null));
   const rack=[...racks[current]];
   const currentCheck=()=>availablePlayKey===key;
@@ -81,5 +89,5 @@ function updateAvailablePlayNotice(){
     const result=await hasDictionaryPlay(grid,rack,buildPlayableWordTrie(),currentCheck);
     if(!currentCheck()||result===null)return;
     availablePlayResult=result;display();
-  }).catch(()=>{if(currentCheck()){availablePlayKey=null;notice.hidden=true;}});
+  }).catch(()=>{if(currentCheck()){availablePlayKey=null;showNotice(false);}});
 }
