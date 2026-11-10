@@ -26,3 +26,6 @@ Sponsor addition: The Border Smoothie by Señor Pronto, using the final approved
 Sponsor addition: Sea Ferrets, using the approved comic-book aquarium artwork with quotation marks around the bottom slogan. Fifteen offline sponsors, including The Border Smoothie, now rotate without consecutive repeats.
 
 Sponsor addition: Edible Aquarium Gravel, using the final approved artwork with the smaller detailed bag and no bottom slogan. Fifteen offline sponsors now rotate without consecutive repeats.
+
+
+November 9 sponsor additions: Fish Skin Pants, Mr. Roboto, and Midtown Underwater Surgery. Uses the final approved artwork for each; all 22 sponsors are bundled offline in the existing nonrepeating rotation. No release version change or App Store submission is part of this asset update.

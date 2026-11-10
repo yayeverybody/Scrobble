@@ -23,6 +23,9 @@
     ,{id:'bear-roll-on', title:'Bear Roll-On', tagline:'', footer:'', alt:'A camper applies roll-on bear repellent to an upright grizzly looming over him.'}
     ,{id:'gary-glimmer', title:'The Magic of Gary Glimmer', tagline:'', footer:'', alt:'Vintage TV magic special with a levitating assistant and the caption Watch Gary appear from the magic closet.'}
     ,{id:'gaggalher', title:'Gaggalher Live!', tagline:'', footer:'', alt:'A comedian aims a stage cannon at a watermelon. Front row seats still available. Mother’s Day sold out.'}
+    ,{id:'fish-skin-pants', title:'Fish Skin Pants', tagline:'', footer:'Caution: steer clear of cats. Keep refrigerated.', alt:'An admired teen arrives at a 1960s high school dance wearing shimmering patchwork fish-skin pants.'}
+    ,{id:'mr-roboto', title:'Mr. Roboto', tagline:'', footer:'Requires 12 D batteries + 8 C batteries. (never included)', alt:'Two excited kids play with a chrome 1980s toy robot beside an inset of its enormous battery compartment.'}
+    ,{id:'midtown-underwater-surgery', title:'Midtown Underwater Surgery', tagline:'Too dry, too die', footer:'Outpatient procedures • Extra towels. Schedule your consultation.', alt:'A surgical team calmly operates underwater as a small red plume drifts up and an instrument floats away. A fictional clinic ad with a decorative QR code.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;

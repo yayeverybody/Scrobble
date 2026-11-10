@@ -63,3 +63,12 @@ Generated and edited with the built-in image tool, converted from the exact appr
 `sea-ferrets.jpg` is the final approved vintage comic-book creative, including double quotation marks around “THEY’RE YOUR PROBLEM NOW.” Converted from the exact approved PNG for offline bundling. Added as sponsor fourteen.
 
 `edible-aquarium-gravel.jpg` is the approved retro creative with the girl, detailed packaging reduced in size, aquarium and bowl. No bottom slogan. Converted from the exact final approved PNG (exec-baaca8a8-6a1e-432a-9560-7ada58b00149.png). Added as sponsor fifteen.
+
+
+## November 9 approved sponsors
+
+- `fish-skin-pants.jpg`: final shimmering small-fish patchwork dance artwork; “Caution: steer clear of cats. Keep refrigerated.”
+- `mr-roboto.jpg`: final 1980s toy artwork; requires 12 D and 8 C batteries, with smaller “(never included)”.
+- `midtown-underwater-surgery.jpg`: final modern clinic artwork; no address, phone or website; consultation CTA in lower footer. Decorative QR artwork is part of the image, not an interactive booking link.
+
+All three are bundled offline and use the existing nonrepeating sponsor rotation.
