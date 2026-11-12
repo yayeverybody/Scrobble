@@ -72,3 +72,5 @@ Generated and edited with the built-in image tool, converted from the exact appr
 - `midtown-underwater-surgery.jpg`: final modern clinic artwork; no address, phone or website; consultation CTA in lower footer. Decorative QR artwork is part of the image, not an interactive booking link.
 
 All three are bundled offline and use the existing nonrepeating sponsor rotation.
+
+- `used-books.jpg`: approved “Sponsored by used books” artwork with the Joke Book cover, “10 clean jokes about holes” starburst, and 49¢ price.
