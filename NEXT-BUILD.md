@@ -34,4 +34,4 @@ November 12 sponsor addition for iOS 1.0.68: the approved Used Books artwork joi
 
 PestSmart brings the iOS 1.0.68 sponsor rotation to 26.
 
-Ankle Watches joins the next iOS build, bringing the sponsor rotation to 27.
+Ankle Watches and Soy Cacahuate join the next iOS build, bringing the sponsor rotation to 28.

@@ -78,3 +78,4 @@ All three are bundled offline and use the existing nonrepeating sponsor rotation
 - `bratmans-extra-skinny.jpg`: approved backyard BBQ artwork with the Bratman’s logo, a foreground grill, and long brats hanging from regular-sized buns.
 - `pestsmart.jpg`: approved Tiny Hats for Mice artwork with the smaller sale footer.
 - `ankle-watches.jpg`: approved close-up artwork with the ankle watch over a charcoal dress sock and the Paris - Milan - Omaha footer.
+- `soy-cacahuate.jpg`: approved peanut milk artwork with green branding, an oatmeal background, and “Drink your peanuts”.
