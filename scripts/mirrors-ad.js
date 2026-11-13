@@ -32,6 +32,7 @@
     ,{id:'pestsmart', title:'PestSmart', tagline:'Tiny Hats for Mice', footer:'Sale! 10% off extra strength rodent poison', alt:'Three mice model a bucket hat, baseball cap, and cowboy hat in the Tiny Hats for Mice department.'}
     ,{id:'ankle-watches', title:'Ankle Watches', tagline:'', footer:'Paris - Milan - Omaha', alt:'A man in a suit balances on one leg to check the silver watch strapped over his raised ankle’s charcoal dress sock.'}
     ,{id:'soy-cacahuate', title:'Soy Cacahuate', tagline:'Drink your peanuts', footer:'', alt:'A carton of peanut milk beside a glass filled with creamy milk and reddish peanut skins.'}
+    ,{id:'basement-clams', title:'Basement Clams', tagline:'', footer:'', alt:'A smug man peeks around the bottom of the basement stairs at stacks of boxes filled with canned clams.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;

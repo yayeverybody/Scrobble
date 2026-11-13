@@ -30,7 +30,7 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
  const seen=new Set([ad.dataset.sponsor]);let previous=ad.dataset.sponsor;
  for(let i=0;i<150;i++){
   // Alternate Mirrors with each index in the list that excludes Mirrors.
-  w.Math.random=()=>i%2 ? (Math.floor(i/2)%27+0.5)/27 : 0;
+  w.Math.random=()=>i%2 ? (Math.floor(i/2)%28+0.5)/28 : 0;
   w.ScrobbleFakeAd.show();
   const id=ad.dataset.sponsor;assert.notEqual(id,previous,'No consecutive sponsor repeats');seen.add(id);previous=id;
   assert.equal(w.localStorage.getItem('scrobble-last-fictional-sponsor'),id);
@@ -52,7 +52,7 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   if(id==='invest-in-glass')assert.equal(w.document.querySelector('.mirrorFooter').textContent,'TURN GOLD INTO GLASS');
   w.ScrobbleFakeAd.reset();
  }
- assert.equal(seen.size,28,'All twenty-eight sponsors are available');
+ assert.equal(seen.size,29,'All twenty-nine sponsors are available');
  const reopened=new JSDOM(html,{runScripts:'outside-only',url:'http://localhost'});
  reopened.window.localStorage.setItem('scrobble-last-fictional-sponsor',previous);
  reopened.window.Math.random=()=>0;
@@ -69,5 +69,5 @@ const repo=path.resolve(__dirname,'..'),dir=fs.mkdtempSync(path.join(os.tmpdir()
   for(const t of sponsor){assert.equal(typeof t.resume,scenario==='human'?'function':'undefined','Only computer ads resume the board');t.fn();if(t.resume){t.resume();assert.equal(cpuRuns,1,'Closing computer ad resumes its turn');ctx.currentComputer=false;t.resume();assert.equal(cpuRuns,1,'Do not resume after leaving the computer game');}}assert.equal(ads.length,sponsor.length);
  }
  assert(app.includes('window.ScrobbleFakeAd?.reset();'),'Navigation resets stale ad eligibility');
- console.log('PASS: all twenty-eight sponsors, 150 nonrepeating rotations, persisted choice across launches, exact text, bundled art, computer-game resume by close/Escape, multiplayer close-to-games, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
+ console.log('PASS: all twenty-nine sponsors, 150 nonrepeating rotations, persisted choice across launches, exact text, bundled art, computer-game resume by close/Escape, multiplayer close-to-games, focus, no duplicate dismissal, saved human turns only, failed saves/pass/swap/CPU/navigation excluded');
 }finally{fs.rmSync(dir,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});
