@@ -30,4 +30,4 @@ Sponsor addition: Edible Aquarium Gravel, using the final approved artwork with 
 
 November 9 sponsor additions: Fish Skin Pants, Mr. Roboto, and Midtown Underwater Surgery. Uses the final approved artwork for each; all 22 sponsors are bundled offline in the existing nonrepeating rotation. No release version change or App Store submission is part of this asset update.
 
-November 12 sponsor addition for iOS 1.0.68: the approved Used Books artwork joins the offline rotation, bringing it to 23 sponsors.
+November 12 sponsor addition for iOS 1.0.68: the approved Used Books artwork joins the offline rotation, bringing it to 23 sponsors. Screeching Monkey Hospice Care brings the rotation to 24.
