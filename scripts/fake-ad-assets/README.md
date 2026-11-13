@@ -75,3 +75,4 @@ All three are bundled offline and use the existing nonrepeating sponsor rotation
 
 - `used-books.jpg`: approved “Sponsored by used books” artwork with the Joke Book cover, “10 clean jokes about holes” starburst, and 49¢ price.
 - `screeching-monkey-hospice.jpg`: approved three-capuchin hospice artwork with “You’ll get your life back soon”.
+- `bratmans-extra-skinny.jpg`: approved backyard BBQ artwork with the Bratman’s logo, a foreground grill, and long brats hanging from regular-sized buns.

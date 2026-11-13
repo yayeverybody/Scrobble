@@ -28,6 +28,7 @@
     ,{id:'midtown-underwater-surgery', title:'Midtown Underwater Surgery', tagline:'Too dry, too die', footer:'Outpatient procedures • Extra towels. Schedule your consultation.', alt:'A surgical team calmly operates underwater as a small red plume drifts up and an instrument floats away. A fictional clinic ad with a decorative QR code.'}
     ,{id:'used-books', title:'Used Books', tagline:'10 clean jokes about holes', footer:'Only 49¢', alt:'An orange paperback titled Joke Book faces out on a shelf. A man peeks through a round cutout beneath a large red starburst.'}
     ,{id:'screeching-monkey-hospice', title:'Screeching Monkey Hospice Care', tagline:'You’ll get your life back soon', footer:'', alt:'Three capuchins occupy the chair, bed, and windowsill in a sunlit hospice room. Two are screeching.'}
+    ,{id:'bratmans-extra-skinny', title:'Bratman’s Extra Skinny', tagline:'', footer:'', alt:'At a backyard barbecue, guests hold regular-sized buns with extra-long grilled brats hanging straight down from both ends.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;
