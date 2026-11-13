@@ -51,7 +51,7 @@ elif sys.argv[1:] == ['native']:
     gradle_path = root / 'android/app/build.gradle'
     gradle = gradle_path.read_text()
     gradle = replace_once(gradle, '        versionCode 1',
-        '        versionCode Integer.parseInt(System.getenv("ANDROID_VERSION_CODE") ?: System.getenv("BUILD_NUMBER") ?: "1")')
+        '        versionCode Integer.parseInt(System.getenv("ANDROID_VERSION_CODE") ?: String.valueOf(100000 + Integer.parseInt(System.getenv("BUILD_NUMBER") ?: "1")))')
     gradle = replace_once(gradle, '        versionName "1.0"', '        versionName "1.0.55"')
     signing = '''    signingConfigs {
         release {
