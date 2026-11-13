@@ -33,3 +33,5 @@ November 9 sponsor additions: Fish Skin Pants, Mr. Roboto, and Midtown Underwate
 November 12 sponsor addition for iOS 1.0.68: the approved Used Books artwork joins the offline rotation, bringing it to 23 sponsors. Screeching Monkey Hospice Care and Bratman’s Extra Skinny bring the rotation to 25.
 
 PestSmart brings the iOS 1.0.68 sponsor rotation to 26.
+
+Ankle Watches joins the next iOS build, bringing the sponsor rotation to 27.
