@@ -7,7 +7,7 @@ function buildPlayableWordTrie(){
   const trie={};
   for(const raw of [...offlineLexicon,...dictionary,...(hasWeirdRule('name_dropper')?properNouns:[])]){
     const word=raw.toUpperCase();
-    if(word.length<2||word.length>15)continue;
+    if(word.length<2||word.length>24)continue;
     let node=trie;
     for(const letter of word)node=node[letter]||(node[letter]={});
     node.end=true;
@@ -18,16 +18,16 @@ async function hasDictionaryPlay(grid,rack,trie,isCurrent){
   const counts={};
   for(const letter of rack)counts[letter]=(counts[letter]||0)+1;
   const occupied=grid.some(row=>row.some(Boolean));
-  const known=word=>{
-    let node=trie;
+  // Advance through both characters of a two-letter tile in one square.
+  const advance=(node,word)=>{
     for(const letter of word){node=node[letter];if(!node)return false;}
-    return !!node.end;
+    return node;
   };
   function crossValid(r,c,letter,dr,dc){
     let prefix='',suffix='';
     for(let rr=r-dc,cc=c-dr;rr>=0&&cc>=0&&rr<15&&cc<15&&grid[rr][cc];rr-=dc,cc-=dr)prefix=grid[rr][cc].letter+prefix;
     for(let rr=r+dc,cc=c+dr;rr>=0&&cc>=0&&rr<15&&cc<15&&grid[rr][cc];rr+=dc,cc+=dr)suffix+=grid[rr][cc].letter;
-    return (!prefix&&!suffix)||known(prefix+letter+suffix);
+    return (!prefix&&!suffix)||!!advance(trie,prefix+letter+suffix)?.end;
   }
   function walk(r,c,dr,dc,node,length,placed,connected,center){
     const inside=r<15&&c<15;
@@ -35,14 +35,16 @@ async function hasDictionaryPlay(grid,rack,trie,isCurrent){
     if(length>=2&&placed&&node.end&&!cell&&(occupied?connected:center))return true;
     if(!inside)return false;
     if(cell){
-      const next=node[cell.letter];
+      const next=advance(node,cell.letter);
       return !!next&&walk(r+dr,c+dc,dr,dc,next,length+1,placed,true,center||(r===7&&c===7));
     }
     const touches=[[1,0],[-1,0],[0,1],[0,-1]].some(([rr,cc])=>grid[r+rr]?.[c+cc]);
     for(const letter of Object.keys(counts)){
-      if(!counts[letter]||!node[letter]||!crossValid(r,c,letter,dr,dc))continue;
+      if(!counts[letter])continue;
+      const next=advance(node,letter);
+      if(!next||!crossValid(r,c,letter,dr,dc))continue;
       counts[letter]--;
-      const found=walk(r+dr,c+dc,dr,dc,node[letter],length+1,placed+1,connected||touches,center||(r===7&&c===7));
+      const found=walk(r+dr,c+dc,dr,dc,next,length+1,placed+1,connected||touches,center||(r===7&&c===7));
       counts[letter]++;
       if(found)return true;
     }

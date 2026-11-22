@@ -40,6 +40,7 @@ workflows:
           python3 ../scripts/patch-land-mines.py
           python3 ../scripts/patch-fake-ad.py
           python3 ../scripts/patch-compact-new-game.py
+          python3 ../scripts/patch-two-letter-tiles.py
           node ../scripts/verify-move-notice.cjs www
           node ../scripts/verify-move-highlights.cjs www
           node ../scripts/test-weird-modes.cjs www
