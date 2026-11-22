@@ -8,6 +8,12 @@ function trie(words){
   return root;
 }
 (async()=>{
+  const digraphWords=trie(['SHE','CHAT','THAT']);
+  assert.equal(await context.hasDictionaryPlay(grid(),['SH','E'],digraphWords,()=>true),true);
+  assert.equal(await context.hasDictionaryPlay(grid(),['SH'],trie(['SH']),()=>true),false);
+  const digraphBoard=grid();
+  digraphBoard[7][7]={letter:'CH'};
+  assert.equal(await context.hasDictionaryPlay(digraphBoard,['A','T'],digraphWords,()=>true),true);
   const words=trie(['AT','IT','AI','TT','QI']);
   let board=grid();
   assert.equal(await context.hasDictionaryPlay(board,['Q'],words,()=>true),false);
