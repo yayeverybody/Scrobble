@@ -33,6 +33,7 @@
     ,{id:'ankle-watches', title:'Ankle Watches', tagline:'', footer:'Paris - Milan - Omaha', alt:'A man in a suit balances on one leg to check the silver watch strapped over his raised ankle’s charcoal dress sock.'}
     ,{id:'soy-cacahuate', title:'Soy Cacahuate', tagline:'Drink your peanuts', footer:'', alt:'A carton of peanut milk beside a glass filled with creamy milk and reddish peanut skins.'}
     ,{id:'basement-clams', title:'Basement Clams', tagline:'', footer:'', alt:'A smug man peeks around the bottom of the basement stairs at stacks of boxes filled with canned clams.'}
+    ,{id:'rolling-green', title:'Rolling Green Fenceless Tennis Courts', tagline:'', footer:'', alt:'A tennis player watches a yellow ball far below a fenceless hilltop court.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;
