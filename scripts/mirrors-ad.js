@@ -34,6 +34,7 @@
     ,{id:'soy-cacahuate', title:'Soy Cacahuate', tagline:'Drink your peanuts', footer:'', alt:'A carton of peanut milk beside a glass filled with creamy milk and reddish peanut skins.'}
     ,{id:'basement-clams', title:'Basement Clams', tagline:'', footer:'', alt:'A smug man peeks around the bottom of the basement stairs at stacks of boxes filled with canned clams.'}
     ,{id:'rolling-green', title:'Rolling Green Fenceless Tennis Courts', tagline:'', footer:'', alt:'A tennis player watches a yellow ball far below a fenceless hilltop court.'}
+    ,{id:'benny-and-the-jets', title:'Benny and the Jets', tagline:'', footer:'', alt:'Ben Franklin plays quarterback for the New York Jets in a movie poster announcing a July 4th release.'}
   ];
   const lastAdKey = 'scrobble-last-fictional-sponsor';
   let lastAd;
